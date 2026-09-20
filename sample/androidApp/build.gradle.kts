@@ -4,10 +4,10 @@ plugins {
 }
 
 android {
-    namespace = "wang.harlon.tinyui.sample"
+    namespace = "app.tinyui.sample"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     defaultConfig {
-        applicationId = "wang.harlon.tinyui.sample"
+        applicationId = "app.tinyui.sample"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

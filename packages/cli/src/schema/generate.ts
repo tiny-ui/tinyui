@@ -56,7 +56,7 @@ export function generateTs(components: ComponentDef[], nodeImport = "tinyui-core
 }
 
 export function generateKt(components: ComponentDef[], pkg: string, objectName: string): string {
-    const out: string[] = [HEADER, `package ${pkg}`, "", "import wang.harlon.tinyui.schema.ComponentSchema", "import wang.harlon.tinyui.schema.FieldSpec", "import wang.harlon.tinyui.schema.PropSpec", "", `object ${objectName} {`];
+    const out: string[] = [HEADER, `package ${pkg}`, "", "import app.tinyui.schema.ComponentSchema", "import app.tinyui.schema.FieldSpec", "import app.tinyui.schema.PropSpec", "", `object ${objectName} {`];
     for (const c of components) {
         out.push(`    val ${ktIdent(c.name)} = ComponentSchema(`);
         out.push(`        type = ${JSON.stringify(c.name)},`);

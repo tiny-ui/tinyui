@@ -6,7 +6,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "wang.harlon.tinyui.sample.shared"
+        namespace = "app.tinyui.sample.shared"
         // AGP 的 KMP 库插件默认不处理 res / assets，Compose resources 在 Android 走 assets，必须打开
         androidResources { enable = true }
     }
@@ -79,6 +79,6 @@ tasks.matching { it.name.startsWith("copy") && it.name.endsWith("ComposeResource
 }
 
 compose.resources {
-    packageOfResClass = "wang.harlon.tinyui.sample.res"
+    packageOfResClass = "app.tinyui.sample.res"
     customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir.parentFile.parentFile }))
 }
