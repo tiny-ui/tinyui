@@ -59,7 +59,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 ## M4 · `tinyui-updates-server` MVP
 
-仓：新建 `HarlonWang/tinyui-updates-server`，MIT。约 800 行。
+仓：新建 `tiny-ui/tinyui-updates-server`，MIT。约 800 行。
 
 | 交付 | 要点 |
 |---|---|

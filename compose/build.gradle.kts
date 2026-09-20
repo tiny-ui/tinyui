@@ -39,7 +39,7 @@ mavenPublishing {
     pom {
         name.set("TinyUI")
         description.set("JS-driven declarative UI for Compose Multiplatform, powered by QuickJS.")
-        url.set("https://github.com/HarlonWang/tinyui")
+        url.set("https://github.com/tiny-ui/tinyui")
         licenses {
             license {
                 name.set("MIT")
@@ -53,8 +53,8 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/HarlonWang/tinyui")
-            connection.set("scm:git:https://github.com/HarlonWang/tinyui.git")
+            url.set("https://github.com/tiny-ui/tinyui")
+            connection.set("scm:git:https://github.com/tiny-ui/tinyui.git")
         }
     }
 }
