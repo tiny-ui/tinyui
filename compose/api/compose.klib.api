@@ -6,663 +6,663 @@
 // - Show declarations: true
 
 // Library unique name: <tinyui:compose>
-final enum class wang.harlon.tinyui.schema/FieldSpec : kotlin/Enum<wang.harlon.tinyui.schema/FieldSpec> { // wang.harlon.tinyui.schema/FieldSpec|null[0]
-    enum entry Bool // wang.harlon.tinyui.schema/FieldSpec.Bool|null[0]
-    enum entry Num // wang.harlon.tinyui.schema/FieldSpec.Num|null[0]
-    enum entry Str // wang.harlon.tinyui.schema/FieldSpec.Str|null[0]
+final enum class app.tinyui.schema/FieldSpec : kotlin/Enum<app.tinyui.schema/FieldSpec> { // app.tinyui.schema/FieldSpec|null[0]
+    enum entry Bool // app.tinyui.schema/FieldSpec.Bool|null[0]
+    enum entry Num // app.tinyui.schema/FieldSpec.Num|null[0]
+    enum entry Str // app.tinyui.schema/FieldSpec.Str|null[0]
 
-    final val entries // wang.harlon.tinyui.schema/FieldSpec.entries|#static{}entries[0]
-        final fun <get-entries>(): kotlin.enums/EnumEntries<wang.harlon.tinyui.schema/FieldSpec> // wang.harlon.tinyui.schema/FieldSpec.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val entries // app.tinyui.schema/FieldSpec.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.schema/FieldSpec> // app.tinyui.schema/FieldSpec.entries.<get-entries>|<get-entries>#static(){}[0]
 
-    final fun accepts(kotlinx.serialization.json/JsonPrimitive): kotlin/Boolean // wang.harlon.tinyui.schema/FieldSpec.accepts|accepts(kotlinx.serialization.json.JsonPrimitive){}[0]
-    final fun valueOf(kotlin/String): wang.harlon.tinyui.schema/FieldSpec // wang.harlon.tinyui.schema/FieldSpec.valueOf|valueOf#static(kotlin.String){}[0]
-    final fun values(): kotlin/Array<wang.harlon.tinyui.schema/FieldSpec> // wang.harlon.tinyui.schema/FieldSpec.values|values#static(){}[0]
+    final fun accepts(kotlinx.serialization.json/JsonPrimitive): kotlin/Boolean // app.tinyui.schema/FieldSpec.accepts|accepts(kotlinx.serialization.json.JsonPrimitive){}[0]
+    final fun valueOf(kotlin/String): app.tinyui.schema/FieldSpec // app.tinyui.schema/FieldSpec.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.schema/FieldSpec> // app.tinyui.schema/FieldSpec.values|values#static(){}[0]
 }
 
-abstract fun interface wang.harlon.tinyui.schema/Component { // wang.harlon.tinyui.schema/Component|null[0]
-    abstract fun Render(wang.harlon.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/Component.Render|Render(wang.harlon.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+abstract fun interface app.tinyui.schema/Component { // app.tinyui.schema/Component|null[0]
+    abstract fun Render(app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/Component.Render|Render(app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 
-abstract fun interface wang.harlon.tinyui/Config { // wang.harlon.tinyui/Config|null[0]
-    abstract fun get(kotlin/String): kotlin/String? // wang.harlon.tinyui/Config.get|get(kotlin.String){}[0]
+abstract fun interface app.tinyui/Config { // app.tinyui/Config|null[0]
+    abstract fun get(kotlin/String): kotlin/String? // app.tinyui/Config.get|get(kotlin.String){}[0]
 
-    final object Companion { // wang.harlon.tinyui/Config.Companion|null[0]
-        final val None // wang.harlon.tinyui/Config.Companion.None|{}None[0]
-            final fun <get-None>(): wang.harlon.tinyui/Config // wang.harlon.tinyui/Config.Companion.None.<get-None>|<get-None>(){}[0]
+    final object Companion { // app.tinyui/Config.Companion|null[0]
+        final val None // app.tinyui/Config.Companion.None|{}None[0]
+            final fun <get-None>(): app.tinyui/Config // app.tinyui/Config.Companion.None.<get-None>|<get-None>(){}[0]
     }
 }
 
-abstract fun interface wang.harlon.tinyui/HostCapability { // wang.harlon.tinyui/HostCapability|null[0]
-    abstract suspend fun call(kotlin/String): kotlin/String? // wang.harlon.tinyui/HostCapability.call|call(kotlin.String){}[0]
+abstract fun interface app.tinyui/HostCapability { // app.tinyui/HostCapability|null[0]
+    abstract suspend fun call(kotlin/String): kotlin/String? // app.tinyui/HostCapability.call|call(kotlin.String){}[0]
 }
 
-abstract fun interface wang.harlon.tinyui/I18n { // wang.harlon.tinyui/I18n|null[0]
-    abstract fun translate(kotlin/String, kotlin/String): kotlin/String? // wang.harlon.tinyui/I18n.translate|translate(kotlin.String;kotlin.String){}[0]
+abstract fun interface app.tinyui/I18n { // app.tinyui/I18n|null[0]
+    abstract fun translate(kotlin/String, kotlin/String): kotlin/String? // app.tinyui/I18n.translate|translate(kotlin.String;kotlin.String){}[0]
 
-    final object Companion { // wang.harlon.tinyui/I18n.Companion|null[0]
-        final val None // wang.harlon.tinyui/I18n.Companion.None|{}None[0]
-            final fun <get-None>(): wang.harlon.tinyui/I18n // wang.harlon.tinyui/I18n.Companion.None.<get-None>|<get-None>(){}[0]
+    final object Companion { // app.tinyui/I18n.Companion|null[0]
+        final val None // app.tinyui/I18n.Companion.None|{}None[0]
+            final fun <get-None>(): app.tinyui/I18n // app.tinyui/I18n.Companion.None.<get-None>|<get-None>(){}[0]
     }
 }
 
-abstract interface wang.harlon.tinyui.schema/NodeScope { // wang.harlon.tinyui.schema/NodeScope|null[0]
-    abstract val node // wang.harlon.tinyui.schema/NodeScope.node|{}node[0]
-        abstract fun <get-node>(): wang.harlon.tinyui.node/UINode // wang.harlon.tinyui.schema/NodeScope.node.<get-node>|<get-node>(){}[0]
+abstract interface app.tinyui.schema/NodeScope { // app.tinyui.schema/NodeScope|null[0]
+    abstract val node // app.tinyui.schema/NodeScope.node|{}node[0]
+        abstract fun <get-node>(): app.tinyui.node/UINode // app.tinyui.schema/NodeScope.node.<get-node>|<get-node>(){}[0]
 
-    abstract fun <#A1: kotlin/Any?> get(kotlin/String): #A1? // wang.harlon.tinyui.schema/NodeScope.get|get(kotlin.String){0§<kotlin.Any?>}[0]
-    abstract fun Children(androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/NodeScope.Children|Children(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    abstract fun RenderChild(wang.harlon.tinyui.node/UINode, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/NodeScope.RenderChild|RenderChild(wang.harlon.tinyui.node.UINode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    abstract fun dispatch(kotlin/String, kotlin/String = ...) // wang.harlon.tinyui.schema/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
-    abstract fun has(kotlin/String): kotlin/Boolean // wang.harlon.tinyui.schema/NodeScope.has|has(kotlin.String){}[0]
-    abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // wang.harlon.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun Children(kotlin/Function1<wang.harlon.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/NodeScope.Children|Children(kotlin.Function1<wang.harlon.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // wang.harlon.tinyui.schema/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun <#A1: kotlin/Any?> get(kotlin/String): #A1? // app.tinyui.schema/NodeScope.get|get(kotlin.String){0§<kotlin.Any?>}[0]
+    abstract fun Children(androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.Children|Children(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun RenderChild(app.tinyui.node/UINode, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.RenderChild|RenderChild(app.tinyui.node.UINode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun dispatch(kotlin/String, kotlin/String = ...) // app.tinyui.schema/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
+    abstract fun has(kotlin/String): kotlin/Boolean // app.tinyui.schema/NodeScope.has|has(kotlin.String){}[0]
+    abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun Children(kotlin/Function1<app.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.Children|Children(kotlin.Function1<app.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // app.tinyui.schema/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
-    final class ComposeDefaultImpls { // wang.harlon.tinyui.schema/NodeScope.ComposeDefaultImpls|null[0]
-        final fun modifier$default(kotlin/Boolean, wang.harlon.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // wang.harlon.tinyui.schema/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;wang.harlon.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+    final class ComposeDefaultImpls { // app.tinyui.schema/NodeScope.ComposeDefaultImpls|null[0]
+        final fun modifier$default(kotlin/Boolean, app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
     }
 }
 
-abstract interface wang.harlon.tinyui/HttpClient { // wang.harlon.tinyui/HttpClient|null[0]
-    abstract suspend fun request(wang.harlon.tinyui/HttpRequest): wang.harlon.tinyui/HttpResponse // wang.harlon.tinyui/HttpClient.request|request(wang.harlon.tinyui.HttpRequest){}[0]
+abstract interface app.tinyui/HttpClient { // app.tinyui/HttpClient|null[0]
+    abstract suspend fun request(app.tinyui/HttpRequest): app.tinyui/HttpResponse // app.tinyui/HttpClient.request|request(app.tinyui.HttpRequest){}[0]
 
-    final object None : wang.harlon.tinyui/HttpClient { // wang.harlon.tinyui/HttpClient.None|null[0]
-        final suspend fun request(wang.harlon.tinyui/HttpRequest): wang.harlon.tinyui/HttpResponse // wang.harlon.tinyui/HttpClient.None.request|request(wang.harlon.tinyui.HttpRequest){}[0]
+    final object None : app.tinyui/HttpClient { // app.tinyui/HttpClient.None|null[0]
+        final suspend fun request(app.tinyui/HttpRequest): app.tinyui/HttpResponse // app.tinyui/HttpClient.None.request|request(app.tinyui.HttpRequest){}[0]
     }
 }
 
-abstract interface wang.harlon.tinyui/Navigator { // wang.harlon.tinyui/Navigator|null[0]
-    abstract fun pop(kotlin/String?) // wang.harlon.tinyui/Navigator.pop|pop(kotlin.String?){}[0]
-    abstract fun push(kotlin/String, kotlin/String) // wang.harlon.tinyui/Navigator.push|push(kotlin.String;kotlin.String){}[0]
+abstract interface app.tinyui/Navigator { // app.tinyui/Navigator|null[0]
+    abstract fun pop(kotlin/String?) // app.tinyui/Navigator.pop|pop(kotlin.String?){}[0]
+    abstract fun push(kotlin/String, kotlin/String) // app.tinyui/Navigator.push|push(kotlin.String;kotlin.String){}[0]
 
-    final object None : wang.harlon.tinyui/Navigator { // wang.harlon.tinyui/Navigator.None|null[0]
-        final fun pop(kotlin/String?) // wang.harlon.tinyui/Navigator.None.pop|pop(kotlin.String?){}[0]
-        final fun push(kotlin/String, kotlin/String) // wang.harlon.tinyui/Navigator.None.push|push(kotlin.String;kotlin.String){}[0]
+    final object None : app.tinyui/Navigator { // app.tinyui/Navigator.None|null[0]
+        final fun pop(kotlin/String?) // app.tinyui/Navigator.None.pop|pop(kotlin.String?){}[0]
+        final fun push(kotlin/String, kotlin/String) // app.tinyui/Navigator.None.push|push(kotlin.String;kotlin.String){}[0]
     }
 }
 
-abstract interface wang.harlon.tinyui/PageSink { // wang.harlon.tinyui/PageSink|null[0]
-    abstract fun error(wang.harlon.tinyui/PageError) // wang.harlon.tinyui/PageSink.error|error(wang.harlon.tinyui.PageError){}[0]
-    abstract fun log(kotlin/String) // wang.harlon.tinyui/PageSink.log|log(kotlin.String){}[0]
+abstract interface app.tinyui/PageSink { // app.tinyui/PageSink|null[0]
+    abstract fun error(app.tinyui/PageError) // app.tinyui/PageSink.error|error(app.tinyui.PageError){}[0]
+    abstract fun log(kotlin/String) // app.tinyui/PageSink.log|log(kotlin.String){}[0]
 }
 
-abstract interface wang.harlon.tinyui/Store { // wang.harlon.tinyui/Store|null[0]
-    abstract fun get(kotlin/String): kotlin/String? // wang.harlon.tinyui/Store.get|get(kotlin.String){}[0]
-    abstract fun observe(kotlin/String, kotlin/Function1<wang.harlon.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/Store.observe|observe(kotlin.String;kotlin.Function1<wang.harlon.tinyui.StoreValue,kotlin.Unit>){}[0]
-    abstract fun set(kotlin/String, kotlin/String) // wang.harlon.tinyui/Store.set|set(kotlin.String;kotlin.String){}[0]
+abstract interface app.tinyui/Store { // app.tinyui/Store|null[0]
+    abstract fun get(kotlin/String): kotlin/String? // app.tinyui/Store.get|get(kotlin.String){}[0]
+    abstract fun observe(kotlin/String, kotlin/Function1<app.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // app.tinyui/Store.observe|observe(kotlin.String;kotlin.Function1<app.tinyui.StoreValue,kotlin.Unit>){}[0]
+    abstract fun set(kotlin/String, kotlin/String) // app.tinyui/Store.set|set(kotlin.String;kotlin.String){}[0]
 }
 
-sealed interface wang.harlon.tinyui.schema/ColorValue { // wang.harlon.tinyui.schema/ColorValue|null[0]
-    open fun resolve(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color // wang.harlon.tinyui.schema/ColorValue.resolve|resolve(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+sealed interface app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue|null[0]
+    open fun resolve(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.resolve|resolve(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
-    final class Literal : wang.harlon.tinyui.schema/ColorValue { // wang.harlon.tinyui.schema/ColorValue.Literal|null[0]
-        constructor <init>(androidx.compose.ui.graphics/Color) // wang.harlon.tinyui.schema/ColorValue.Literal.<init>|<init>(androidx.compose.ui.graphics.Color){}[0]
+    final class Literal : app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue.Literal|null[0]
+        constructor <init>(androidx.compose.ui.graphics/Color) // app.tinyui.schema/ColorValue.Literal.<init>|<init>(androidx.compose.ui.graphics.Color){}[0]
 
-        final val color // wang.harlon.tinyui.schema/ColorValue.Literal.color|{}color[0]
-            final fun <get-color>(): androidx.compose.ui.graphics/Color // wang.harlon.tinyui.schema/ColorValue.Literal.color.<get-color>|<get-color>(){}[0]
+        final val color // app.tinyui.schema/ColorValue.Literal.color|{}color[0]
+            final fun <get-color>(): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.Literal.color.<get-color>|<get-color>(){}[0]
 
-        final fun component1(): androidx.compose.ui.graphics/Color // wang.harlon.tinyui.schema/ColorValue.Literal.component1|component1(){}[0]
-        final fun copy(androidx.compose.ui.graphics/Color = ...): wang.harlon.tinyui.schema/ColorValue.Literal // wang.harlon.tinyui.schema/ColorValue.Literal.copy|copy(androidx.compose.ui.graphics.Color){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // wang.harlon.tinyui.schema/ColorValue.Literal.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // wang.harlon.tinyui.schema/ColorValue.Literal.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // wang.harlon.tinyui.schema/ColorValue.Literal.toString|toString(){}[0]
+        final fun component1(): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.Literal.component1|component1(){}[0]
+        final fun copy(androidx.compose.ui.graphics/Color = ...): app.tinyui.schema/ColorValue.Literal // app.tinyui.schema/ColorValue.Literal.copy|copy(androidx.compose.ui.graphics.Color){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/ColorValue.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.schema/ColorValue.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.schema/ColorValue.Literal.toString|toString(){}[0]
     }
 
-    final class Token : wang.harlon.tinyui.schema/ColorValue { // wang.harlon.tinyui.schema/ColorValue.Token|null[0]
-        constructor <init>(kotlin/String) // wang.harlon.tinyui.schema/ColorValue.Token.<init>|<init>(kotlin.String){}[0]
+    final class Token : app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue.Token|null[0]
+        constructor <init>(kotlin/String) // app.tinyui.schema/ColorValue.Token.<init>|<init>(kotlin.String){}[0]
 
-        final val name // wang.harlon.tinyui.schema/ColorValue.Token.name|{}name[0]
-            final fun <get-name>(): kotlin/String // wang.harlon.tinyui.schema/ColorValue.Token.name.<get-name>|<get-name>(){}[0]
+        final val name // app.tinyui.schema/ColorValue.Token.name|{}name[0]
+            final fun <get-name>(): kotlin/String // app.tinyui.schema/ColorValue.Token.name.<get-name>|<get-name>(){}[0]
 
-        final fun component1(): kotlin/String // wang.harlon.tinyui.schema/ColorValue.Token.component1|component1(){}[0]
-        final fun copy(kotlin/String = ...): wang.harlon.tinyui.schema/ColorValue.Token // wang.harlon.tinyui.schema/ColorValue.Token.copy|copy(kotlin.String){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // wang.harlon.tinyui.schema/ColorValue.Token.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // wang.harlon.tinyui.schema/ColorValue.Token.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // wang.harlon.tinyui.schema/ColorValue.Token.toString|toString(){}[0]
-    }
-}
-
-sealed interface wang.harlon.tinyui.schema/SizeValue { // wang.harlon.tinyui.schema/SizeValue|null[0]
-    final class Fixed : wang.harlon.tinyui.schema/SizeValue { // wang.harlon.tinyui.schema/SizeValue.Fixed|null[0]
-        constructor <init>(androidx.compose.ui.unit/Dp) // wang.harlon.tinyui.schema/SizeValue.Fixed.<init>|<init>(androidx.compose.ui.unit.Dp){}[0]
-
-        final val dp // wang.harlon.tinyui.schema/SizeValue.Fixed.dp|{}dp[0]
-            final fun <get-dp>(): androidx.compose.ui.unit/Dp // wang.harlon.tinyui.schema/SizeValue.Fixed.dp.<get-dp>|<get-dp>(){}[0]
-
-        final fun component1(): androidx.compose.ui.unit/Dp // wang.harlon.tinyui.schema/SizeValue.Fixed.component1|component1(){}[0]
-        final fun copy(androidx.compose.ui.unit/Dp = ...): wang.harlon.tinyui.schema/SizeValue.Fixed // wang.harlon.tinyui.schema/SizeValue.Fixed.copy|copy(androidx.compose.ui.unit.Dp){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // wang.harlon.tinyui.schema/SizeValue.Fixed.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // wang.harlon.tinyui.schema/SizeValue.Fixed.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // wang.harlon.tinyui.schema/SizeValue.Fixed.toString|toString(){}[0]
-    }
-
-    final object Fill : wang.harlon.tinyui.schema/SizeValue { // wang.harlon.tinyui.schema/SizeValue.Fill|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // wang.harlon.tinyui.schema/SizeValue.Fill.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // wang.harlon.tinyui.schema/SizeValue.Fill.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // wang.harlon.tinyui.schema/SizeValue.Fill.toString|toString(){}[0]
-    }
-
-    final object Wrap : wang.harlon.tinyui.schema/SizeValue { // wang.harlon.tinyui.schema/SizeValue.Wrap|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // wang.harlon.tinyui.schema/SizeValue.Wrap.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // wang.harlon.tinyui.schema/SizeValue.Wrap.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // wang.harlon.tinyui.schema/SizeValue.Wrap.toString|toString(){}[0]
+        final fun component1(): kotlin/String // app.tinyui.schema/ColorValue.Token.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): app.tinyui.schema/ColorValue.Token // app.tinyui.schema/ColorValue.Token.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/ColorValue.Token.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.schema/ColorValue.Token.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.schema/ColorValue.Token.toString|toString(){}[0]
     }
 }
 
-final class wang.harlon.tinyui.node/Command { // wang.harlon.tinyui.node/Command|null[0]
-    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/Any?>) // wang.harlon.tinyui.node/Command.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.Any?>){}[0]
+sealed interface app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue|null[0]
+    final class Fixed : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Fixed|null[0]
+        constructor <init>(androidx.compose.ui.unit/Dp) // app.tinyui.schema/SizeValue.Fixed.<init>|<init>(androidx.compose.ui.unit.Dp){}[0]
 
-    final val args // wang.harlon.tinyui.node/Command.args|{}args[0]
-        final fun <get-args>(): kotlin.collections/Map<kotlin/String, kotlin/Any?> // wang.harlon.tinyui.node/Command.args.<get-args>|<get-args>(){}[0]
-    final val name // wang.harlon.tinyui.node/Command.name|{}name[0]
-        final fun <get-name>(): kotlin/String // wang.harlon.tinyui.node/Command.name.<get-name>|<get-name>(){}[0]
-}
+        final val dp // app.tinyui.schema/SizeValue.Fixed.dp|{}dp[0]
+            final fun <get-dp>(): androidx.compose.ui.unit/Dp // app.tinyui.schema/SizeValue.Fixed.dp.<get-dp>|<get-dp>(){}[0]
 
-final class wang.harlon.tinyui.node/NodeTree { // wang.harlon.tinyui.node/NodeTree|null[0]
-    constructor <init>(wang.harlon.tinyui.schema/ComponentRegistry, kotlin/Function1<wang.harlon.tinyui.node/PatchProblem, kotlin/Unit>) // wang.harlon.tinyui.node/NodeTree.<init>|<init>(wang.harlon.tinyui.schema.ComponentRegistry;kotlin.Function1<wang.harlon.tinyui.node.PatchProblem,kotlin.Unit>){}[0]
+        final fun component1(): androidx.compose.ui.unit/Dp // app.tinyui.schema/SizeValue.Fixed.component1|component1(){}[0]
+        final fun copy(androidx.compose.ui.unit/Dp = ...): app.tinyui.schema/SizeValue.Fixed // app.tinyui.schema/SizeValue.Fixed.copy|copy(androidx.compose.ui.unit.Dp){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Fixed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Fixed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Fixed.toString|toString(){}[0]
+    }
 
-    final val root // wang.harlon.tinyui.node/NodeTree.root|{}root[0]
-        final fun <get-root>(): wang.harlon.tinyui.node/UINode // wang.harlon.tinyui.node/NodeTree.root.<get-root>|<get-root>(){}[0]
-    final val size // wang.harlon.tinyui.node/NodeTree.size|{}size[0]
-        final fun <get-size>(): kotlin/Int // wang.harlon.tinyui.node/NodeTree.size.<get-size>|<get-size>(){}[0]
+    final object Fill : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Fill|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Fill.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Fill.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Fill.toString|toString(){}[0]
+    }
 
-    final fun apply(kotlin/String) // wang.harlon.tinyui.node/NodeTree.apply|apply(kotlin.String){}[0]
-    final fun clear() // wang.harlon.tinyui.node/NodeTree.clear|clear(){}[0]
-    final fun node(kotlin/Int): wang.harlon.tinyui.node/UINode? // wang.harlon.tinyui.node/NodeTree.node|node(kotlin.Int){}[0]
-}
-
-final class wang.harlon.tinyui.node/PatchProblem { // wang.harlon.tinyui.node/PatchProblem|null[0]
-    constructor <init>(kotlin/String, kotlin/String) // wang.harlon.tinyui.node/PatchProblem.<init>|<init>(kotlin.String;kotlin.String){}[0]
-
-    final val op // wang.harlon.tinyui.node/PatchProblem.op|{}op[0]
-        final fun <get-op>(): kotlin/String // wang.harlon.tinyui.node/PatchProblem.op.<get-op>|<get-op>(){}[0]
-    final val reason // wang.harlon.tinyui.node/PatchProblem.reason|{}reason[0]
-        final fun <get-reason>(): kotlin/String // wang.harlon.tinyui.node/PatchProblem.reason.<get-reason>|<get-reason>(){}[0]
-
-    final fun toString(): kotlin/String // wang.harlon.tinyui.node/PatchProblem.toString|toString(){}[0]
-}
-
-final class wang.harlon.tinyui.node/UINode { // wang.harlon.tinyui.node/UINode|null[0]
-    final val children // wang.harlon.tinyui.node/UINode.children|{}children[0]
-        final fun <get-children>(): androidx.compose.runtime.snapshots/SnapshotStateList<wang.harlon.tinyui.node/UINode> // wang.harlon.tinyui.node/UINode.children.<get-children>|<get-children>(){}[0]
-    final val commands // wang.harlon.tinyui.node/UINode.commands|{}commands[0]
-        final fun <get-commands>(): androidx.compose.runtime.snapshots/SnapshotStateList<wang.harlon.tinyui.node/Command> // wang.harlon.tinyui.node/UINode.commands.<get-commands>|<get-commands>(){}[0]
-    final val events // wang.harlon.tinyui.node/UINode.events|{}events[0]
-        final fun <get-events>(): androidx.compose.runtime.snapshots/SnapshotStateMap<kotlin/String, kotlin/Boolean> // wang.harlon.tinyui.node/UINode.events.<get-events>|<get-events>(){}[0]
-    final val id // wang.harlon.tinyui.node/UINode.id|{}id[0]
-        final fun <get-id>(): kotlin/Int // wang.harlon.tinyui.node/UINode.id.<get-id>|<get-id>(){}[0]
-    final val props // wang.harlon.tinyui.node/UINode.props|{}props[0]
-        final fun <get-props>(): androidx.compose.runtime.snapshots/SnapshotStateMap<kotlin/String, kotlin/Any?> // wang.harlon.tinyui.node/UINode.props.<get-props>|<get-props>(){}[0]
-    final val type // wang.harlon.tinyui.node/UINode.type|{}type[0]
-        final fun <get-type>(): kotlin/String // wang.harlon.tinyui.node/UINode.type.<get-type>|<get-type>(){}[0]
-}
-
-final class wang.harlon.tinyui.schema/ComponentRegistry { // wang.harlon.tinyui.schema/ComponentRegistry|null[0]
-    constructor <init>() // wang.harlon.tinyui.schema/ComponentRegistry.<init>|<init>(){}[0]
-
-    final fun Render(kotlin/String, wang.harlon.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/ComponentRegistry.Render|Render(kotlin.String;wang.harlon.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    final fun manifest(kotlin.collections/List<kotlin/String>): kotlin/String // wang.harlon.tinyui.schema/ComponentRegistry.manifest|manifest(kotlin.collections.List<kotlin.String>){}[0]
-    final fun register(wang.harlon.tinyui.schema/ComponentSchema, wang.harlon.tinyui.schema/Component) // wang.harlon.tinyui.schema/ComponentRegistry.register|register(wang.harlon.tinyui.schema.ComponentSchema;wang.harlon.tinyui.schema.Component){}[0]
-    final fun schema(kotlin/String): wang.harlon.tinyui.schema/ComponentSchema? // wang.harlon.tinyui.schema/ComponentRegistry.schema|schema(kotlin.String){}[0]
-
-    final object Companion { // wang.harlon.tinyui.schema/ComponentRegistry.Companion|null[0]
-        final const val PLACEHOLDER // wang.harlon.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER|{}PLACEHOLDER[0]
-            final fun <get-PLACEHOLDER>(): kotlin/String // wang.harlon.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER.<get-PLACEHOLDER>|<get-PLACEHOLDER>(){}[0]
+    final object Wrap : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Wrap|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Wrap.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Wrap.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Wrap.toString|toString(){}[0]
     }
 }
 
-final class wang.harlon.tinyui.schema/ComponentSchema { // wang.harlon.tinyui.schema/ComponentSchema|null[0]
-    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/FieldSpec>>, kotlin/Boolean, kotlin/Boolean) // wang.harlon.tinyui.schema/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,wang.harlon.tinyui.schema.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,wang.harlon.tinyui.schema.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,wang.harlon.tinyui.schema.FieldSpec>>;kotlin.Boolean;kotlin.Boolean){}[0]
+final class app.tinyui.node/Command { // app.tinyui.node/Command|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/Any?>) // app.tinyui.node/Command.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.Any?>){}[0]
 
-    final val children // wang.harlon.tinyui.schema/ComponentSchema.children|{}children[0]
-        final fun <get-children>(): kotlin/Boolean // wang.harlon.tinyui.schema/ComponentSchema.children.<get-children>|<get-children>(){}[0]
-    final val commands // wang.harlon.tinyui.schema/ComponentSchema.commands|{}commands[0]
-        final fun <get-commands>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/FieldSpec>> // wang.harlon.tinyui.schema/ComponentSchema.commands.<get-commands>|<get-commands>(){}[0]
-    final val events // wang.harlon.tinyui.schema/ComponentSchema.events|{}events[0]
-        final fun <get-events>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/FieldSpec>> // wang.harlon.tinyui.schema/ComponentSchema.events.<get-events>|<get-events>(){}[0]
-    final val layout // wang.harlon.tinyui.schema/ComponentSchema.layout|{}layout[0]
-        final fun <get-layout>(): kotlin/Boolean // wang.harlon.tinyui.schema/ComponentSchema.layout.<get-layout>|<get-layout>(){}[0]
-    final val props // wang.harlon.tinyui.schema/ComponentSchema.props|{}props[0]
-        final fun <get-props>(): kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/PropSpec> // wang.harlon.tinyui.schema/ComponentSchema.props.<get-props>|<get-props>(){}[0]
-    final val type // wang.harlon.tinyui.schema/ComponentSchema.type|{}type[0]
-        final fun <get-type>(): kotlin/String // wang.harlon.tinyui.schema/ComponentSchema.type.<get-type>|<get-type>(){}[0]
-
-    final fun prop(kotlin/String): wang.harlon.tinyui.schema/PropSpec? // wang.harlon.tinyui.schema/ComponentSchema.prop|prop(kotlin.String){}[0]
+    final val args // app.tinyui.node/Command.args|{}args[0]
+        final fun <get-args>(): kotlin.collections/Map<kotlin/String, kotlin/Any?> // app.tinyui.node/Command.args.<get-args>|<get-args>(){}[0]
+    final val name // app.tinyui.node/Command.name|{}name[0]
+        final fun <get-name>(): kotlin/String // app.tinyui.node/Command.name.<get-name>|<get-name>(){}[0]
 }
 
-final class wang.harlon.tinyui/BuildManifest { // wang.harlon.tinyui/BuildManifest|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>) // wang.harlon.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+final class app.tinyui.node/NodeTree { // app.tinyui.node/NodeTree|null[0]
+    constructor <init>(app.tinyui.schema/ComponentRegistry, kotlin/Function1<app.tinyui.node/PatchProblem, kotlin/Unit>) // app.tinyui.node/NodeTree.<init>|<init>(app.tinyui.schema.ComponentRegistry;kotlin.Function1<app.tinyui.node.PatchProblem,kotlin.Unit>){}[0]
 
-    final val buildIds // wang.harlon.tinyui/BuildManifest.buildIds|{}buildIds[0]
-        final fun <get-buildIds>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/BuildManifest.buildIds.<get-buildIds>|<get-buildIds>(){}[0]
-    final val files // wang.harlon.tinyui/BuildManifest.files|{}files[0]
-        final fun <get-files>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/BuildManifest.files.<get-files>|<get-files>(){}[0]
-    final val pages // wang.harlon.tinyui/BuildManifest.pages|{}pages[0]
-        final fun <get-pages>(): kotlin.collections/List<kotlin/String> // wang.harlon.tinyui/BuildManifest.pages.<get-pages>|<get-pages>(){}[0]
-    final val runtime // wang.harlon.tinyui/BuildManifest.runtime|{}runtime[0]
-        final fun <get-runtime>(): kotlin.collections/List<kotlin/String> // wang.harlon.tinyui/BuildManifest.runtime.<get-runtime>|<get-runtime>(){}[0]
+    final val root // app.tinyui.node/NodeTree.root|{}root[0]
+        final fun <get-root>(): app.tinyui.node/UINode // app.tinyui.node/NodeTree.root.<get-root>|<get-root>(){}[0]
+    final val size // app.tinyui.node/NodeTree.size|{}size[0]
+        final fun <get-size>(): kotlin/Int // app.tinyui.node/NodeTree.size.<get-size>|<get-size>(){}[0]
 
-    final fun buildId(kotlin/String): kotlin/String // wang.harlon.tinyui/BuildManifest.buildId|buildId(kotlin.String){}[0]
-    final fun file(kotlin/String): kotlin/String // wang.harlon.tinyui/BuildManifest.file|file(kotlin.String){}[0]
+    final fun apply(kotlin/String) // app.tinyui.node/NodeTree.apply|apply(kotlin.String){}[0]
+    final fun clear() // app.tinyui.node/NodeTree.clear|clear(){}[0]
+    final fun node(kotlin/Int): app.tinyui.node/UINode? // app.tinyui.node/NodeTree.node|node(kotlin.Int){}[0]
+}
 
-    final object Companion { // wang.harlon.tinyui/BuildManifest.Companion|null[0]
-        final fun parse(kotlin/String): wang.harlon.tinyui/BuildManifest // wang.harlon.tinyui/BuildManifest.Companion.parse|parse(kotlin.String){}[0]
+final class app.tinyui.node/PatchProblem { // app.tinyui.node/PatchProblem|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // app.tinyui.node/PatchProblem.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+    final val op // app.tinyui.node/PatchProblem.op|{}op[0]
+        final fun <get-op>(): kotlin/String // app.tinyui.node/PatchProblem.op.<get-op>|<get-op>(){}[0]
+    final val reason // app.tinyui.node/PatchProblem.reason|{}reason[0]
+        final fun <get-reason>(): kotlin/String // app.tinyui.node/PatchProblem.reason.<get-reason>|<get-reason>(){}[0]
+
+    final fun toString(): kotlin/String // app.tinyui.node/PatchProblem.toString|toString(){}[0]
+}
+
+final class app.tinyui.node/UINode { // app.tinyui.node/UINode|null[0]
+    final val children // app.tinyui.node/UINode.children|{}children[0]
+        final fun <get-children>(): androidx.compose.runtime.snapshots/SnapshotStateList<app.tinyui.node/UINode> // app.tinyui.node/UINode.children.<get-children>|<get-children>(){}[0]
+    final val commands // app.tinyui.node/UINode.commands|{}commands[0]
+        final fun <get-commands>(): androidx.compose.runtime.snapshots/SnapshotStateList<app.tinyui.node/Command> // app.tinyui.node/UINode.commands.<get-commands>|<get-commands>(){}[0]
+    final val events // app.tinyui.node/UINode.events|{}events[0]
+        final fun <get-events>(): androidx.compose.runtime.snapshots/SnapshotStateMap<kotlin/String, kotlin/Boolean> // app.tinyui.node/UINode.events.<get-events>|<get-events>(){}[0]
+    final val id // app.tinyui.node/UINode.id|{}id[0]
+        final fun <get-id>(): kotlin/Int // app.tinyui.node/UINode.id.<get-id>|<get-id>(){}[0]
+    final val props // app.tinyui.node/UINode.props|{}props[0]
+        final fun <get-props>(): androidx.compose.runtime.snapshots/SnapshotStateMap<kotlin/String, kotlin/Any?> // app.tinyui.node/UINode.props.<get-props>|<get-props>(){}[0]
+    final val type // app.tinyui.node/UINode.type|{}type[0]
+        final fun <get-type>(): kotlin/String // app.tinyui.node/UINode.type.<get-type>|<get-type>(){}[0]
+}
+
+final class app.tinyui.schema/ComponentRegistry { // app.tinyui.schema/ComponentRegistry|null[0]
+    constructor <init>() // app.tinyui.schema/ComponentRegistry.<init>|<init>(){}[0]
+
+    final fun Render(kotlin/String, app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/ComponentRegistry.Render|Render(kotlin.String;app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    final fun manifest(kotlin.collections/List<kotlin/String>): kotlin/String // app.tinyui.schema/ComponentRegistry.manifest|manifest(kotlin.collections.List<kotlin.String>){}[0]
+    final fun register(app.tinyui.schema/ComponentSchema, app.tinyui.schema/Component) // app.tinyui.schema/ComponentRegistry.register|register(app.tinyui.schema.ComponentSchema;app.tinyui.schema.Component){}[0]
+    final fun schema(kotlin/String): app.tinyui.schema/ComponentSchema? // app.tinyui.schema/ComponentRegistry.schema|schema(kotlin.String){}[0]
+
+    final object Companion { // app.tinyui.schema/ComponentRegistry.Companion|null[0]
+        final const val PLACEHOLDER // app.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER|{}PLACEHOLDER[0]
+            final fun <get-PLACEHOLDER>(): kotlin/String // app.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER.<get-PLACEHOLDER>|<get-PLACEHOLDER>(){}[0]
     }
 }
 
-final class wang.harlon.tinyui/EventBus { // wang.harlon.tinyui/EventBus|null[0]
-    constructor <init>() // wang.harlon.tinyui/EventBus.<init>|<init>(){}[0]
+final class app.tinyui.schema/ComponentSchema { // app.tinyui.schema/ComponentSchema|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin/Boolean, kotlin/Boolean) // app.tinyui.schema/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.schema.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.Boolean;kotlin.Boolean){}[0]
 
-    final fun emit(kotlin/String, kotlin/String) // wang.harlon.tinyui/EventBus.emit|emit(kotlin.String;kotlin.String){}[0]
-    final fun subscribe(kotlin/String, kotlin/Function1<kotlin/String, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/EventBus.subscribe|subscribe(kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+    final val children // app.tinyui.schema/ComponentSchema.children|{}children[0]
+        final fun <get-children>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.children.<get-children>|<get-children>(){}[0]
+    final val commands // app.tinyui.schema/ComponentSchema.commands|{}commands[0]
+        final fun <get-commands>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.commands.<get-commands>|<get-commands>(){}[0]
+    final val events // app.tinyui.schema/ComponentSchema.events|{}events[0]
+        final fun <get-events>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.events.<get-events>|<get-events>(){}[0]
+    final val layout // app.tinyui.schema/ComponentSchema.layout|{}layout[0]
+        final fun <get-layout>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.layout.<get-layout>|<get-layout>(){}[0]
+    final val props // app.tinyui.schema/ComponentSchema.props|{}props[0]
+        final fun <get-props>(): kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec> // app.tinyui.schema/ComponentSchema.props.<get-props>|<get-props>(){}[0]
+    final val type // app.tinyui.schema/ComponentSchema.type|{}type[0]
+        final fun <get-type>(): kotlin/String // app.tinyui.schema/ComponentSchema.type.<get-type>|<get-type>(){}[0]
+
+    final fun prop(kotlin/String): app.tinyui.schema/PropSpec? // app.tinyui.schema/ComponentSchema.prop|prop(kotlin.String){}[0]
 }
 
-final class wang.harlon.tinyui/HostException : kotlin/Exception { // wang.harlon.tinyui/HostException|null[0]
-    constructor <init>(kotlin/String, kotlin/String) // wang.harlon.tinyui/HostException.<init>|<init>(kotlin.String;kotlin.String){}[0]
+final class app.tinyui/BuildManifest { // app.tinyui/BuildManifest|null[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>) // app.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
-    final val code // wang.harlon.tinyui/HostException.code|{}code[0]
-        final fun <get-code>(): kotlin/String // wang.harlon.tinyui/HostException.code.<get-code>|<get-code>(){}[0]
-}
+    final val buildIds // app.tinyui/BuildManifest.buildIds|{}buildIds[0]
+        final fun <get-buildIds>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/BuildManifest.buildIds.<get-buildIds>|<get-buildIds>(){}[0]
+    final val files // app.tinyui/BuildManifest.files|{}files[0]
+        final fun <get-files>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/BuildManifest.files.<get-files>|<get-files>(){}[0]
+    final val pages // app.tinyui/BuildManifest.pages|{}pages[0]
+        final fun <get-pages>(): kotlin.collections/List<kotlin/String> // app.tinyui/BuildManifest.pages.<get-pages>|<get-pages>(){}[0]
+    final val runtime // app.tinyui/BuildManifest.runtime|{}runtime[0]
+        final fun <get-runtime>(): kotlin.collections/List<kotlin/String> // app.tinyui/BuildManifest.runtime.<get-runtime>|<get-runtime>(){}[0]
 
-final class wang.harlon.tinyui/HostServices { // wang.harlon.tinyui/HostServices|null[0]
-    constructor <init>(wang.harlon.tinyui/Navigator = ..., wang.harlon.tinyui/Store = ..., wang.harlon.tinyui/HttpClient = ..., wang.harlon.tinyui/I18n = ..., wang.harlon.tinyui/Config = ..., wang.harlon.tinyui/EventBus = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, wang.harlon.tinyui/HostCapability> = ...) // wang.harlon.tinyui/HostServices.<init>|<init>(wang.harlon.tinyui.Navigator;wang.harlon.tinyui.Store;wang.harlon.tinyui.HttpClient;wang.harlon.tinyui.I18n;wang.harlon.tinyui.Config;wang.harlon.tinyui.EventBus;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,wang.harlon.tinyui.HostCapability>){}[0]
+    final fun buildId(kotlin/String): kotlin/String // app.tinyui/BuildManifest.buildId|buildId(kotlin.String){}[0]
+    final fun file(kotlin/String): kotlin/String // app.tinyui/BuildManifest.file|file(kotlin.String){}[0]
 
-    final val capabilities // wang.harlon.tinyui/HostServices.capabilities|{}capabilities[0]
-        final fun <get-capabilities>(): kotlin.collections/Map<kotlin/String, wang.harlon.tinyui/HostCapability> // wang.harlon.tinyui/HostServices.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
-    final val config // wang.harlon.tinyui/HostServices.config|{}config[0]
-        final fun <get-config>(): wang.harlon.tinyui/Config // wang.harlon.tinyui/HostServices.config.<get-config>|<get-config>(){}[0]
-    final val deviceInfo // wang.harlon.tinyui/HostServices.deviceInfo|{}deviceInfo[0]
-        final fun <get-deviceInfo>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/HostServices.deviceInfo.<get-deviceInfo>|<get-deviceInfo>(){}[0]
-    final val events // wang.harlon.tinyui/HostServices.events|{}events[0]
-        final fun <get-events>(): wang.harlon.tinyui/EventBus // wang.harlon.tinyui/HostServices.events.<get-events>|<get-events>(){}[0]
-    final val http // wang.harlon.tinyui/HostServices.http|{}http[0]
-        final fun <get-http>(): wang.harlon.tinyui/HttpClient // wang.harlon.tinyui/HostServices.http.<get-http>|<get-http>(){}[0]
-    final val i18n // wang.harlon.tinyui/HostServices.i18n|{}i18n[0]
-        final fun <get-i18n>(): wang.harlon.tinyui/I18n // wang.harlon.tinyui/HostServices.i18n.<get-i18n>|<get-i18n>(){}[0]
-    final val navigator // wang.harlon.tinyui/HostServices.navigator|{}navigator[0]
-        final fun <get-navigator>(): wang.harlon.tinyui/Navigator // wang.harlon.tinyui/HostServices.navigator.<get-navigator>|<get-navigator>(){}[0]
-    final val store // wang.harlon.tinyui/HostServices.store|{}store[0]
-        final fun <get-store>(): wang.harlon.tinyui/Store // wang.harlon.tinyui/HostServices.store.<get-store>|<get-store>(){}[0]
-
-    final object Companion { // wang.harlon.tinyui/HostServices.Companion|null[0]
-        final val Default // wang.harlon.tinyui/HostServices.Companion.Default|{}Default[0]
-            final fun <get-Default>(): wang.harlon.tinyui/HostServices // wang.harlon.tinyui/HostServices.Companion.Default.<get-Default>|<get-Default>(){}[0]
+    final object Companion { // app.tinyui/BuildManifest.Companion|null[0]
+        final fun parse(kotlin/String): app.tinyui/BuildManifest // app.tinyui/BuildManifest.Companion.parse|parse(kotlin.String){}[0]
     }
 }
 
-final class wang.harlon.tinyui/HttpRequest { // wang.harlon.tinyui/HttpRequest|null[0]
-    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String?, kotlin/Long?) // wang.harlon.tinyui/HttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?;kotlin.Long?){}[0]
+final class app.tinyui/EventBus { // app.tinyui/EventBus|null[0]
+    constructor <init>() // app.tinyui/EventBus.<init>|<init>(){}[0]
 
-    final val bodyJson // wang.harlon.tinyui/HttpRequest.bodyJson|{}bodyJson[0]
-        final fun <get-bodyJson>(): kotlin/String? // wang.harlon.tinyui/HttpRequest.bodyJson.<get-bodyJson>|<get-bodyJson>(){}[0]
-    final val headers // wang.harlon.tinyui/HttpRequest.headers|{}headers[0]
-        final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/HttpRequest.headers.<get-headers>|<get-headers>(){}[0]
-    final val method // wang.harlon.tinyui/HttpRequest.method|{}method[0]
-        final fun <get-method>(): kotlin/String // wang.harlon.tinyui/HttpRequest.method.<get-method>|<get-method>(){}[0]
-    final val timeoutMs // wang.harlon.tinyui/HttpRequest.timeoutMs|{}timeoutMs[0]
-        final fun <get-timeoutMs>(): kotlin/Long? // wang.harlon.tinyui/HttpRequest.timeoutMs.<get-timeoutMs>|<get-timeoutMs>(){}[0]
-    final val url // wang.harlon.tinyui/HttpRequest.url|{}url[0]
-        final fun <get-url>(): kotlin/String // wang.harlon.tinyui/HttpRequest.url.<get-url>|<get-url>(){}[0]
+    final fun emit(kotlin/String, kotlin/String) // app.tinyui/EventBus.emit|emit(kotlin.String;kotlin.String){}[0]
+    final fun subscribe(kotlin/String, kotlin/Function1<kotlin/String, kotlin/Unit>): kotlin/AutoCloseable // app.tinyui/EventBus.subscribe|subscribe(kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
 }
 
-final class wang.harlon.tinyui/HttpResponse { // wang.harlon.tinyui/HttpResponse|null[0]
-    constructor <init>(kotlin/Int, kotlin/String) // wang.harlon.tinyui/HttpResponse.<init>|<init>(kotlin.Int;kotlin.String){}[0]
+final class app.tinyui/HostException : kotlin/Exception { // app.tinyui/HostException|null[0]
+    constructor <init>(kotlin/String, kotlin/String) // app.tinyui/HostException.<init>|<init>(kotlin.String;kotlin.String){}[0]
 
-    final val bodyJson // wang.harlon.tinyui/HttpResponse.bodyJson|{}bodyJson[0]
-        final fun <get-bodyJson>(): kotlin/String // wang.harlon.tinyui/HttpResponse.bodyJson.<get-bodyJson>|<get-bodyJson>(){}[0]
-    final val status // wang.harlon.tinyui/HttpResponse.status|{}status[0]
-        final fun <get-status>(): kotlin/Int // wang.harlon.tinyui/HttpResponse.status.<get-status>|<get-status>(){}[0]
+    final val code // app.tinyui/HostException.code|{}code[0]
+        final fun <get-code>(): kotlin/String // app.tinyui/HostException.code.<get-code>|<get-code>(){}[0]
 }
 
-final class wang.harlon.tinyui/InMemoryStore : wang.harlon.tinyui/Store { // wang.harlon.tinyui/InMemoryStore|null[0]
-    constructor <init>() // wang.harlon.tinyui/InMemoryStore.<init>|<init>(){}[0]
+final class app.tinyui/HostServices { // app.tinyui/HostServices|null[0]
+    constructor <init>(app.tinyui/Navigator = ..., app.tinyui/Store = ..., app.tinyui/HttpClient = ..., app.tinyui/I18n = ..., app.tinyui/Config = ..., app.tinyui/EventBus = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HostCapability> = ...) // app.tinyui/HostServices.<init>|<init>(app.tinyui.Navigator;app.tinyui.Store;app.tinyui.HttpClient;app.tinyui.I18n;app.tinyui.Config;app.tinyui.EventBus;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,app.tinyui.HostCapability>){}[0]
 
-    final fun get(kotlin/String): kotlin/String? // wang.harlon.tinyui/InMemoryStore.get|get(kotlin.String){}[0]
-    final fun observe(kotlin/String, kotlin/Function1<wang.harlon.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/InMemoryStore.observe|observe(kotlin.String;kotlin.Function1<wang.harlon.tinyui.StoreValue,kotlin.Unit>){}[0]
-    final fun set(kotlin/String, kotlin/String) // wang.harlon.tinyui/InMemoryStore.set|set(kotlin.String;kotlin.String){}[0]
-}
+    final val capabilities // app.tinyui/HostServices.capabilities|{}capabilities[0]
+        final fun <get-capabilities>(): kotlin.collections/Map<kotlin/String, app.tinyui/HostCapability> // app.tinyui/HostServices.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
+    final val config // app.tinyui/HostServices.config|{}config[0]
+        final fun <get-config>(): app.tinyui/Config // app.tinyui/HostServices.config.<get-config>|<get-config>(){}[0]
+    final val deviceInfo // app.tinyui/HostServices.deviceInfo|{}deviceInfo[0]
+        final fun <get-deviceInfo>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/HostServices.deviceInfo.<get-deviceInfo>|<get-deviceInfo>(){}[0]
+    final val events // app.tinyui/HostServices.events|{}events[0]
+        final fun <get-events>(): app.tinyui/EventBus // app.tinyui/HostServices.events.<get-events>|<get-events>(){}[0]
+    final val http // app.tinyui/HostServices.http|{}http[0]
+        final fun <get-http>(): app.tinyui/HttpClient // app.tinyui/HostServices.http.<get-http>|<get-http>(){}[0]
+    final val i18n // app.tinyui/HostServices.i18n|{}i18n[0]
+        final fun <get-i18n>(): app.tinyui/I18n // app.tinyui/HostServices.i18n.<get-i18n>|<get-i18n>(){}[0]
+    final val navigator // app.tinyui/HostServices.navigator|{}navigator[0]
+        final fun <get-navigator>(): app.tinyui/Navigator // app.tinyui/HostServices.navigator.<get-navigator>|<get-navigator>(){}[0]
+    final val store // app.tinyui/HostServices.store|{}store[0]
+        final fun <get-store>(): app.tinyui/Store // app.tinyui/HostServices.store.<get-store>|<get-store>(){}[0]
 
-final class wang.harlon.tinyui/PageError { // wang.harlon.tinyui/PageError|null[0]
-    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/List<wang.harlon.tinyui/StackFrame> = ..., kotlin/String? = ...) // wang.harlon.tinyui/PageError.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String?;kotlin.String?;kotlin.collections.List<wang.harlon.tinyui.StackFrame>;kotlin.String?){}[0]
-
-    final val buildId // wang.harlon.tinyui/PageError.buildId|{}buildId[0]
-        final fun <get-buildId>(): kotlin/String // wang.harlon.tinyui/PageError.buildId.<get-buildId>|<get-buildId>(){}[0]
-    final val entry // wang.harlon.tinyui/PageError.entry|{}entry[0]
-        final fun <get-entry>(): kotlin/String? // wang.harlon.tinyui/PageError.entry.<get-entry>|<get-entry>(){}[0]
-    final val frames // wang.harlon.tinyui/PageError.frames|{}frames[0]
-        final fun <get-frames>(): kotlin.collections/List<wang.harlon.tinyui/StackFrame> // wang.harlon.tinyui/PageError.frames.<get-frames>|<get-frames>(){}[0]
-    final val jsStack // wang.harlon.tinyui/PageError.jsStack|{}jsStack[0]
-        final fun <get-jsStack>(): kotlin/String? // wang.harlon.tinyui/PageError.jsStack.<get-jsStack>|<get-jsStack>(){}[0]
-    final val kind // wang.harlon.tinyui/PageError.kind|{}kind[0]
-        final fun <get-kind>(): kotlin/String // wang.harlon.tinyui/PageError.kind.<get-kind>|<get-kind>(){}[0]
-    final val message // wang.harlon.tinyui/PageError.message|{}message[0]
-        final fun <get-message>(): kotlin/String // wang.harlon.tinyui/PageError.message.<get-message>|<get-message>(){}[0]
-    final val op // wang.harlon.tinyui/PageError.op|{}op[0]
-        final fun <get-op>(): kotlin/String? // wang.harlon.tinyui/PageError.op.<get-op>|<get-op>(){}[0]
-    final val page // wang.harlon.tinyui/PageError.page|{}page[0]
-        final fun <get-page>(): kotlin/String // wang.harlon.tinyui/PageError.page.<get-page>|<get-page>(){}[0]
-
-    final fun toString(): kotlin/String // wang.harlon.tinyui/PageError.toString|toString(){}[0]
-}
-
-final class wang.harlon.tinyui/PageFailure { // wang.harlon.tinyui/PageFailure|null[0]
-    constructor <init>(wang.harlon.tinyui/PageError) // wang.harlon.tinyui/PageFailure.<init>|<init>(wang.harlon.tinyui.PageError){}[0]
-
-    final val error // wang.harlon.tinyui/PageFailure.error|{}error[0]
-        final fun <get-error>(): wang.harlon.tinyui/PageError // wang.harlon.tinyui/PageFailure.error.<get-error>|<get-error>(){}[0]
-    final val kind // wang.harlon.tinyui/PageFailure.kind|{}kind[0]
-        final fun <get-kind>(): kotlin/String // wang.harlon.tinyui/PageFailure.kind.<get-kind>|<get-kind>(){}[0]
-    final val message // wang.harlon.tinyui/PageFailure.message|{}message[0]
-        final fun <get-message>(): kotlin/String // wang.harlon.tinyui/PageFailure.message.<get-message>|<get-message>(){}[0]
-}
-
-final class wang.harlon.tinyui/PageHost { // wang.harlon.tinyui/PageHost|null[0]
-    constructor <init>(wang.harlon.tinyui/RuntimeBundle, wang.harlon.tinyui/PageModule, wang.harlon.tinyui.schema/ComponentRegistry, wang.harlon.tinyui/PageSink, wang.harlon.tinyui/HostServices = ..., kotlin/String = ..., kotlin/Long = ..., wang.harlon.tinyui/SourceMaps = ...) // wang.harlon.tinyui/PageHost.<init>|<init>(wang.harlon.tinyui.RuntimeBundle;wang.harlon.tinyui.PageModule;wang.harlon.tinyui.schema.ComponentRegistry;wang.harlon.tinyui.PageSink;wang.harlon.tinyui.HostServices;kotlin.String;kotlin.Long;wang.harlon.tinyui.SourceMaps){}[0]
-
-    final val registry // wang.harlon.tinyui/PageHost.registry|{}registry[0]
-        final fun <get-registry>(): wang.harlon.tinyui.schema/ComponentRegistry // wang.harlon.tinyui/PageHost.registry.<get-registry>|<get-registry>(){}[0]
-    final val tree // wang.harlon.tinyui/PageHost.tree|{}tree[0]
-        final fun <get-tree>(): wang.harlon.tinyui.node/NodeTree // wang.harlon.tinyui/PageHost.tree.<get-tree>|<get-tree>(){}[0]
-
-    final var failure // wang.harlon.tinyui/PageHost.failure|{}failure[0]
-        final fun <get-failure>(): wang.harlon.tinyui/PageFailure? // wang.harlon.tinyui/PageHost.failure.<get-failure>|<get-failure>(){}[0]
-
-    final fun close() // wang.harlon.tinyui/PageHost.close|close(){}[0]
-    final fun dispatch(kotlin/Int, kotlin/String, kotlin/String) // wang.harlon.tinyui/PageHost.dispatch|dispatch(kotlin.Int;kotlin.String;kotlin.String){}[0]
-    final fun emit(kotlin/String, kotlin/String) // wang.harlon.tinyui/PageHost.emit|emit(kotlin.String;kotlin.String){}[0]
-    final fun reject(kotlin/Int, kotlin/String, kotlin/String) // wang.harlon.tinyui/PageHost.reject|reject(kotlin.Int;kotlin.String;kotlin.String){}[0]
-    final fun resolve(kotlin/Int, kotlin/String) // wang.harlon.tinyui/PageHost.resolve|resolve(kotlin.Int;kotlin.String){}[0]
-    final fun start() // wang.harlon.tinyui/PageHost.start|start(){}[0]
-    final fun visible(kotlin/Boolean) // wang.harlon.tinyui/PageHost.visible|visible(kotlin.Boolean){}[0]
-
-    final object Companion { // wang.harlon.tinyui/PageHost.Companion|null[0]
-        final const val MODULE_SCHEME // wang.harlon.tinyui/PageHost.Companion.MODULE_SCHEME|{}MODULE_SCHEME[0]
-            final fun <get-MODULE_SCHEME>(): kotlin/String // wang.harlon.tinyui/PageHost.Companion.MODULE_SCHEME.<get-MODULE_SCHEME>|<get-MODULE_SCHEME>(){}[0]
-        final const val PROTOCOL // wang.harlon.tinyui/PageHost.Companion.PROTOCOL|{}PROTOCOL[0]
-            final fun <get-PROTOCOL>(): kotlin/Int // wang.harlon.tinyui/PageHost.Companion.PROTOCOL.<get-PROTOCOL>|<get-PROTOCOL>(){}[0]
+    final object Companion { // app.tinyui/HostServices.Companion|null[0]
+        final val Default // app.tinyui/HostServices.Companion.Default|{}Default[0]
+            final fun <get-Default>(): app.tinyui/HostServices // app.tinyui/HostServices.Companion.Default.<get-Default>|<get-Default>(){}[0]
     }
 }
 
-final class wang.harlon.tinyui/PageModule { // wang.harlon.tinyui/PageModule|null[0]
-    constructor <init>(kotlin/String, kotlin/ByteArray, kotlin/String = ...) // wang.harlon.tinyui/PageModule.<init>|<init>(kotlin.String;kotlin.ByteArray;kotlin.String){}[0]
+final class app.tinyui/HttpRequest { // app.tinyui/HttpRequest|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String?, kotlin/Long?) // app.tinyui/HttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?;kotlin.Long?){}[0]
 
-    final val buildId // wang.harlon.tinyui/PageModule.buildId|{}buildId[0]
-        final fun <get-buildId>(): kotlin/String // wang.harlon.tinyui/PageModule.buildId.<get-buildId>|<get-buildId>(){}[0]
-    final val bytecode // wang.harlon.tinyui/PageModule.bytecode|{}bytecode[0]
-        final fun <get-bytecode>(): kotlin/ByteArray // wang.harlon.tinyui/PageModule.bytecode.<get-bytecode>|<get-bytecode>(){}[0]
-    final val name // wang.harlon.tinyui/PageModule.name|{}name[0]
-        final fun <get-name>(): kotlin/String // wang.harlon.tinyui/PageModule.name.<get-name>|<get-name>(){}[0]
+    final val bodyJson // app.tinyui/HttpRequest.bodyJson|{}bodyJson[0]
+        final fun <get-bodyJson>(): kotlin/String? // app.tinyui/HttpRequest.bodyJson.<get-bodyJson>|<get-bodyJson>(){}[0]
+    final val headers // app.tinyui/HttpRequest.headers|{}headers[0]
+        final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/HttpRequest.headers.<get-headers>|<get-headers>(){}[0]
+    final val method // app.tinyui/HttpRequest.method|{}method[0]
+        final fun <get-method>(): kotlin/String // app.tinyui/HttpRequest.method.<get-method>|<get-method>(){}[0]
+    final val timeoutMs // app.tinyui/HttpRequest.timeoutMs|{}timeoutMs[0]
+        final fun <get-timeoutMs>(): kotlin/Long? // app.tinyui/HttpRequest.timeoutMs.<get-timeoutMs>|<get-timeoutMs>(){}[0]
+    final val url // app.tinyui/HttpRequest.url|{}url[0]
+        final fun <get-url>(): kotlin/String // app.tinyui/HttpRequest.url.<get-url>|<get-url>(){}[0]
 }
 
-final class wang.harlon.tinyui/RuntimeBundle { // wang.harlon.tinyui/RuntimeBundle|null[0]
-    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // wang.harlon.tinyui/RuntimeBundle.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+final class app.tinyui/HttpResponse { // app.tinyui/HttpResponse|null[0]
+    constructor <init>(kotlin/Int, kotlin/String) // app.tinyui/HttpResponse.<init>|<init>(kotlin.Int;kotlin.String){}[0]
 
-    final val core // wang.harlon.tinyui/RuntimeBundle.core|{}core[0]
-        final fun <get-core>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.core.<get-core>|<get-core>(){}[0]
-    final val native // wang.harlon.tinyui/RuntimeBundle.native|{}native[0]
-        final fun <get-native>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.native.<get-native>|<get-native>(){}[0]
+    final val bodyJson // app.tinyui/HttpResponse.bodyJson|{}bodyJson[0]
+        final fun <get-bodyJson>(): kotlin/String // app.tinyui/HttpResponse.bodyJson.<get-bodyJson>|<get-bodyJson>(){}[0]
+    final val status // app.tinyui/HttpResponse.status|{}status[0]
+        final fun <get-status>(): kotlin/Int // app.tinyui/HttpResponse.status.<get-status>|<get-status>(){}[0]
 }
 
-final class wang.harlon.tinyui/SourceMaps { // wang.harlon.tinyui/SourceMaps|null[0]
-    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String>) // wang.harlon.tinyui/SourceMaps.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+final class app.tinyui/InMemoryStore : app.tinyui/Store { // app.tinyui/InMemoryStore|null[0]
+    constructor <init>() // app.tinyui/InMemoryStore.<init>|<init>(){}[0]
 
-    final fun frames(kotlin/String?): kotlin.collections/List<wang.harlon.tinyui/StackFrame> // wang.harlon.tinyui/SourceMaps.frames|frames(kotlin.String?){}[0]
+    final fun get(kotlin/String): kotlin/String? // app.tinyui/InMemoryStore.get|get(kotlin.String){}[0]
+    final fun observe(kotlin/String, kotlin/Function1<app.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // app.tinyui/InMemoryStore.observe|observe(kotlin.String;kotlin.Function1<app.tinyui.StoreValue,kotlin.Unit>){}[0]
+    final fun set(kotlin/String, kotlin/String) // app.tinyui/InMemoryStore.set|set(kotlin.String;kotlin.String){}[0]
+}
 
-    final object Companion { // wang.harlon.tinyui/SourceMaps.Companion|null[0]
-        final val EMPTY // wang.harlon.tinyui/SourceMaps.Companion.EMPTY|{}EMPTY[0]
-            final fun <get-EMPTY>(): wang.harlon.tinyui/SourceMaps // wang.harlon.tinyui/SourceMaps.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
+final class app.tinyui/PageError { // app.tinyui/PageError|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String? = ..., kotlin/String? = ..., kotlin.collections/List<app.tinyui/StackFrame> = ..., kotlin/String? = ...) // app.tinyui/PageError.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String?;kotlin.String?;kotlin.collections.List<app.tinyui.StackFrame>;kotlin.String?){}[0]
+
+    final val buildId // app.tinyui/PageError.buildId|{}buildId[0]
+        final fun <get-buildId>(): kotlin/String // app.tinyui/PageError.buildId.<get-buildId>|<get-buildId>(){}[0]
+    final val entry // app.tinyui/PageError.entry|{}entry[0]
+        final fun <get-entry>(): kotlin/String? // app.tinyui/PageError.entry.<get-entry>|<get-entry>(){}[0]
+    final val frames // app.tinyui/PageError.frames|{}frames[0]
+        final fun <get-frames>(): kotlin.collections/List<app.tinyui/StackFrame> // app.tinyui/PageError.frames.<get-frames>|<get-frames>(){}[0]
+    final val jsStack // app.tinyui/PageError.jsStack|{}jsStack[0]
+        final fun <get-jsStack>(): kotlin/String? // app.tinyui/PageError.jsStack.<get-jsStack>|<get-jsStack>(){}[0]
+    final val kind // app.tinyui/PageError.kind|{}kind[0]
+        final fun <get-kind>(): kotlin/String // app.tinyui/PageError.kind.<get-kind>|<get-kind>(){}[0]
+    final val message // app.tinyui/PageError.message|{}message[0]
+        final fun <get-message>(): kotlin/String // app.tinyui/PageError.message.<get-message>|<get-message>(){}[0]
+    final val op // app.tinyui/PageError.op|{}op[0]
+        final fun <get-op>(): kotlin/String? // app.tinyui/PageError.op.<get-op>|<get-op>(){}[0]
+    final val page // app.tinyui/PageError.page|{}page[0]
+        final fun <get-page>(): kotlin/String // app.tinyui/PageError.page.<get-page>|<get-page>(){}[0]
+
+    final fun toString(): kotlin/String // app.tinyui/PageError.toString|toString(){}[0]
+}
+
+final class app.tinyui/PageFailure { // app.tinyui/PageFailure|null[0]
+    constructor <init>(app.tinyui/PageError) // app.tinyui/PageFailure.<init>|<init>(app.tinyui.PageError){}[0]
+
+    final val error // app.tinyui/PageFailure.error|{}error[0]
+        final fun <get-error>(): app.tinyui/PageError // app.tinyui/PageFailure.error.<get-error>|<get-error>(){}[0]
+    final val kind // app.tinyui/PageFailure.kind|{}kind[0]
+        final fun <get-kind>(): kotlin/String // app.tinyui/PageFailure.kind.<get-kind>|<get-kind>(){}[0]
+    final val message // app.tinyui/PageFailure.message|{}message[0]
+        final fun <get-message>(): kotlin/String // app.tinyui/PageFailure.message.<get-message>|<get-message>(){}[0]
+}
+
+final class app.tinyui/PageHost { // app.tinyui/PageHost|null[0]
+    constructor <init>(app.tinyui/RuntimeBundle, app.tinyui/PageModule, app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/HostServices = ..., kotlin/String = ..., kotlin/Long = ..., app.tinyui/SourceMaps = ...) // app.tinyui/PageHost.<init>|<init>(app.tinyui.RuntimeBundle;app.tinyui.PageModule;app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.HostServices;kotlin.String;kotlin.Long;app.tinyui.SourceMaps){}[0]
+
+    final val registry // app.tinyui/PageHost.registry|{}registry[0]
+        final fun <get-registry>(): app.tinyui.schema/ComponentRegistry // app.tinyui/PageHost.registry.<get-registry>|<get-registry>(){}[0]
+    final val tree // app.tinyui/PageHost.tree|{}tree[0]
+        final fun <get-tree>(): app.tinyui.node/NodeTree // app.tinyui/PageHost.tree.<get-tree>|<get-tree>(){}[0]
+
+    final var failure // app.tinyui/PageHost.failure|{}failure[0]
+        final fun <get-failure>(): app.tinyui/PageFailure? // app.tinyui/PageHost.failure.<get-failure>|<get-failure>(){}[0]
+
+    final fun close() // app.tinyui/PageHost.close|close(){}[0]
+    final fun dispatch(kotlin/Int, kotlin/String, kotlin/String) // app.tinyui/PageHost.dispatch|dispatch(kotlin.Int;kotlin.String;kotlin.String){}[0]
+    final fun emit(kotlin/String, kotlin/String) // app.tinyui/PageHost.emit|emit(kotlin.String;kotlin.String){}[0]
+    final fun reject(kotlin/Int, kotlin/String, kotlin/String) // app.tinyui/PageHost.reject|reject(kotlin.Int;kotlin.String;kotlin.String){}[0]
+    final fun resolve(kotlin/Int, kotlin/String) // app.tinyui/PageHost.resolve|resolve(kotlin.Int;kotlin.String){}[0]
+    final fun start() // app.tinyui/PageHost.start|start(){}[0]
+    final fun visible(kotlin/Boolean) // app.tinyui/PageHost.visible|visible(kotlin.Boolean){}[0]
+
+    final object Companion { // app.tinyui/PageHost.Companion|null[0]
+        final const val MODULE_SCHEME // app.tinyui/PageHost.Companion.MODULE_SCHEME|{}MODULE_SCHEME[0]
+            final fun <get-MODULE_SCHEME>(): kotlin/String // app.tinyui/PageHost.Companion.MODULE_SCHEME.<get-MODULE_SCHEME>|<get-MODULE_SCHEME>(){}[0]
+        final const val PROTOCOL // app.tinyui/PageHost.Companion.PROTOCOL|{}PROTOCOL[0]
+            final fun <get-PROTOCOL>(): kotlin/Int // app.tinyui/PageHost.Companion.PROTOCOL.<get-PROTOCOL>|<get-PROTOCOL>(){}[0]
     }
 }
 
-final class wang.harlon.tinyui/StackFrame { // wang.harlon.tinyui/StackFrame|null[0]
-    constructor <init>(kotlin/String, kotlin/String, kotlin/Int, kotlin/Int?, kotlin/Boolean) // wang.harlon.tinyui/StackFrame.<init>|<init>(kotlin.String;kotlin.String;kotlin.Int;kotlin.Int?;kotlin.Boolean){}[0]
+final class app.tinyui/PageModule { // app.tinyui/PageModule|null[0]
+    constructor <init>(kotlin/String, kotlin/ByteArray, kotlin/String = ...) // app.tinyui/PageModule.<init>|<init>(kotlin.String;kotlin.ByteArray;kotlin.String){}[0]
 
-    final val column // wang.harlon.tinyui/StackFrame.column|{}column[0]
-        final fun <get-column>(): kotlin/Int? // wang.harlon.tinyui/StackFrame.column.<get-column>|<get-column>(){}[0]
-    final val file // wang.harlon.tinyui/StackFrame.file|{}file[0]
-        final fun <get-file>(): kotlin/String // wang.harlon.tinyui/StackFrame.file.<get-file>|<get-file>(){}[0]
-    final val function // wang.harlon.tinyui/StackFrame.function|{}function[0]
-        final fun <get-function>(): kotlin/String // wang.harlon.tinyui/StackFrame.function.<get-function>|<get-function>(){}[0]
-    final val line // wang.harlon.tinyui/StackFrame.line|{}line[0]
-        final fun <get-line>(): kotlin/Int // wang.harlon.tinyui/StackFrame.line.<get-line>|<get-line>(){}[0]
-    final val mapped // wang.harlon.tinyui/StackFrame.mapped|{}mapped[0]
-        final fun <get-mapped>(): kotlin/Boolean // wang.harlon.tinyui/StackFrame.mapped.<get-mapped>|<get-mapped>(){}[0]
-
-    final fun toString(): kotlin/String // wang.harlon.tinyui/StackFrame.toString|toString(){}[0]
+    final val buildId // app.tinyui/PageModule.buildId|{}buildId[0]
+        final fun <get-buildId>(): kotlin/String // app.tinyui/PageModule.buildId.<get-buildId>|<get-buildId>(){}[0]
+    final val bytecode // app.tinyui/PageModule.bytecode|{}bytecode[0]
+        final fun <get-bytecode>(): kotlin/ByteArray // app.tinyui/PageModule.bytecode.<get-bytecode>|<get-bytecode>(){}[0]
+    final val name // app.tinyui/PageModule.name|{}name[0]
+        final fun <get-name>(): kotlin/String // app.tinyui/PageModule.name.<get-name>|<get-name>(){}[0]
 }
 
-final class wang.harlon.tinyui/StoreValue { // wang.harlon.tinyui/StoreValue|null[0]
-    constructor <init>(kotlin/String, kotlin/Long) // wang.harlon.tinyui/StoreValue.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+final class app.tinyui/RuntimeBundle { // app.tinyui/RuntimeBundle|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // app.tinyui/RuntimeBundle.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
 
-    final val json // wang.harlon.tinyui/StoreValue.json|{}json[0]
-        final fun <get-json>(): kotlin/String // wang.harlon.tinyui/StoreValue.json.<get-json>|<get-json>(){}[0]
-    final val version // wang.harlon.tinyui/StoreValue.version|{}version[0]
-        final fun <get-version>(): kotlin/Long // wang.harlon.tinyui/StoreValue.version.<get-version>|<get-version>(){}[0]
+    final val core // app.tinyui/RuntimeBundle.core|{}core[0]
+        final fun <get-core>(): kotlin/ByteArray // app.tinyui/RuntimeBundle.core.<get-core>|<get-core>(){}[0]
+    final val native // app.tinyui/RuntimeBundle.native|{}native[0]
+        final fun <get-native>(): kotlin/ByteArray // app.tinyui/RuntimeBundle.native.<get-native>|<get-native>(){}[0]
 }
 
-sealed class wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec|null[0]
-    abstract val default // wang.harlon.tinyui.schema/PropSpec.default|{}default[0]
-        abstract fun <get-default>(): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.default.<get-default>|<get-default>(){}[0]
-    final val initial // wang.harlon.tinyui.schema/PropSpec.initial|{}initial[0]
-        final fun <get-initial>(): kotlin/Boolean // wang.harlon.tinyui.schema/PropSpec.initial.<get-initial>|<get-initial>(){}[0]
-    final val kind // wang.harlon.tinyui.schema/PropSpec.kind|{}kind[0]
-        final fun <get-kind>(): kotlin/String // wang.harlon.tinyui.schema/PropSpec.kind.<get-kind>|<get-kind>(){}[0]
-    final val required // wang.harlon.tinyui.schema/PropSpec.required|{}required[0]
-        final fun <get-required>(): kotlin/Boolean // wang.harlon.tinyui.schema/PropSpec.required.<get-required>|<get-required>(){}[0]
+final class app.tinyui/SourceMaps { // app.tinyui/SourceMaps|null[0]
+    constructor <init>(kotlin.collections/Map<kotlin/String, kotlin/String>) // app.tinyui/SourceMaps.<init>|<init>(kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
-    abstract fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    final fun frames(kotlin/String?): kotlin.collections/List<app.tinyui/StackFrame> // app.tinyui/SourceMaps.frames|frames(kotlin.String?){}[0]
 
-    final class Bool : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Bool|null[0]
-        constructor <init>(kotlin/Boolean?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Bool.<init>|<init>(kotlin.Boolean?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Bool.default|{}default[0]
-            final fun <get-default>(): kotlin/Boolean? // wang.harlon.tinyui.schema/PropSpec.Bool.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Bool.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class ColorSpec : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.ColorSpec|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.ColorSpec.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.ColorSpec.default|{}default[0]
-            final fun <get-default>(): wang.harlon.tinyui.schema/ColorValue? // wang.harlon.tinyui.schema/PropSpec.ColorSpec.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.ColorSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Dp : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Dp|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Dp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Dp.default|{}default[0]
-            final fun <get-default>(): androidx.compose.ui.unit/Dp? // wang.harlon.tinyui.schema/PropSpec.Dp.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Dp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Enum : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Enum|null[0]
-        constructor <init>(kotlin.collections/Set<kotlin/String>, kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Enum.<init>|<init>(kotlin.collections.Set<kotlin.String>;kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Enum.default|{}default[0]
-            final fun <get-default>(): kotlin/String? // wang.harlon.tinyui.schema/PropSpec.Enum.default.<get-default>|<get-default>(){}[0]
-        final val values // wang.harlon.tinyui.schema/PropSpec.Enum.values|{}values[0]
-            final fun <get-values>(): kotlin.collections/Set<kotlin/String> // wang.harlon.tinyui.schema/PropSpec.Enum.values.<get-values>|<get-values>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Enum.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Num : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Num|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Num.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Num.default|{}default[0]
-            final fun <get-default>(): kotlin/Double? // wang.harlon.tinyui.schema/PropSpec.Num.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Num.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Size : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Size|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Size.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Size.default|{}default[0]
-            final fun <get-default>(): wang.harlon.tinyui.schema/SizeValue? // wang.harlon.tinyui.schema/PropSpec.Size.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Size.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Sp : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Sp|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Sp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Sp.default|{}default[0]
-            final fun <get-default>(): androidx.compose.ui.unit/TextUnit? // wang.harlon.tinyui.schema/PropSpec.Sp.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Sp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
-    }
-
-    final class Str : wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec.Str|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // wang.harlon.tinyui.schema/PropSpec.Str.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
-
-        final val default // wang.harlon.tinyui.schema/PropSpec.Str.default|{}default[0]
-            final fun <get-default>(): kotlin/String? // wang.harlon.tinyui.schema/PropSpec.Str.default.<get-default>|<get-default>(){}[0]
-
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // wang.harlon.tinyui.schema/PropSpec.Str.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    final object Companion { // app.tinyui/SourceMaps.Companion|null[0]
+        final val EMPTY // app.tinyui/SourceMaps.Companion.EMPTY|{}EMPTY[0]
+            final fun <get-EMPTY>(): app.tinyui/SourceMaps // app.tinyui/SourceMaps.Companion.EMPTY.<get-EMPTY>|<get-EMPTY>(){}[0]
     }
 }
 
-final object wang.harlon.tinyui.components.generated/BuiltinSchemas { // wang.harlon.tinyui.components.generated/BuiltinSchemas|null[0]
-    final val Box // wang.harlon.tinyui.components.generated/BuiltinSchemas.Box|{}Box[0]
-        final fun <get-Box>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Box.<get-Box>|<get-Box>(){}[0]
-    final val Button // wang.harlon.tinyui.components.generated/BuiltinSchemas.Button|{}Button[0]
-        final fun <get-Button>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
-    final val Column // wang.harlon.tinyui.components.generated/BuiltinSchemas.Column|{}Column[0]
-        final fun <get-Column>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
-    final val LazyColumn // wang.harlon.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]
-        final fun <get-LazyColumn>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.LazyColumn.<get-LazyColumn>|<get-LazyColumn>(){}[0]
-    final val RadioButton // wang.harlon.tinyui.components.generated/BuiltinSchemas.RadioButton|{}RadioButton[0]
-        final fun <get-RadioButton>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
-    final val Row // wang.harlon.tinyui.components.generated/BuiltinSchemas.Row|{}Row[0]
-        final fun <get-Row>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Row.<get-Row>|<get-Row>(){}[0]
-    final val Spacer // wang.harlon.tinyui.components.generated/BuiltinSchemas.Spacer|{}Spacer[0]
-        final fun <get-Spacer>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Spacer.<get-Spacer>|<get-Spacer>(){}[0]
-    final val Text // wang.harlon.tinyui.components.generated/BuiltinSchemas.Text|{}Text[0]
-        final fun <get-Text>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Text.<get-Text>|<get-Text>(){}[0]
-    final val TextField // wang.harlon.tinyui.components.generated/BuiltinSchemas.TextField|{}TextField[0]
-        final fun <get-TextField>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.TextField.<get-TextField>|<get-TextField>(){}[0]
-    final val all // wang.harlon.tinyui.components.generated/BuiltinSchemas.all|{}all[0]
-        final fun <get-all>(): kotlin.collections/List<wang.harlon.tinyui.schema/ComponentSchema> // wang.harlon.tinyui.components.generated/BuiltinSchemas.all.<get-all>|<get-all>(){}[0]
-    final val colorTokens // wang.harlon.tinyui.components.generated/BuiltinSchemas.colorTokens|{}colorTokens[0]
-        final fun <get-colorTokens>(): kotlin.collections/Set<kotlin/String> // wang.harlon.tinyui.components.generated/BuiltinSchemas.colorTokens.<get-colorTokens>|<get-colorTokens>(){}[0]
-    final val textStyles // wang.harlon.tinyui.components.generated/BuiltinSchemas.textStyles|{}textStyles[0]
-        final fun <get-textStyles>(): kotlin.collections/Set<kotlin/String> // wang.harlon.tinyui.components.generated/BuiltinSchemas.textStyles.<get-textStyles>|<get-textStyles>(){}[0]
+final class app.tinyui/StackFrame { // app.tinyui/StackFrame|null[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin/Int, kotlin/Int?, kotlin/Boolean) // app.tinyui/StackFrame.<init>|<init>(kotlin.String;kotlin.String;kotlin.Int;kotlin.Int?;kotlin.Boolean){}[0]
+
+    final val column // app.tinyui/StackFrame.column|{}column[0]
+        final fun <get-column>(): kotlin/Int? // app.tinyui/StackFrame.column.<get-column>|<get-column>(){}[0]
+    final val file // app.tinyui/StackFrame.file|{}file[0]
+        final fun <get-file>(): kotlin/String // app.tinyui/StackFrame.file.<get-file>|<get-file>(){}[0]
+    final val function // app.tinyui/StackFrame.function|{}function[0]
+        final fun <get-function>(): kotlin/String // app.tinyui/StackFrame.function.<get-function>|<get-function>(){}[0]
+    final val line // app.tinyui/StackFrame.line|{}line[0]
+        final fun <get-line>(): kotlin/Int // app.tinyui/StackFrame.line.<get-line>|<get-line>(){}[0]
+    final val mapped // app.tinyui/StackFrame.mapped|{}mapped[0]
+        final fun <get-mapped>(): kotlin/Boolean // app.tinyui/StackFrame.mapped.<get-mapped>|<get-mapped>(){}[0]
+
+    final fun toString(): kotlin/String // app.tinyui/StackFrame.toString|toString(){}[0]
 }
 
-final object wang.harlon.tinyui.schema/LayoutProps { // wang.harlon.tinyui.schema/LayoutProps|null[0]
-    final val specs // wang.harlon.tinyui.schema/LayoutProps.specs|{}specs[0]
-        final fun <get-specs>(): kotlin.collections/Map<kotlin/String, wang.harlon.tinyui.schema/PropSpec> // wang.harlon.tinyui.schema/LayoutProps.specs.<get-specs>|<get-specs>(){}[0]
+final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
+    constructor <init>(kotlin/String, kotlin/Long) // app.tinyui/StoreValue.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val json // app.tinyui/StoreValue.json|{}json[0]
+        final fun <get-json>(): kotlin/String // app.tinyui/StoreValue.json.<get-json>|<get-json>(){}[0]
+    final val version // app.tinyui/StoreValue.version|{}version[0]
+        final fun <get-version>(): kotlin/Long // app.tinyui/StoreValue.version.<get-version>|<get-version>(){}[0]
 }
 
-final object wang.harlon.tinyui.schema/Theme { // wang.harlon.tinyui.schema/Theme|null[0]
-    final fun color(androidx.compose.material3/ColorScheme, kotlin/String): androidx.compose.ui.graphics/Color? // wang.harlon.tinyui.schema/Theme.color|color(androidx.compose.material3.ColorScheme;kotlin.String){}[0]
-    final fun isColorToken(kotlin/String): kotlin/Boolean // wang.harlon.tinyui.schema/Theme.isColorToken|isColorToken(kotlin.String){}[0]
-    final fun textStyle(androidx.compose.material3/Typography, kotlin/String): androidx.compose.ui.text/TextStyle? // wang.harlon.tinyui.schema/Theme.textStyle|textStyle(androidx.compose.material3.Typography;kotlin.String){}[0]
+sealed class app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec|null[0]
+    abstract val default // app.tinyui.schema/PropSpec.default|{}default[0]
+        abstract fun <get-default>(): kotlin/Any? // app.tinyui.schema/PropSpec.default.<get-default>|<get-default>(){}[0]
+    final val initial // app.tinyui.schema/PropSpec.initial|{}initial[0]
+        final fun <get-initial>(): kotlin/Boolean // app.tinyui.schema/PropSpec.initial.<get-initial>|<get-initial>(){}[0]
+    final val kind // app.tinyui.schema/PropSpec.kind|{}kind[0]
+        final fun <get-kind>(): kotlin/String // app.tinyui.schema/PropSpec.kind.<get-kind>|<get-kind>(){}[0]
+    final val required // app.tinyui.schema/PropSpec.required|{}required[0]
+        final fun <get-required>(): kotlin/Boolean // app.tinyui.schema/PropSpec.required.<get-required>|<get-required>(){}[0]
+
+    abstract fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+
+    final class Bool : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Bool|null[0]
+        constructor <init>(kotlin/Boolean?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Bool.<init>|<init>(kotlin.Boolean?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Bool.default|{}default[0]
+            final fun <get-default>(): kotlin/Boolean? // app.tinyui.schema/PropSpec.Bool.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Bool.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class ColorSpec : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.ColorSpec|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.ColorSpec.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.ColorSpec.default|{}default[0]
+            final fun <get-default>(): app.tinyui.schema/ColorValue? // app.tinyui.schema/PropSpec.ColorSpec.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.ColorSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Dp : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Dp|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Dp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Dp.default|{}default[0]
+            final fun <get-default>(): androidx.compose.ui.unit/Dp? // app.tinyui.schema/PropSpec.Dp.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Dp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Enum : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Enum|null[0]
+        constructor <init>(kotlin.collections/Set<kotlin/String>, kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Enum.<init>|<init>(kotlin.collections.Set<kotlin.String>;kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Enum.default|{}default[0]
+            final fun <get-default>(): kotlin/String? // app.tinyui.schema/PropSpec.Enum.default.<get-default>|<get-default>(){}[0]
+        final val values // app.tinyui.schema/PropSpec.Enum.values|{}values[0]
+            final fun <get-values>(): kotlin.collections/Set<kotlin/String> // app.tinyui.schema/PropSpec.Enum.values.<get-values>|<get-values>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Enum.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Num : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Num|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Num.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Num.default|{}default[0]
+            final fun <get-default>(): kotlin/Double? // app.tinyui.schema/PropSpec.Num.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Num.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Size : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Size|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Size.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Size.default|{}default[0]
+            final fun <get-default>(): app.tinyui.schema/SizeValue? // app.tinyui.schema/PropSpec.Size.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Size.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Sp : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Sp|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Sp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Sp.default|{}default[0]
+            final fun <get-default>(): androidx.compose.ui.unit/TextUnit? // app.tinyui.schema/PropSpec.Sp.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Sp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
+
+    final class Str : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Str|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Str.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+        final val default // app.tinyui.schema/PropSpec.Str.default|{}default[0]
+            final fun <get-default>(): kotlin/String? // app.tinyui.schema/PropSpec.Str.default.<get-default>|<get-default>(){}[0]
+
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Str.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    }
 }
 
-final object wang.harlon.tinyui/TinyUI { // wang.harlon.tinyui/TinyUI|null[0]
-    final val engineVersion // wang.harlon.tinyui/TinyUI.engineVersion|{}engineVersion[0]
-        final fun <get-engineVersion>(): kotlin/String // wang.harlon.tinyui/TinyUI.engineVersion.<get-engineVersion>|<get-engineVersion>(){}[0]
-
-    final var debug // wang.harlon.tinyui/TinyUI.debug|{}debug[0]
-        final fun <get-debug>(): kotlin/Boolean // wang.harlon.tinyui/TinyUI.debug.<get-debug>|<get-debug>(){}[0]
-        final fun <set-debug>(kotlin/Boolean) // wang.harlon.tinyui/TinyUI.debug.<set-debug>|<set-debug>(kotlin.Boolean){}[0]
+final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.components.generated/BuiltinSchemas|null[0]
+    final val Box // app.tinyui.components.generated/BuiltinSchemas.Box|{}Box[0]
+        final fun <get-Box>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Box.<get-Box>|<get-Box>(){}[0]
+    final val Button // app.tinyui.components.generated/BuiltinSchemas.Button|{}Button[0]
+        final fun <get-Button>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
+    final val Column // app.tinyui.components.generated/BuiltinSchemas.Column|{}Column[0]
+        final fun <get-Column>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
+    final val LazyColumn // app.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]
+        final fun <get-LazyColumn>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.LazyColumn.<get-LazyColumn>|<get-LazyColumn>(){}[0]
+    final val RadioButton // app.tinyui.components.generated/BuiltinSchemas.RadioButton|{}RadioButton[0]
+        final fun <get-RadioButton>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
+    final val Row // app.tinyui.components.generated/BuiltinSchemas.Row|{}Row[0]
+        final fun <get-Row>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Row.<get-Row>|<get-Row>(){}[0]
+    final val Spacer // app.tinyui.components.generated/BuiltinSchemas.Spacer|{}Spacer[0]
+        final fun <get-Spacer>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Spacer.<get-Spacer>|<get-Spacer>(){}[0]
+    final val Text // app.tinyui.components.generated/BuiltinSchemas.Text|{}Text[0]
+        final fun <get-Text>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Text.<get-Text>|<get-Text>(){}[0]
+    final val TextField // app.tinyui.components.generated/BuiltinSchemas.TextField|{}TextField[0]
+        final fun <get-TextField>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.TextField.<get-TextField>|<get-TextField>(){}[0]
+    final val all // app.tinyui.components.generated/BuiltinSchemas.all|{}all[0]
+        final fun <get-all>(): kotlin.collections/List<app.tinyui.schema/ComponentSchema> // app.tinyui.components.generated/BuiltinSchemas.all.<get-all>|<get-all>(){}[0]
+    final val colorTokens // app.tinyui.components.generated/BuiltinSchemas.colorTokens|{}colorTokens[0]
+        final fun <get-colorTokens>(): kotlin.collections/Set<kotlin/String> // app.tinyui.components.generated/BuiltinSchemas.colorTokens.<get-colorTokens>|<get-colorTokens>(){}[0]
+    final val textStyles // app.tinyui.components.generated/BuiltinSchemas.textStyles|{}textStyles[0]
+        final fun <get-textStyles>(): kotlin.collections/Set<kotlin/String> // app.tinyui.components.generated/BuiltinSchemas.textStyles.<get-textStyles>|<get-textStyles>(){}[0]
 }
 
-final const val wang.harlon.tinyui.node/ROOT_ID // wang.harlon.tinyui.node/ROOT_ID|{}ROOT_ID[0]
-    final fun <get-ROOT_ID>(): kotlin/Int // wang.harlon.tinyui.node/ROOT_ID.<get-ROOT_ID>|<get-ROOT_ID>(){}[0]
+final object app.tinyui.schema/LayoutProps { // app.tinyui.schema/LayoutProps|null[0]
+    final val specs // app.tinyui.schema/LayoutProps.specs|{}specs[0]
+        final fun <get-specs>(): kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec> // app.tinyui.schema/LayoutProps.specs.<get-specs>|<get-specs>(){}[0]
+}
 
-final val wang.harlon.tinyui.components.generated/wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop // wang.harlon.tinyui.components.generated/wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop|#static{}wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop[0]
-final val wang.harlon.tinyui.node/wang_harlon_tinyui_node_Command$stableprop // wang.harlon.tinyui.node/wang_harlon_tinyui_node_Command$stableprop|#static{}wang_harlon_tinyui_node_Command$stableprop[0]
-final val wang.harlon.tinyui.node/wang_harlon_tinyui_node_NodeTree$stableprop // wang.harlon.tinyui.node/wang_harlon_tinyui_node_NodeTree$stableprop|#static{}wang_harlon_tinyui_node_NodeTree$stableprop[0]
-final val wang.harlon.tinyui.node/wang_harlon_tinyui_node_PatchProblem$stableprop // wang.harlon.tinyui.node/wang_harlon_tinyui_node_PatchProblem$stableprop|#static{}wang_harlon_tinyui_node_PatchProblem$stableprop[0]
-final val wang.harlon.tinyui.node/wang_harlon_tinyui_node_UINode$stableprop // wang.harlon.tinyui.node/wang_harlon_tinyui_node_UINode$stableprop|#static{}wang_harlon_tinyui_node_UINode$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Literal$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Literal$stableprop|#static{}wang_harlon_tinyui_schema_ColorValue_Literal$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Token$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Token$stableprop|#static{}wang_harlon_tinyui_schema_ColorValue_Token$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentRegistry$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentRegistry$stableprop|#static{}wang_harlon_tinyui_schema_ComponentRegistry$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentSchema$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentSchema$stableprop|#static{}wang_harlon_tinyui_schema_ComponentSchema$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_LayoutProps$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_LayoutProps$stableprop|#static{}wang_harlon_tinyui_schema_LayoutProps$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Bool$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Bool$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Bool$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Dp$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Dp$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Dp$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Enum$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Enum$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Enum$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Num$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Num$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Num$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Size$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Size$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Size$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Sp$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Sp$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Sp$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Str$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Str$stableprop|#static{}wang_harlon_tinyui_schema_PropSpec_Str$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fill$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fill$stableprop|#static{}wang_harlon_tinyui_schema_SizeValue_Fill$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop|#static{}wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop|#static{}wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop[0]
-final val wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_Theme$stableprop // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_Theme$stableprop|#static{}wang_harlon_tinyui_schema_Theme$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_BuildManifest$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_BuildManifest$stableprop|#static{}wang_harlon_tinyui_BuildManifest$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_EventBus$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_EventBus$stableprop|#static{}wang_harlon_tinyui_EventBus$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_HostException$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_HostException$stableprop|#static{}wang_harlon_tinyui_HostException$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_HostServices$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_HostServices$stableprop|#static{}wang_harlon_tinyui_HostServices$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_HttpClient_None$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_HttpClient_None$stableprop|#static{}wang_harlon_tinyui_HttpClient_None$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_HttpRequest$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_HttpRequest$stableprop|#static{}wang_harlon_tinyui_HttpRequest$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_HttpResponse$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_HttpResponse$stableprop|#static{}wang_harlon_tinyui_HttpResponse$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_InMemoryStore$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_InMemoryStore$stableprop|#static{}wang_harlon_tinyui_InMemoryStore$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop|#static{}wang_harlon_tinyui_Navigator_None$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_PageError$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageError$stableprop|#static{}wang_harlon_tinyui_PageError$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop|#static{}wang_harlon_tinyui_PageFailure$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop|#static{}wang_harlon_tinyui_PageHost$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_PageModule$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageModule$stableprop|#static{}wang_harlon_tinyui_PageModule$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop|#static{}wang_harlon_tinyui_RuntimeBundle$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_SourceMap_Position$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_SourceMap_Position$stableprop|#static{}wang_harlon_tinyui_SourceMap_Position$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_SourceMaps$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_SourceMaps$stableprop|#static{}wang_harlon_tinyui_SourceMaps$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_StackFrame$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_StackFrame$stableprop|#static{}wang_harlon_tinyui_StackFrame$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop|#static{}wang_harlon_tinyui_StoreValue$stableprop[0]
-final val wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop|#static{}wang_harlon_tinyui_TinyUI$stableprop[0]
+final object app.tinyui.schema/Theme { // app.tinyui.schema/Theme|null[0]
+    final fun color(androidx.compose.material3/ColorScheme, kotlin/String): androidx.compose.ui.graphics/Color? // app.tinyui.schema/Theme.color|color(androidx.compose.material3.ColorScheme;kotlin.String){}[0]
+    final fun isColorToken(kotlin/String): kotlin/Boolean // app.tinyui.schema/Theme.isColorToken|isColorToken(kotlin.String){}[0]
+    final fun textStyle(androidx.compose.material3/Typography, kotlin/String): androidx.compose.ui.text/TextStyle? // app.tinyui.schema/Theme.textStyle|textStyle(androidx.compose.material3.Typography;kotlin.String){}[0]
+}
 
-final fun (wang.harlon.tinyui.schema/ComponentRegistry).wang.harlon.tinyui.components/registerBuiltins(): wang.harlon.tinyui.schema/ComponentRegistry // wang.harlon.tinyui.components/registerBuiltins|registerBuiltins@wang.harlon.tinyui.schema.ComponentRegistry(){}[0]
-final fun (wang.harlon.tinyui.schema/NodeScope).wang.harlon.tinyui.schema/Commands(kotlin.coroutines/SuspendFunction1<wang.harlon.tinyui.node/Command, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/Commands|Commands@wang.harlon.tinyui.schema.NodeScope(kotlin.coroutines.SuspendFunction1<wang.harlon.tinyui.node.Command,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-final fun wang.harlon.tinyui.components.generated/wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.components.generated/wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop_getter|wang_harlon_tinyui_components_generated_BuiltinSchemas$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.node/wang_harlon_tinyui_node_Command$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.node/wang_harlon_tinyui_node_Command$stableprop_getter|wang_harlon_tinyui_node_Command$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.node/wang_harlon_tinyui_node_NodeTree$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.node/wang_harlon_tinyui_node_NodeTree$stableprop_getter|wang_harlon_tinyui_node_NodeTree$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.node/wang_harlon_tinyui_node_PatchProblem$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.node/wang_harlon_tinyui_node_PatchProblem$stableprop_getter|wang_harlon_tinyui_node_PatchProblem$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.node/wang_harlon_tinyui_node_UINode$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.node/wang_harlon_tinyui_node_UINode$stableprop_getter|wang_harlon_tinyui_node_UINode$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Literal$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Literal$stableprop_getter|wang_harlon_tinyui_schema_ColorValue_Literal$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Token$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ColorValue_Token$stableprop_getter|wang_harlon_tinyui_schema_ColorValue_Token$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentRegistry$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentRegistry$stableprop_getter|wang_harlon_tinyui_schema_ComponentRegistry$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentSchema$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_ComponentSchema$stableprop_getter|wang_harlon_tinyui_schema_ComponentSchema$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_LayoutProps$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_LayoutProps$stableprop_getter|wang_harlon_tinyui_schema_LayoutProps$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec$stableprop_getter|wang_harlon_tinyui_schema_PropSpec$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Bool$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Bool$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Bool$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Dp$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Dp$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Dp$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Enum$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Enum$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Enum$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Num$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Num$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Num$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Size$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Size$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Size$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Sp$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Sp$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Sp$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Str$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_PropSpec_Str$stableprop_getter|wang_harlon_tinyui_schema_PropSpec_Str$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fill$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fill$stableprop_getter|wang_harlon_tinyui_schema_SizeValue_Fill$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop_getter|wang_harlon_tinyui_schema_SizeValue_Fixed$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop_getter|wang_harlon_tinyui_schema_SizeValue_Wrap$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_Theme$stableprop_getter(): kotlin/Int // wang.harlon.tinyui.schema/wang_harlon_tinyui_schema_Theme$stableprop_getter|wang_harlon_tinyui_schema_Theme$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/PageFailureScreen(wang.harlon.tinyui/PageFailure, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui/PageFailureScreen|PageFailureScreen(wang.harlon.tinyui.PageFailure;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-final fun wang.harlon.tinyui/TinyUIPage(wang.harlon.tinyui/RuntimeBundle, wang.harlon.tinyui/PageModule, wang.harlon.tinyui.schema/ComponentRegistry, wang.harlon.tinyui/PageSink, wang.harlon.tinyui/HostServices?, kotlin/String?, androidx.compose.ui/Modifier?, wang.harlon.tinyui/SourceMaps?, kotlin/Function3<wang.harlon.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<wang.harlon.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // wang.harlon.tinyui/TinyUIPage|TinyUIPage(wang.harlon.tinyui.RuntimeBundle;wang.harlon.tinyui.PageModule;wang.harlon.tinyui.schema.ComponentRegistry;wang.harlon.tinyui.PageSink;wang.harlon.tinyui.HostServices?;kotlin.String?;androidx.compose.ui.Modifier?;wang.harlon.tinyui.SourceMaps?;kotlin.Function3<wang.harlon.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<wang.harlon.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_BuildManifest$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_BuildManifest$stableprop_getter|wang_harlon_tinyui_BuildManifest$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_EventBus$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_EventBus$stableprop_getter|wang_harlon_tinyui_EventBus$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_HostException$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_HostException$stableprop_getter|wang_harlon_tinyui_HostException$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_HostServices$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_HostServices$stableprop_getter|wang_harlon_tinyui_HostServices$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_HttpClient_None$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_HttpClient_None$stableprop_getter|wang_harlon_tinyui_HttpClient_None$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_HttpRequest$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_HttpRequest$stableprop_getter|wang_harlon_tinyui_HttpRequest$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_HttpResponse$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_HttpResponse$stableprop_getter|wang_harlon_tinyui_HttpResponse$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_InMemoryStore$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_InMemoryStore$stableprop_getter|wang_harlon_tinyui_InMemoryStore$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop_getter|wang_harlon_tinyui_Navigator_None$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_PageError$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageError$stableprop_getter|wang_harlon_tinyui_PageError$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop_getter|wang_harlon_tinyui_PageFailure$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop_getter|wang_harlon_tinyui_PageHost$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_PageModule$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageModule$stableprop_getter|wang_harlon_tinyui_PageModule$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter|wang_harlon_tinyui_RuntimeBundle$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_SourceMap_Position$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_SourceMap_Position$stableprop_getter|wang_harlon_tinyui_SourceMap_Position$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_SourceMaps$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_SourceMaps$stableprop_getter|wang_harlon_tinyui_SourceMaps$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_StackFrame$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_StackFrame$stableprop_getter|wang_harlon_tinyui_StackFrame$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop_getter|wang_harlon_tinyui_StoreValue$stableprop_getter(){}[0]
-final fun wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter|wang_harlon_tinyui_TinyUI$stableprop_getter(){}[0]
+final object app.tinyui/TinyUI { // app.tinyui/TinyUI|null[0]
+    final val engineVersion // app.tinyui/TinyUI.engineVersion|{}engineVersion[0]
+        final fun <get-engineVersion>(): kotlin/String // app.tinyui/TinyUI.engineVersion.<get-engineVersion>|<get-engineVersion>(){}[0]
+
+    final var debug // app.tinyui/TinyUI.debug|{}debug[0]
+        final fun <get-debug>(): kotlin/Boolean // app.tinyui/TinyUI.debug.<get-debug>|<get-debug>(){}[0]
+        final fun <set-debug>(kotlin/Boolean) // app.tinyui/TinyUI.debug.<set-debug>|<set-debug>(kotlin.Boolean){}[0]
+}
+
+final const val app.tinyui.node/ROOT_ID // app.tinyui.node/ROOT_ID|{}ROOT_ID[0]
+    final fun <get-ROOT_ID>(): kotlin/Int // app.tinyui.node/ROOT_ID.<get-ROOT_ID>|<get-ROOT_ID>(){}[0]
+
+final val app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop|#static{}app_tinyui_components_generated_BuiltinSchemas$stableprop[0]
+final val app.tinyui.node/app_tinyui_node_Command$stableprop // app.tinyui.node/app_tinyui_node_Command$stableprop|#static{}app_tinyui_node_Command$stableprop[0]
+final val app.tinyui.node/app_tinyui_node_NodeTree$stableprop // app.tinyui.node/app_tinyui_node_NodeTree$stableprop|#static{}app_tinyui_node_NodeTree$stableprop[0]
+final val app.tinyui.node/app_tinyui_node_PatchProblem$stableprop // app.tinyui.node/app_tinyui_node_PatchProblem$stableprop|#static{}app_tinyui_node_PatchProblem$stableprop[0]
+final val app.tinyui.node/app_tinyui_node_UINode$stableprop // app.tinyui.node/app_tinyui_node_UINode$stableprop|#static{}app_tinyui_node_UINode$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop // app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop|#static{}app_tinyui_schema_ColorValue_Literal$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop // app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop|#static{}app_tinyui_schema_ColorValue_Token$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop // app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop|#static{}app_tinyui_schema_ComponentRegistry$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop // app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop|#static{}app_tinyui_schema_ComponentSchema$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop // app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop|#static{}app_tinyui_schema_LayoutProps$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop|#static{}app_tinyui_schema_PropSpec$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop|#static{}app_tinyui_schema_PropSpec_Bool$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop|#static{}app_tinyui_schema_PropSpec_ColorSpec$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop|#static{}app_tinyui_schema_PropSpec_Dp$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop|#static{}app_tinyui_schema_PropSpec_Enum$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop|#static{}app_tinyui_schema_PropSpec_Num$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop|#static{}app_tinyui_schema_PropSpec_Size$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop|#static{}app_tinyui_schema_PropSpec_Sp$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop|#static{}app_tinyui_schema_PropSpec_Str$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop|#static{}app_tinyui_schema_SizeValue_Fill$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop|#static{}app_tinyui_schema_SizeValue_Fixed$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop|#static{}app_tinyui_schema_SizeValue_Wrap$stableprop[0]
+final val app.tinyui.schema/app_tinyui_schema_Theme$stableprop // app.tinyui.schema/app_tinyui_schema_Theme$stableprop|#static{}app_tinyui_schema_Theme$stableprop[0]
+final val app.tinyui/app_tinyui_BuildManifest$stableprop // app.tinyui/app_tinyui_BuildManifest$stableprop|#static{}app_tinyui_BuildManifest$stableprop[0]
+final val app.tinyui/app_tinyui_EventBus$stableprop // app.tinyui/app_tinyui_EventBus$stableprop|#static{}app_tinyui_EventBus$stableprop[0]
+final val app.tinyui/app_tinyui_HostException$stableprop // app.tinyui/app_tinyui_HostException$stableprop|#static{}app_tinyui_HostException$stableprop[0]
+final val app.tinyui/app_tinyui_HostServices$stableprop // app.tinyui/app_tinyui_HostServices$stableprop|#static{}app_tinyui_HostServices$stableprop[0]
+final val app.tinyui/app_tinyui_HttpClient_None$stableprop // app.tinyui/app_tinyui_HttpClient_None$stableprop|#static{}app_tinyui_HttpClient_None$stableprop[0]
+final val app.tinyui/app_tinyui_HttpRequest$stableprop // app.tinyui/app_tinyui_HttpRequest$stableprop|#static{}app_tinyui_HttpRequest$stableprop[0]
+final val app.tinyui/app_tinyui_HttpResponse$stableprop // app.tinyui/app_tinyui_HttpResponse$stableprop|#static{}app_tinyui_HttpResponse$stableprop[0]
+final val app.tinyui/app_tinyui_InMemoryStore$stableprop // app.tinyui/app_tinyui_InMemoryStore$stableprop|#static{}app_tinyui_InMemoryStore$stableprop[0]
+final val app.tinyui/app_tinyui_Navigator_None$stableprop // app.tinyui/app_tinyui_Navigator_None$stableprop|#static{}app_tinyui_Navigator_None$stableprop[0]
+final val app.tinyui/app_tinyui_PageError$stableprop // app.tinyui/app_tinyui_PageError$stableprop|#static{}app_tinyui_PageError$stableprop[0]
+final val app.tinyui/app_tinyui_PageFailure$stableprop // app.tinyui/app_tinyui_PageFailure$stableprop|#static{}app_tinyui_PageFailure$stableprop[0]
+final val app.tinyui/app_tinyui_PageHost$stableprop // app.tinyui/app_tinyui_PageHost$stableprop|#static{}app_tinyui_PageHost$stableprop[0]
+final val app.tinyui/app_tinyui_PageModule$stableprop // app.tinyui/app_tinyui_PageModule$stableprop|#static{}app_tinyui_PageModule$stableprop[0]
+final val app.tinyui/app_tinyui_RuntimeBundle$stableprop // app.tinyui/app_tinyui_RuntimeBundle$stableprop|#static{}app_tinyui_RuntimeBundle$stableprop[0]
+final val app.tinyui/app_tinyui_SourceMap_Position$stableprop // app.tinyui/app_tinyui_SourceMap_Position$stableprop|#static{}app_tinyui_SourceMap_Position$stableprop[0]
+final val app.tinyui/app_tinyui_SourceMaps$stableprop // app.tinyui/app_tinyui_SourceMaps$stableprop|#static{}app_tinyui_SourceMaps$stableprop[0]
+final val app.tinyui/app_tinyui_StackFrame$stableprop // app.tinyui/app_tinyui_StackFrame$stableprop|#static{}app_tinyui_StackFrame$stableprop[0]
+final val app.tinyui/app_tinyui_StoreValue$stableprop // app.tinyui/app_tinyui_StoreValue$stableprop|#static{}app_tinyui_StoreValue$stableprop[0]
+final val app.tinyui/app_tinyui_TinyUI$stableprop // app.tinyui/app_tinyui_TinyUI$stableprop|#static{}app_tinyui_TinyUI$stableprop[0]
+
+final fun (app.tinyui.schema/ComponentRegistry).app.tinyui.components/registerBuiltins(): app.tinyui.schema/ComponentRegistry // app.tinyui.components/registerBuiltins|registerBuiltins@app.tinyui.schema.ComponentRegistry(){}[0]
+final fun (app.tinyui.schema/NodeScope).app.tinyui.schema/Commands(kotlin.coroutines/SuspendFunction1<app.tinyui.node/Command, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/Commands|Commands@app.tinyui.schema.NodeScope(kotlin.coroutines.SuspendFunction1<app.tinyui.node.Command,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(): kotlin/Int // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter|app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(){}[0]
+final fun app.tinyui.node/app_tinyui_node_Command$stableprop_getter(): kotlin/Int // app.tinyui.node/app_tinyui_node_Command$stableprop_getter|app_tinyui_node_Command$stableprop_getter(){}[0]
+final fun app.tinyui.node/app_tinyui_node_NodeTree$stableprop_getter(): kotlin/Int // app.tinyui.node/app_tinyui_node_NodeTree$stableprop_getter|app_tinyui_node_NodeTree$stableprop_getter(){}[0]
+final fun app.tinyui.node/app_tinyui_node_PatchProblem$stableprop_getter(): kotlin/Int // app.tinyui.node/app_tinyui_node_PatchProblem$stableprop_getter|app_tinyui_node_PatchProblem$stableprop_getter(){}[0]
+final fun app.tinyui.node/app_tinyui_node_UINode$stableprop_getter(): kotlin/Int // app.tinyui.node/app_tinyui_node_UINode$stableprop_getter|app_tinyui_node_UINode$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop_getter|app_tinyui_schema_ColorValue_Literal$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop_getter|app_tinyui_schema_ColorValue_Token$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop_getter|app_tinyui_schema_ComponentRegistry$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop_getter|app_tinyui_schema_ComponentSchema$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop_getter|app_tinyui_schema_LayoutProps$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop_getter|app_tinyui_schema_PropSpec$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop_getter|app_tinyui_schema_PropSpec_Bool$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter|app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop_getter|app_tinyui_schema_PropSpec_Dp$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop_getter|app_tinyui_schema_PropSpec_Enum$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop_getter|app_tinyui_schema_PropSpec_Num$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop_getter|app_tinyui_schema_PropSpec_Size$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop_getter|app_tinyui_schema_PropSpec_Sp$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop_getter|app_tinyui_schema_PropSpec_Str$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop_getter|app_tinyui_schema_SizeValue_Fill$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop_getter|app_tinyui_schema_SizeValue_Fixed$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop_getter|app_tinyui_schema_SizeValue_Wrap$stableprop_getter(){}[0]
+final fun app.tinyui.schema/app_tinyui_schema_Theme$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_Theme$stableprop_getter|app_tinyui_schema_Theme$stableprop_getter(){}[0]
+final fun app.tinyui/PageFailureScreen(app.tinyui/PageFailure, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui/PageFailureScreen|PageFailureScreen(app.tinyui.PageFailure;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun app.tinyui/TinyUIPage(app.tinyui/RuntimeBundle, app.tinyui/PageModule, app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/HostServices?, kotlin/String?, androidx.compose.ui/Modifier?, app.tinyui/SourceMaps?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui/TinyUIPage|TinyUIPage(app.tinyui.RuntimeBundle;app.tinyui.PageModule;app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.HostServices?;kotlin.String?;androidx.compose.ui.Modifier?;app.tinyui.SourceMaps?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun app.tinyui/app_tinyui_BuildManifest$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_BuildManifest$stableprop_getter|app_tinyui_BuildManifest$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_EventBus$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_EventBus$stableprop_getter|app_tinyui_EventBus$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_HostException$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HostException$stableprop_getter|app_tinyui_HostException$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_HostServices$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HostServices$stableprop_getter|app_tinyui_HostServices$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_HttpClient_None$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HttpClient_None$stableprop_getter|app_tinyui_HttpClient_None$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_HttpRequest$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HttpRequest$stableprop_getter|app_tinyui_HttpRequest$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_HttpResponse$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HttpResponse$stableprop_getter|app_tinyui_HttpResponse$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_InMemoryStore$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_InMemoryStore$stableprop_getter|app_tinyui_InMemoryStore$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_Navigator_None$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_Navigator_None$stableprop_getter|app_tinyui_Navigator_None$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_PageError$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PageError$stableprop_getter|app_tinyui_PageError$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_PageFailure$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PageFailure$stableprop_getter|app_tinyui_PageFailure$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_PageHost$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PageHost$stableprop_getter|app_tinyui_PageHost$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_PageModule$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PageModule$stableprop_getter|app_tinyui_PageModule$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_RuntimeBundle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_RuntimeBundle$stableprop_getter|app_tinyui_RuntimeBundle$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_SourceMap_Position$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_SourceMap_Position$stableprop_getter|app_tinyui_SourceMap_Position$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_SourceMaps$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_SourceMaps$stableprop_getter|app_tinyui_SourceMaps$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_StackFrame$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StackFrame$stableprop_getter|app_tinyui_StackFrame$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_StoreValue$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StoreValue$stableprop_getter|app_tinyui_StoreValue$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_TinyUI$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUI$stableprop_getter|app_tinyui_TinyUI$stableprop_getter(){}[0]

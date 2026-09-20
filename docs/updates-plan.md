@@ -44,7 +44,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 ## M3 · `updates/` 模块
 
-仓：tinyui，新 Gradle 模块，artifact `wang.harlon:tinyui-updates`。约 600 行 / 15 文件，PR。
+仓：tinyui，新 Gradle 模块，artifact `app.tinyui:tinyui-updates`。约 600 行 / 15 文件，PR。
 
 | 交付 | 要点 |
 |---|---|

@@ -53,8 +53,9 @@ JS                                   桥                          Kotlin
 | 拼写 | 用在哪 | 理由 |
 |---|---|---|
 | **TinyUI** | 品牌与行文：文档标题、README 首行、日志前缀、对外提及 | 大小写体现 Tiny + UI 两个词 |
-| **tinyui** | 所有机器标识符：GitHub 仓 `tiny-ui/tinyui`、Maven `wang.harlon:tinyui`、Kotlin 包 `wang.harlon.tinyui`、CLI 命令、环境变量前缀 `TINYUI_`、目录名 | 无连字符是唯一在每种标识符里都合法的形态；避开 npm 上他人的 `tiny-ui` React 库 |
+| **tinyui** | 所有机器标识符：GitHub 仓 `tiny-ui/tinyui`、Maven `app.tinyui:tinyui`、Kotlin 包 `app.tinyui`、CLI 命令、环境变量前缀 `TINYUI_`、目录名 | 无连字符是唯一在每种标识符里都合法的形态；避开 npm 上他人的 `tiny-ui` React 库 |
 | **tiny-ui** | 仅 GitHub 组织名 `github.com/tiny-ui` | 2021 年同名项目建的组织沿用（2026-09-20 仓库转入），组织名不再改；仓名仍是 `tinyui` |
+| **app.tinyui** | Maven group 与 Kotlin 根包（2026-09-20 起，此前 `wang.harlon`） | 反转域名 tinyui.app，Central 命名空间按域名验证；先例 `app.cash.*` |
 | **tinyui-core / tinyui-native / tinyui-cli** | 仅 npm 包名（也是引擎里的运行时模块名） | 无 scope；`tinyui-` 前缀粘连、功能词用连字符接 |
 
 npm 裸包 `tinyui` 不可用：npm 防仿冒规则判定其与已有的 `tiny-ui` 过于相似（2026-09-15 实测 E403）；scope `@tiny-ui` 是他人 2017 年起的用户 scope（`@tiny-ui/components`），`@tinyui` 是他人的空 org，2026-09-18 定为无 scope 的 `tinyui-*`。`tiny-ui` 本身是活跃维护的 React 组件库（2026-03 发 1.0，GitHub 233 star），转让与争议均无望，裸名不再追。同日在 npm 建了免费 org **tinyui-app**（与域名对齐，仅占位防蹭，暂不发包；账号 whlong 为 owner）。域名 **tinyui.app** 已于 2026-09-15 在 Cloudflare Registrar（个人账号）注册，自动续费 $14.20/年，DNS 在 Cloudflare。
@@ -72,7 +73,7 @@ tinyui/
 │   ├── core/           tinyui-core    JS 运行时（signal / effect / owner / h / For / Show / ref + cmd）+ 内置组件的 TS 类型（由 schema/ 生成，无运行时代码）；作为 ES 模块字节码内置
 │   ├── native/         tinyui-native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
 │   └── cli/            tinyui-cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`
-├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
+├── compose/            app.tinyui:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
 ├── schema/             内置组件 schema 的唯一真值（TS DSL）→ `pnpm schema` 生成 packages/core 的类型与 compose/ 的注册 schema
 ├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
 │   ├── js/             页面源码（pnpm workspace 成员），shared 的 Gradle 任务调 CLI 编成字节码打进 Compose 资源

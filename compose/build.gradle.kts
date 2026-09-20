@@ -9,7 +9,7 @@ plugins {
 
 kotlin {
     android {
-        namespace = "wang.harlon.tinyui"
+        namespace = "app.tinyui"
     }
 
     sourceSets {

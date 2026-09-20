@@ -55,7 +55,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 ### 2.4 库的边界
 
-库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `wang.harlon:tinyui-updates`：core 库保持零 I/O、零文件依赖；不需要热下发的宿主直接不依赖它。
+库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `app.tinyui:tinyui-updates`：core 库保持零 I/O、零文件依赖；不需要热下发的宿主直接不依赖它。
 
 ### 2.5 服务端形态
 
