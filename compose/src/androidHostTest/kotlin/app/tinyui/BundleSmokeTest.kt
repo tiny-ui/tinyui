@@ -38,7 +38,7 @@ class BundleSmokeTest {
     fun stacksFromABuiltPageMapBackToTheSource() = runBlocking {
         if (!out.isDirectory) return@runBlocking
         val manifest = BuildManifest.parse(out.resolve("manifest.json").readText())
-        val maps = SourceMaps(mapOf("pages/todos" to out.resolve("pages/todos.js.map").readText(), "tinyui-core" to out.resolve("runtime/core.js.map").readText()))
+        val maps = SourceMaps(mapOf("sample/todos" to out.resolve("pages/todos.js.map").readText(), "tinyui-core" to out.resolve("runtime/core.js.map").readText()))
         val errors = mutableListOf<PageError>()
         val sink = object : PageSink {
             override fun error(error: PageError) { errors += error }
@@ -50,7 +50,7 @@ class BundleSmokeTest {
                 else throw HostException("E_HTTP", "500")
         }
         val runtime = RuntimeBundle(out.resolve("runtime/core.bin").readBytes(), out.resolve("runtime/native.bin").readBytes())
-        val page = PageModule("pages/todos", out.resolve("pages/todos.bin").readBytes(), manifest.buildId("pages/todos"))
+        val page = PageModule("sample/todos", out.resolve("pages/todos.bin").readBytes(), manifest.buildId("sample/todos"))
         val host = PageHost(runtime, page, ComponentRegistry().registerBuiltins(), sink, HostServices(http = http), sourceMaps = maps)
         host.start()
         try {
@@ -62,7 +62,7 @@ class BundleSmokeTest {
                 while (errors.none { it.kind == "E7" }) delay(20)
             } }
             val e = errors.single { it.kind == "E7" }
-            assertEquals(manifest.buildId("pages/todos"), e.buildId)
+            assertEquals(manifest.buildId("sample/todos"), e.buildId)
             val own = e.frames.firstOrNull { it.mapped && it.file == "src/pages/todos.tsx" } ?: error("no mapped frame in ${e.frames}; stack=${e.jsStack}")
             val source = File("../sample/js/src/pages/todos.tsx").readLines()
             assertTrue("await http.get" in source[own.line - 1], "frame $own points at the await; stack=${e.jsStack}")

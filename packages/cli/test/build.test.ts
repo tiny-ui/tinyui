@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -20,8 +20,8 @@ describe("tinyui build", () => {
     });
     after(() => rm(out, { recursive: true, force: true }));
 
-    it("names pages after their path under src/pages", () => {
-        assert.deepEqual(result.pages.map((m) => m.name), ["pages/home", "pages/nested/detail"]);
+    it("names pages <pkg>/<path under src/pages>", () => {
+        assert.deepEqual(result.pages.map((m) => m.name), ["fixture/home", "fixture/nested/detail"]);
         assert.deepEqual(result.runtime.map((m) => m.name), ["tinyui-core", "tinyui-native"]);
     });
 
@@ -78,9 +78,10 @@ describe("tinyui build", () => {
         const clashRoot = await mkdtemp(join(tmpdir(), "tinyui-clash-"));
         try {
             await mkdir(join(clashRoot, "src", "pages"), { recursive: true });
+            await copyFile(join(root, "tinyui.config.json"), join(clashRoot, "tinyui.config.json"));
             await writeFile(join(clashRoot, "src", "pages", "home.ts"), "export default () => 1;");
             await writeFile(join(clashRoot, "src", "pages", "home.tsx"), "export default () => 2;");
-            await assert.rejects(build({ root: clashRoot, jsOnly: true }), /page pages\/home has two sources/);
+            await assert.rejects(build({ root: clashRoot, jsOnly: true }), /page fixture\/home has two sources/);
         } finally {
             await rm(clashRoot, { recursive: true, force: true });
         }
@@ -89,16 +90,54 @@ describe("tinyui build", () => {
     it("lists everything in manifest.json", async () => {
         const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
         assert.deepEqual(manifest.runtime, ["tinyui-core", "tinyui-native"]);
-        assert.deepEqual(manifest.pages, ["pages/home", "pages/nested/detail"]);
+        assert.deepEqual(manifest.pages, ["fixture/home", "fixture/nested/detail"]);
         assert.deepEqual(Object.keys(manifest.buildIds), [...manifest.runtime, ...manifest.pages]);
         assert.deepEqual(manifest.files, {
             "tinyui-core": "runtime/core",
             "tinyui-native": "runtime/native",
-            "pages/home": "pages/home",
-            "pages/nested/detail": "pages/nested/detail",
+            "fixture/home": "pages/home",
+            "fixture/nested/detail": "pages/nested/detail",
         });
         for (const id of Object.values(manifest.buildIds)) assert.match(id as string, /^[0-9a-f]{8}$/);
-        assert.equal(manifest.buildIds["pages/home"], result.pages[0]!.buildId);
+        assert.equal(manifest.buildIds["fixture/home"], result.pages[0]!.buildId);
+    });
+
+    it("records the package identity and what hot updates compare (docs/updates.md §1.1)", async () => {
+        const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
+        const config = JSON.parse(await readFile(join(root, "tinyui.config.json"), "utf8"));
+        assert.equal(manifest.name, "fixture");
+        assert.equal(manifest.publicKey, config.publicKey);
+        assert.match(manifest.createdAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+        assert.match(manifest.version, /^\d{8}T\d{6}Z-([0-9a-f]{7,}|nogit)$/);
+        assert.ok(manifest.version.startsWith(manifest.createdAt.replace(/[-:]/g, "")), `${manifest.version} starts with the compact createdAt`);
+        assert.equal(manifest.protocol, 1);
+        if (qjsc) {
+            assert.match(manifest.engine, /^[0-9a-f]{40}$/);
+            assert.deepEqual(Object.keys(manifest.hashes), [...manifest.runtime, ...manifest.pages]);
+            for (const hash of Object.values(manifest.hashes)) assert.match(hash as string, /^[0-9a-f]{64}$/);
+        } else {
+            assert.equal(manifest.engine, "");
+            assert.deepEqual(manifest.hashes, {});
+        }
+    });
+
+    it("takes --version as is", async () => {
+        const dir = await mkdtemp(join(tmpdir(), "tinyui-version-"));
+        try {
+            const r = await build({ root, out: dir, jsOnly: true, version: "1.2.3" });
+            assert.equal(JSON.parse(await readFile(r.manifest, "utf8")).version, "1.2.3");
+        } finally {
+            await rm(dir, { recursive: true, force: true });
+        }
+    });
+
+    it("refuses a root without tinyui.config.json", async () => {
+        const bare = await mkdtemp(join(tmpdir(), "tinyui-noconfig-"));
+        try {
+            await assert.rejects(build({ root: bare, jsOnly: true }), /tinyui\.config\.json not found/);
+        } finally {
+            await rm(bare, { recursive: true, force: true });
+        }
     });
 
     it("compiles every module to bytecode when qjsc-kmp is available", { skip: !process.env["TINYUI_QJSC"] && "TINYUI_QJSC not set" }, async () => {

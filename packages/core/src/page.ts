@@ -3,8 +3,9 @@ import { createOwner, disposeOwner, insideRender, onCleanup, runPending, runWith
 import { handlers, patches, resetIds, type Node, type Props } from "./node.ts";
 import { apply, rejectPending, report, resolvePending } from "./host.ts";
 import { installGlobals } from "./timers.ts";
+import { PROTOCOL } from "./protocol.ts";
 
-export const PROTOCOL = 1;
+export { PROTOCOL };
 
 export interface HostManifest {
     components: Record<string, { props: string[]; events: string[]; commands: string[] }>;
