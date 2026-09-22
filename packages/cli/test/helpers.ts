@@ -6,7 +6,7 @@ import type { Manifest } from "../src/build.ts";
 
 /** A `tinyui build` output written by hand: bundle only needs the manifest and the `.bin` files it lists. */
 export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifest) => void = () => {}): Promise<string> {
-    const files = { "tinyui-core": "runtime/core", "tinyui-native": "runtime/native", "fixture/home": "pages/home", "fixture/订单": "pages/订单" };
+    const files = { "tinyui-core": "runtime/core", "tinyui-native": "runtime/native", "fixture/home": "pages/home", "fixture/orders": "pages/orders" };
     const hashes: Record<string, string> = {};
     for (const [module, path] of Object.entries(files)) {
         const bytes = Buffer.concat([Buffer.from("QJKB"), Buffer.alloc(8), Buffer.from("a".repeat(40)), Buffer.from(module)]);
@@ -16,7 +16,7 @@ export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifes
     }
     const manifest: Manifest = {
         runtime: ["tinyui-core", "tinyui-native"],
-        pages: ["fixture/home", "fixture/订单"],
+        pages: ["fixture/home", "fixture/orders"],
         files,
         buildIds: Object.fromEntries(Object.keys(files).map((m) => [m, "00000000"])),
         name: "fixture",
@@ -114,6 +114,16 @@ function defaultReply(method: string, path: string, body: Buffer, uploads: Map<s
         if (!uploads.has(`/${app}/${pkg}/${rv}/${version}/manifest.json`)) return [409, { error: `${version}/manifest.json is not uploaded yet: content first, pointer last` }];
         return [200, { version, rollout: parsed["rollout"] ?? 100, signature: parsed["signature"] }];
     }
+    // management routes first, exactly as the server registers them: `/apps/<a>/packages/<p>/publicKey`
+    // is five segments and would otherwise be swallowed by the upload route
+    if (segments[0] === "apps") {
+        if (method === "POST" && path === "/apps") return [201, { ...parsed, createdAt: "2026-09-22T09:00:00Z" }];
+        if (method === "POST" && last === "packages") return [201, { ...parsed, createdAt: "2026-09-22T09:00:00Z" }];
+        if (method === "PUT" && last === "publicKey") return [200, { name: segments.at(-2), ...parsed, createdAt: "2026-09-22T09:00:00Z", publicKeyUpdatedAt: "2026-09-22T09:05:00Z" }];
+        if (method === "POST" && last === "tokens") return [201, { id: "tok_1", token: "publish-token-shown-once", channels: parsed["channels"], createdAt: "2026-09-22T09:00:00Z" }];
+        if (method === "DELETE" && segments.at(-2) === "tokens") return [204, undefined];
+        return [404, { error: "not found" }];
+    }
     if (method === "PUT" && segments.length >= 5) {
         const sha256 = createHash("sha256").update(body).digest("hex");
         const existing = uploads.get(path);
@@ -124,11 +134,6 @@ function defaultReply(method: string, path: string, body: Buffer, uploads: Map<s
         if (existing !== sha256) return [409, { error: `${path} already exists with different content` }];
         return [200, { path: segments.slice(4).join("/"), sha256, existing: true }];
     }
-    if (method === "POST" && path === "/apps") return [201, { ...parsed, createdAt: "2026-09-22T09:00:00Z" }];
-    if (method === "POST" && last === "packages") return [201, { ...parsed, createdAt: "2026-09-22T09:00:00Z" }];
-    if (method === "PUT" && last === "publicKey") return [200, { name: segments.at(-2), ...parsed, publicKeyUpdatedAt: "2026-09-22T09:00:00Z" }];
-    if (method === "POST" && last === "tokens") return [201, { id: "tok_1", token: "publish-token-shown-once", channels: parsed["channels"], createdAt: "2026-09-22T09:00:00Z" }];
-    if (method === "DELETE" && segments.at(-2) === "tokens") return [204, undefined];
     if (method === "GET" && last === "releases") {
         return [
             200,

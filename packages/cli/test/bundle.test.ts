@@ -37,7 +37,7 @@ describe("tinyui bundle", () => {
         assert.deepEqual((await readdir(versionDir, { recursive: true })).filter((f) => f.includes(".")).sort(), [
             "manifest.json",
             "pages/home.bin",
-            "pages/订单.bin",
+            "pages/orders.bin",
             "runtime/core.bin",
             "runtime/native.bin",
         ]);
@@ -58,7 +58,7 @@ describe("tinyui bundle", () => {
         const bytes = await readFile(result.manifest);
         assert.ok(verify(config.publicKey, bytes, pointer.signature));
         // non-ASCII module names survive as written: no canonicalization on any side
-        assert.match(bytes.toString("utf8"), /"fixture\/订单"/);
+        assert.match(bytes.toString("utf8"), /"fixture\/orders"/);
         const reserialized = Buffer.from(JSON.stringify(JSON.parse(bytes.toString("utf8"))));
         assert.ok(!verify(config.publicKey, reserialized, pointer.signature), "a re-serialization is a different message");
     });
@@ -141,6 +141,11 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: extra, runtimeVersion: "1", signingKey }), /"hashes" does not cover exactly/);
         const dist = await fakeDist(join(tmp, "dist-rv"));
         await assert.rejects(bundle({ dist, runtimeVersion: "1/2", signingKey }), /runtime version must be a single path segment/);
+    });
+
+    it("refuses an output path that would not survive the delivery URL", async () => {
+        const chinese = await fakeDist(join(tmp, "dist-nonascii"), (m) => { m.files["fixture/home"] = "pages/订单"; });
+        await assert.rejects(bundle({ dist: chinese, runtimeVersion: "1", signingKey }), /every segment must match \[A-Za-z0-9\._-\]\+ to survive the delivery URL/);
     });
 
     it("bundles a real build end to end", { skip: !qjsc && "qjsc-kmp not found" }, async () => {

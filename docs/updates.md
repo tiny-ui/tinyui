@@ -252,7 +252,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 | 请求 | 语义 |
 |---|---|
-| `GET /<app>/<pkg>/<rv>/releases` | 已发布的 version 列表：`createdAt`、各 channel 的指针与 `rollout` |
+| `GET /<app>/<pkg>/<rv>/releases` | 已发布的 version 列表：`createdAt`（包的构建时刻，来自 manifest）、`publishedAt`（服务端记下的发布时刻）、各 channel 的指针与 `rollout` |
 | `POST /<app>/<channel>/<pkg>/<rv>/pointer`，body `{ "version": …, "rollout"?: … }` | 指针指向 (app, pkg, rv) 下任一已发布 version——回滚与跨 channel 晋级是同一个操作；或只改当前指针的 `rollout`。服务端用记录里该 version 的 `signature` 重写 `current.json` |
 
 服务端按 version 保存 release 记录（`createdAt`、`signature`），指针切换不需要重新上传；改 `rollout` 只改指针，签名不受影响（§7）。CLI：`tinyui releases list` / `rollback <version>` / `rollout <p>` / `promote <version> --to <channel>`。

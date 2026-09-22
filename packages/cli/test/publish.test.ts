@@ -11,7 +11,7 @@ import { fakeDist, startFakeServer, type FakeServer } from "./helpers.ts";
 
 const pair = generateKeyPair();
 const VERSION = "20260922T090000Z-3f2a1c";
-const FILES = ["runtime/core.bin", "runtime/native.bin", "pages/home.bin", "pages/订单.bin", "manifest.json"];
+const FILES = ["runtime/core.bin", "runtime/native.bin", "pages/home.bin", "pages/orders.bin", "manifest.json"];
 
 describe("tinyui publish", () => {
     let tmp: string;
@@ -55,7 +55,7 @@ describe("tinyui publish", () => {
         const sent = requestsSince(mark);
         assert.deepEqual(
             sent.slice(0, -1).sort(),
-            FILES.map((f) => `PUT /demo/fixture/1/${VERSION}/${encodeURI(f)}`).sort(),
+            FILES.map((f) => `PUT /demo/fixture/1/${VERSION}/${f}`).sort(),
         );
         assert.equal(sent.at(-1), "PUT /demo/staging/fixture/1/current.json");
 
@@ -121,7 +121,7 @@ describe("tinyui publish", () => {
     });
 
     it("takes the package and runtime version from the manifest, not from the directory name", async () => {
-        const renamed = join(tmp, "renamed-artifact");
+        const renamed = join(tmp, "artifacts", "build-1234", "1");
         await cp(join(await bundled("renamed"), "fixture", "1"), renamed, { recursive: true });
         const mark = server.requests.length;
         const result = await publish({ client, dir: renamed, app: "demo", channel: "staging" });
@@ -142,6 +142,25 @@ describe("tinyui publish", () => {
         await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /is not a pointer file/);
         await rm(pointerFile);
         await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /no current.json under/);
+    });
+
+    it("refuses a bundle whose own paths would read outside it, and a concurrency that uploads nothing", async () => {
+        const dir = await bundled("traversal");
+        const manifestFile = join(dir, "fixture", "1", VERSION, "manifest.json");
+        const manifest = JSON.parse(await readFile(manifestFile, "utf8")) as { files: Record<string, string> };
+        await writeFile(manifestFile, JSON.stringify({ ...manifest, files: { ...manifest.files, "fixture/home": "../../../../etc/passwd" } }));
+        const mark = server.requests.length;
+        await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /every segment must match/);
+        assert.deepEqual(requestsSince(mark), [], "nothing outside the bundle is read, let alone uploaded");
+
+        const pointerFile = join(dir, "fixture", "1", "current.json");
+        const pointer = JSON.parse(await readFile(pointerFile, "utf8")) as Record<string, unknown>;
+        await writeFile(pointerFile, JSON.stringify({ ...pointer, version: ".." }));
+        await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /is not a single path segment/);
+
+        // zero workers would upload nothing and still move the pointer
+        await assert.rejects(publish({ client, dir: await bundled("workers"), app: "demo", channel: "staging", concurrency: 0 }), /concurrency must be a positive integer/);
+        assert.deepEqual(requestsSince(mark), []);
     });
 
     it("passes the server's own words through", async () => {

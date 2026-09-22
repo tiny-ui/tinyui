@@ -26,7 +26,7 @@ export interface IssuedToken {
 }
 
 export interface Releases {
-    versions: { version: string; createdAt: string; publishedAt: string }[];
+    versions: { version: string; createdAt: string; publishedAt?: string }[];
     channels: Record<string, { version: string; rollout: number }>;
 }
 

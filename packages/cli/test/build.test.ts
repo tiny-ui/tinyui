@@ -146,6 +146,18 @@ describe("tinyui build", () => {
         }
     });
 
+    it("refuses a page whose path cannot be a URL segment", async () => {
+        const project = await mkdtemp(join(tmpdir(), "tinyui-nonascii-"));
+        try {
+            await copyFile(join(root, "tinyui.config.json"), join(project, "tinyui.config.json"));
+            await mkdir(join(project, "src", "pages"), { recursive: true });
+            await copyFile(join(root, "src", "pages", "home.tsx"), join(project, "src", "pages", "订单.tsx"));
+            await assert.rejects(build({ root: project, jsOnly: true }), /"订单" must match \[A-Za-z0-9\._-\]\+; a page path becomes a URL segment/);
+        } finally {
+            await rm(project, { recursive: true, force: true });
+        }
+    });
+
     it("compiles every module to bytecode when qjsc-kmp is available", { skip: !process.env["TINYUI_QJSC"] && "TINYUI_QJSC not set" }, async () => {
         for (const m of [...result.runtime, ...result.pages]) {
             assert.ok(m.bin, `${m.name} has bytecode`);

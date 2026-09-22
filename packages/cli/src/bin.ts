@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "./admin.ts";
 import { build } from "./build.ts";
-import { bundle } from "./bundle.ts";
+import { bundle, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
 import { generateKeyPair } from "./keys.ts";
@@ -95,7 +95,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 dist: (v["dist"] as string | undefined) ?? resolve("dist"),
                 runtimeVersion,
                 signingKey,
-                ...(v["rollout"] !== undefined && { rollout: Number(v["rollout"]) }),
+                ...(v["rollout"] !== undefined && { rollout: percentage(v["rollout"] as string, "bundle: --rollout") }),
                 ...(v["out"] !== undefined && { out: v["out"] as string }),
             });
             process.stdout.write(`${result.version} -> ${result.dir}\n`);
@@ -138,7 +138,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 // a mistyped channel is the one command that reaches every user at once
                 channel: requireName("--channel", required(v["channel"], "publish: --channel is required")),
                 dir: (v["dir"] as string | undefined) ?? resolve("dist", "ota"),
-                ...(v["rollout"] !== undefined && { rollout: Number(v["rollout"]) }),
+                ...(v["rollout"] !== undefined && { rollout: percentage(v["rollout"] as string, "publish: --rollout") }),
                 onUpload: (u) => process.stderr.write(`${u.existing ? "exists  " : "uploaded"} ${u.path}\n`),
             });
             const { pkg, runtimeVersion, version, pointer } = result;
@@ -186,7 +186,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const app = await appId(v);
             const pkg = await packageName(v, positionals[2]);
             if (action === "revoke") {
-                const id = required(v["id"], "tokens revoke: --id is required (tinyui releases list does not show it; keep the id from tokens create)");
+                const id = pathSegment(required(v["id"], "tokens revoke: --id is required (tinyui releases list does not show it; keep the id from tokens create)"), "--id");
                 await revokeToken(client, app, pkg, id);
                 process.stderr.write(`token ${id} revoked\n`);
                 return 0;
@@ -214,7 +214,7 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
     const client = publishClient(v);
     const app = await appId(v);
     const pkg = await packageName(v, undefined);
-    const runtimeVersion = required(v["runtime-version"], `releases ${action ?? ""}: --runtime-version is required`);
+    const runtimeVersion = pathSegment(required(v["runtime-version"], `releases ${action ?? ""}: --runtime-version is required`), "--runtime-version");
     if (action === "list") {
         const found = await listReleases(client, app, pkg, runtimeVersion);
         if (v["json"] as boolean) {
@@ -229,18 +229,18 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
                 .join(" ");
         const width = Math.max(7, ...found.versions.map((r) => r.version.length));
         process.stdout.write(`${"VERSION".padEnd(width)}  ${"PUBLISHED".padEnd(24)}  CHANNELS\n`);
-        for (const release of found.versions) process.stdout.write(`${release.version.padEnd(width)}  ${release.publishedAt.padEnd(24)}  ${at(release.version)}\n`);
+        for (const r of found.versions) process.stdout.write(`${r.version.padEnd(width)}  ${(r.publishedAt ?? r.createdAt ?? "").padEnd(24)}  ${at(r.version)}\n`);
         return 0;
     }
     const target = { app, pkg, runtimeVersion, channel: "" };
     let body: { version?: string; rollout?: number };
     if (action === "rollback" || action === "promote") {
-        const version = required(positionals[2], `releases ${action}: a version is required`);
+        const version = pathSegment(required(positionals[2], `releases ${action}: a version is required`), "a version");
         target.channel = requireName("the channel", required(action === "promote" ? v["to"] : v["channel"], `releases ${action}: ${action === "promote" ? "--to" : "--channel"} is required`));
         body = { version };
     } else if (action === "rollout") {
         target.channel = requireName("--channel", required(v["channel"], "releases rollout: --channel is required"));
-        body = { rollout: Number(required(positionals[2], "releases rollout: a percentage is required")) };
+        body = { rollout: percentage(required(positionals[2], "releases rollout: a percentage is required"), "releases rollout") };
     } else {
         throw new Error("releases: expected list, rollback, rollout or promote");
     }
@@ -269,6 +269,17 @@ async function packageName(v: Values, positional: string | undefined): Promise<s
     const config = await loadConfig(process.cwd()).catch(() => null);
     if (config) return config.name;
     return required(undefined, "--pkg is required here; there is no tinyui.config.json in the current directory to take it from");
+}
+
+function pathSegment(value: string, what: string): string {
+    if (!isPathSegment(value)) throw new Error(`${what} must be a single path segment matching [A-Za-z0-9._-]+, got "${value}"`);
+    return value;
+}
+
+function percentage(value: string, what: string): number {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) throw new Error(`${what} must be an integer from 0 to 100, got "${value}"`);
+    return parsed;
 }
 
 function required(value: unknown, message: string): string {

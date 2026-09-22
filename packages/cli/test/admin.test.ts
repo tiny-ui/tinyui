@@ -29,10 +29,14 @@ describe("management commands", () => {
         assert.equal(last().path, "/apps/demo/packages");
         assert.deepEqual(last().body, { name: "fixture", publicKey: "BASE64" });
 
-        await rotatePublicKey(client, "demo", "fixture", "ROTATED");
+        // five segments, same shape as an upload path: the management route has to win
+        const rotated = await rotatePublicKey(client, "demo", "fixture", "ROTATED");
         assert.equal(last().method, "PUT");
         assert.equal(last().path, "/apps/demo/packages/fixture/publicKey");
         assert.deepEqual(last().body, { publicKey: "ROTATED" });
+        assert.equal(rotated.name, "fixture");
+        assert.equal(rotated.publicKey, "ROTATED");
+        assert.ok(rotated.publicKeyUpdatedAt);
     });
 
     it("issues a token for the named channels and revokes it by id", async () => {
@@ -62,9 +66,10 @@ describe("management commands", () => {
 
     it("encodes each segment and holds names to the rule the server enforces", () => {
         assert.equal(segments("demo", "a/b", "1"), "/demo/a%2Fb/1");
+        // page paths are ASCII by construction (tinyui build refuses the rest); encoding is the last line of defence
         assert.equal(segments("demo", "fixture", "1", "订单.bin"), "/demo/fixture/1/%E8%AE%A2%E5%8D%95.bin");
-        // encodeURIComponent leaves dots alone, so a traversing value has to be refused, not escaped
-        assert.equal(segments("demo", "..", "1"), "/demo/../1");
+        // encodeURIComponent leaves dots alone, so a traversing value is refused rather than escaped
+        for (const traversal of ["..", ".", ""]) assert.throws(() => segments("demo", traversal, "1"), /cannot be a path segment/);
         assert.throws(() => requireName("--app", ".."), /--app must match \[a-z0-9-\]\+/);
         assert.throws(() => requireName("--channel", "Production"), /--channel must match/);
         assert.equal(requireName("--app", "trendingai"), "trendingai");
@@ -98,6 +103,15 @@ describe("management commands", () => {
                 else process.env[variable] = saved;
             }
         }
+    });
+
+    it("refuses to carry a token over plain http unless the instance is loopback", () => {
+        assert.throws(() => resolveUrl("http://updates.example.com"), /cleartext/);
+        assert.throws(() => new UpdatesClient({ url: "http://updates.example.com", token: "t" }), /cleartext/);
+        assert.throws(() => resolveUrl("not-a-url"), /not an instance url/);
+        assert.equal(resolveUrl("https://updates.example.com"), "https://updates.example.com");
+        assert.equal(resolveUrl("http://localhost:8787"), "http://localhost:8787");
+        assert.equal(resolveUrl("http://127.0.0.1:8787"), "http://127.0.0.1:8787");
     });
 
     it("strips a trailing slash off the instance url", async () => {

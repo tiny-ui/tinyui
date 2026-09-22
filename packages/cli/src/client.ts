@@ -34,13 +34,16 @@ export class UpdatesError extends Error {
     }
 }
 
+/** Loopback is the one place a token may travel without TLS: `wrangler dev` has no certificate. */
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+
 export class UpdatesClient {
     readonly url: string;
     readonly #token: string;
     readonly #fetch: typeof globalThis.fetch;
 
     constructor(options: ClientOptions) {
-        this.url = options.url.replace(/\/+$/, "");
+        this.url = requireSecureUrl(options.url).replace(/\/+$/, "");
         this.#token = options.token;
         this.#fetch = options.fetch ?? globalThis.fetch;
     }
@@ -75,7 +78,18 @@ export class UpdatesClient {
 }
 
 export function resolveUrl(explicit: string | undefined): string {
-    return explicit ?? process.env[URL_ENV] ?? DEFAULT_URL;
+    return requireSecureUrl(explicit ?? process.env[URL_ENV] ?? DEFAULT_URL);
+}
+
+export function requireSecureUrl(url: string): string {
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        throw new Error(`not an instance url: ${url}`);
+    }
+    if (parsed.protocol === "https:" || (parsed.protocol === "http:" && LOOPBACK.has(parsed.hostname))) return url;
+    throw new Error(`${url} would carry the token in cleartext; use https, or http on localhost only`);
 }
 
 /** Credentials never come from the command line: they would land in shell history and in `ps` output. */
@@ -98,7 +112,13 @@ async function detail(response: Response): Promise<string> {
     return text === "" ? response.statusText : text;
 }
 
-/** A request path from raw values: a segment can never open a new one. */
+/**
+ * A request path from raw values. Encoding alone is not enough: `encodeURIComponent` leaves `.` and `..`
+ * intact and fetch then normalises `/../` away, which would silently address another route.
+ */
 export function segments(...parts: string[]): string {
+    for (const part of parts) {
+        if (part === "" || part === "." || part === "..") throw new Error(`"${part}" cannot be a path segment`);
+    }
     return `/${parts.map(encodeURIComponent).join("/")}`;
 }

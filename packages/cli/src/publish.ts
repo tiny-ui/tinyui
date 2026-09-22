@@ -1,7 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import type { Manifest } from "./build.ts";
-import type { Pointer } from "./bundle.ts";
+import { isPathSegment, type Pointer } from "./bundle.ts";
 import { segments, type UpdatesClient, type UploadResult } from "./client.ts";
 
 export interface PublishOptions {
@@ -39,6 +39,8 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     if (options.rollout !== undefined && (!Number.isInteger(options.rollout) || options.rollout < 0 || options.rollout > 100)) {
         throw new Error(`rollout must be an integer from 0 to 100, got ${options.rollout}`);
     }
+    const concurrency = options.concurrency ?? 4;
+    if (!Number.isInteger(concurrency) || concurrency < 1) throw new Error(`concurrency must be a positive integer, got ${options.concurrency}`);
     const local = await load(await discover(resolve(options.dir)));
     const { manifest, pointer } = local;
     const pkg = manifest.name;
@@ -48,7 +50,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
 
     const files = [...new Set(Object.values(manifest.files).map((path) => `${path}.bin`)), "manifest.json"];
     const results: UploadResult[] = [];
-    await inParallel(files, options.concurrency ?? 4, async (path) => {
+    await inParallel(files, concurrency, async (path) => {
         const bytes = path === "manifest.json" ? local.manifestBytes : await readFile(join(local.dir, version, path));
         const result = await client.upload(`${prefix}${segments(...path.split("/"))}`, bytes);
         results.push(result);
@@ -67,30 +69,27 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     };
 }
 
-/**
- * `<dir>` is either the `<pkg>/<rv>` directory itself or the root `tinyui bundle --out` wrote it under.
- * Only the second form says anything about the package: a directory named directly may be a CI artifact
- * unpacked under any name.
- */
-async function discover(dir: string): Promise<{ dir: string; laidOut: boolean }> {
-    if (await exists(join(dir, "current.json"))) return { dir, laidOut: false };
+/** `<dir>` is either the `<pkg>/<rv>` directory itself or the root `tinyui bundle --out` wrote it under. */
+async function discover(dir: string): Promise<string> {
+    if (await exists(join(dir, "current.json"))) return dir;
     const found: string[] = [];
     for (const pkg of await subdirectories(dir)) {
         for (const rv of await subdirectories(join(dir, pkg))) {
             if (await exists(join(dir, pkg, rv, "current.json"))) found.push(join(dir, pkg, rv));
         }
     }
-    if (found.length === 1) return { dir: found[0]!, laidOut: true };
+    if (found.length === 1) return found[0]!;
     if (found.length === 0) throw new Error(`no current.json under ${dir}; run tinyui bundle first, or point --dir at the bundle directory`);
     const list = found.map((f) => `  ${f}`).join("\n");
     throw new Error(`${dir} holds more than one bundle; publish one at a time by pointing --dir at it:\n${list}`);
 }
 
-async function load({ dir, laidOut }: { dir: string; laidOut: boolean }): Promise<LocalBundle> {
+async function load(dir: string): Promise<LocalBundle> {
     const pointer = JSON.parse(await readFile(join(dir, "current.json"), "utf8")) as Partial<Pointer>;
     if (typeof pointer.version !== "string" || typeof pointer.signature !== "string" || typeof pointer.rollout !== "number") {
         throw new Error(`${join(dir, "current.json")} is not a pointer file; expected version / rollout / signature`);
     }
+    if (!isPathSegment(pointer.version)) throw new Error(`${join(dir, "current.json")}: "${pointer.version}" is not a single path segment`);
     const manifestFile = join(dir, pointer.version, "manifest.json");
     const manifestBytes = await readFile(manifestFile).catch(() => {
         throw new Error(`${manifestFile} is missing; current.json points at a version that was not bundled here`);
@@ -101,11 +100,11 @@ async function load({ dir, laidOut }: { dir: string; laidOut: boolean }): Promis
     }
     // the same three checks the server runs (§6.1), so a mismatch costs no upload
     if (manifest.version !== pointer.version) throw new Error(`${manifestFile} is version ${manifest.version}, current.json points at ${pointer.version}`);
-    if (laidOut) {
-        const rv = basename(dir);
-        const pkg = basename(dirname(dir));
-        if (manifest.runtimeVersion !== rv || manifest.name !== pkg) {
-            throw new Error(`${dir} is laid out as ${pkg}/${rv} but holds ${manifest.name}/${manifest.runtimeVersion}; re-run tinyui bundle instead of moving directories`);
+    // these paths pick which files are read and uploaded, so they stay inside <version>/ and inside the URL charset
+    if (typeof manifest.files !== "object" || manifest.files === null) throw new Error(`${manifestFile}: "files" must map module names to paths`);
+    for (const [module, path] of Object.entries(manifest.files)) {
+        if (typeof path !== "string" || !path.split("/").every(isPathSegment)) {
+            throw new Error(`${manifestFile}: files["${module}"] = ${JSON.stringify(path)}; every segment must match [A-Za-z0-9._-]+`);
         }
     }
     return { dir, pointer: pointer as Pointer, manifestBytes, manifest: manifest as Manifest & { runtimeVersion: string } };

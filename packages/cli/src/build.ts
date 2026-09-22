@@ -126,7 +126,13 @@ async function discoverPages(pkg: string, pagesDir: string): Promise<Map<string,
     for (const e of entries) {
         if (!e.isFile() || !/\.tsx?$/.test(e.name) || e.name.endsWith(".d.ts")) continue;
         const file = join(e.parentPath, e.name);
-        const name = `${pkg}/` + relative(pagesDir, file).replace(/\.tsx?$/, "").split(sep).join("/");
+        const path = relative(pagesDir, file).replace(/\.tsx?$/, "").split(sep).join("/");
+        // the page path reaches devices as URL segments, where it has to survive three implementations of
+        // percent-encoding; the charset is the same one versions and package names are held to (docs/updates.md §6.1)
+        for (const segment of path.split("/")) {
+            if (!isPathSegment(segment)) throw new Error(`page ${file}: "${segment}" must match [A-Za-z0-9._-]+; a page path becomes a URL segment when the package is served`);
+        }
+        const name = `${pkg}/${path}`;
         const clash = found.get(name);
         if (clash) throw new Error(`page ${name} has two sources: ${clash} and ${file}`);
         found.set(name, file);
