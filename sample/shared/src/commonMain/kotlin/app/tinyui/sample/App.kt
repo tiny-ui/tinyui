@@ -77,7 +77,7 @@ fun App() {
                 core = Res.readBytes("files/tinyui/${manifest.file("tinyui-core")}.bin"),
                 native = Res.readBytes("files/tinyui/${manifest.file("tinyui-native")}.bin"),
             ),
-            page = PageModule("pages/todos", Res.readBytes("files/tinyui/${manifest.file("pages/todos")}.bin"), manifest.buildId("pages/todos")),
+            page = PageModule("sample/todos", Res.readBytes("files/tinyui/${manifest.file("sample/todos")}.bin"), manifest.buildId("sample/todos")),
             maps = SourceMaps(maps),
         )
     }

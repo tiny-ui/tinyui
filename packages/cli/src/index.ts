@@ -1,5 +1,11 @@
 export { build, RUNTIME_MODULES } from "./build.ts";
 export type { BuildOptions, BuildResult, BuiltModule, Manifest } from "./build.ts";
+export { bundle } from "./bundle.ts";
+export type { BundleOptions, BundleResult, Pointer } from "./bundle.ts";
+export { loadConfig, CONFIG_FILE } from "./config.ts";
+export type { TinyUIConfig } from "./config.ts";
+export { generateKeyPair, publicKeyOf, isPublicKey, sign, verify } from "./keys.ts";
+export type { KeyPair } from "./keys.ts";
 export { compileModule, findQjsc } from "./qjsc.ts";
 export type { CompileOptions } from "./qjsc.ts";
 export { transformJsx, TransformError } from "./transform.ts";

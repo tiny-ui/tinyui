@@ -63,7 +63,7 @@ import app.tinyui.schema.SizeValue
 /** Bytecode of the runtime modules every page imports, as `tinyui build` writes them under `runtime/`. */
 class RuntimeBundle(val core: ByteArray, val native: ByteArray)
 
-/** One page's bytecode; [name] is the module name (`pages/todos`) and [buildId] comes from `manifest.json`. */
+/** One page's bytecode; [name] is the module name (`sample/todos`) and [buildId] comes from `manifest.json`. */
 class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "")
 
 /** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */

@@ -96,7 +96,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 | 里程碑 | 状态 |
 |---|---|
-| M1 CLI 产包与签名（含配置文件与模块名改名） | 待开 |
+| M1 CLI 产包与签名（含配置文件与模块名改名） | 已完成（PR #13，2026-09-22）：`tinyui.config.json`、模块名 `<pkg>/…`、manifest 扩展、`keys generate`、`bundle` 签原始字节写 `current.json`；sample 包名 `sample` |
 | M2 core `Bundle` | 待开 |
 | M3 `updates/` 模块 | 待开 |
 | M4 服务 MVP | 待开 |

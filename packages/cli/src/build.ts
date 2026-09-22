@@ -1,15 +1,23 @@
 import { build as esbuild, type Plugin } from "esbuild";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import { isPathSegment } from "./bundle.ts";
+import { loadConfig, type TinyUIConfig } from "./config.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { TransformError, transformJsx } from "./transform.ts";
+
+const execFileAsync = promisify(execFile);
 
 /** Runtime module name as the engine sees it → output file under `runtime/`. */
 export const RUNTIME_MODULES = { "tinyui-core": "core", "tinyui-native": "native" } as const;
 
 export interface BuildOptions {
-    /** Project root: pages are discovered under `<root>/src/pages`, packages resolved from `<root>/node_modules`. */
+    /** Project root: `tinyui.config.json` lives here, packages resolve from `<root>/node_modules`. */
     root: string;
     /** Output directory; defaults to `<root>/dist`. */
     out?: string;
@@ -17,10 +25,12 @@ export interface BuildOptions {
     qjsc?: string;
     /** Emit only the ESM sources and skip bytecode; for debugging the transform without an engine build. */
     jsOnly?: boolean;
+    /** Package version to record instead of the derived `<createdAt>-<git sha>`. */
+    version?: string;
 }
 
 export interface BuiltModule {
-    /** Module name as the engine sees it: `pages/home`, `tinyui-core`. */
+    /** Module name as the engine sees it: `<pkg>/home`, `tinyui-core`. */
     name: string;
     js: string;
     map: string;
@@ -35,19 +45,31 @@ export interface BuildResult {
     manifest: string;
 }
 
+/** `manifest.json` as `tinyui build` writes it (docs/updates.md §1.1). */
 export interface Manifest {
     runtime: string[];
     pages: string[];
     /** Module name → output path without extension (`runtime/core`, `pages/home`); hosts locate `.bin` / `.js.map` through it. */
     files: Record<string, string>;
     buildIds: Record<string, string>;
+    name: string;
+    publicKey: string;
+    version: string;
+    createdAt: string;
+    /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
+    engine: string;
+    protocol: number;
+    /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
+    hashes: Record<string, string>;
 }
 
 export async function build(options: BuildOptions): Promise<BuildResult> {
     const root = resolve(options.root);
     const out = resolve(options.out ?? join(root, "dist"));
-    const pagesDir = join(root, "src", "pages");
-    const pageNames = await discoverPages(pagesDir);
+    const config = await loadConfig(root);
+    if (options.version !== undefined && !isPathSegment(options.version)) throw new Error(`version must be a single path segment, got "${options.version}"`);
+    const pagesDir = join(root, config.pages);
+    const pageNames = await discoverPages(config.name, pagesDir);
     if (pageNames.size === 0) throw new Error(`no pages found under ${pagesDir}`);
 
     const qjsc = options.jsOnly ? undefined : await findQjsc(options.qjsc);
@@ -59,30 +81,41 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     await rm(join(out, "pages"), { recursive: true, force: true });
     await rm(join(out, "runtime"), { recursive: true, force: true });
     const runtime = await bundleRuntime(root, out);
-    const pages = await bundlePages(root, out, pageNames);
-    for (const m of [...runtime, ...pages]) {
+    const pages = await bundlePages(root, out, config, pagesDir, pageNames);
+    const modules = [...runtime, ...pages];
+    for (const m of modules) {
         m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
         await rootRelativeSources(root, m.map);
     }
+    const hashes: Record<string, string> = {};
     if (qjsc) {
-        for (const m of [...runtime, ...pages]) {
+        for (const m of modules) {
             m.bin = m.js.replace(/\.js$/, ".bin");
             await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
+            hashes[m.name] = createHash("sha256").update(await readFile(m.bin)).digest("hex");
         }
     }
 
+    const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const manifest = join(out, "manifest.json");
     const content: Manifest = {
         runtime: runtime.map((m) => m.name),
         pages: pages.map((m) => m.name),
-        files: Object.fromEntries([...runtime, ...pages].map((m) => [m.name, relative(out, m.js).replace(/\.js$/, "").split(sep).join("/")])),
-        buildIds: Object.fromEntries([...runtime, ...pages].map((m) => [m.name, m.buildId])),
+        files: Object.fromEntries(modules.map((m) => [m.name, relative(out, m.js).replace(/\.js$/, "").split(sep).join("/")])),
+        buildIds: Object.fromEntries(modules.map((m) => [m.name, m.buildId])),
+        name: config.name,
+        publicKey: config.publicKey,
+        version: options.version ?? `${createdAt.replace(/[-:]/g, "")}-${await gitShortSha(root)}`,
+        createdAt,
+        engine: runtime[0]?.bin ? await engineCommit(runtime[0].bin) : "",
+        protocol: await runtimeProtocol(root),
+        hashes,
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
     return { runtime, pages, manifest };
 }
 
-async function discoverPages(pagesDir: string): Promise<Map<string, string>> {
+async function discoverPages(pkg: string, pagesDir: string): Promise<Map<string, string>> {
     const found = new Map<string, string>();
     let entries;
     try {
@@ -93,7 +126,7 @@ async function discoverPages(pagesDir: string): Promise<Map<string, string>> {
     for (const e of entries) {
         if (!e.isFile() || !/\.tsx?$/.test(e.name) || e.name.endsWith(".d.ts")) continue;
         const file = join(e.parentPath, e.name);
-        const name = "pages/" + relative(pagesDir, file).replace(/\.tsx?$/, "").split(sep).join("/");
+        const name = `${pkg}/` + relative(pagesDir, file).replace(/\.tsx?$/, "").split(sep).join("/");
         const clash = found.get(name);
         if (clash) throw new Error(`page ${name} has two sources: ${clash} and ${file}`);
         found.set(name, file);
@@ -117,13 +150,14 @@ async function bundleRuntime(root: string, out: string): Promise<BuiltModule[]> 
     return built;
 }
 
-async function bundlePages(root: string, out: string, pages: Map<string, string>): Promise<BuiltModule[]> {
+async function bundlePages(root: string, out: string, config: TinyUIConfig, pagesDir: string, pages: Map<string, string>): Promise<BuiltModule[]> {
     const outdir = join(out, "pages");
+    const prefix = `${config.name}/`;
     await esbuild({
         ...common(root),
-        entryPoints: [...pages].map(([name, file]) => ({ in: file, out: name.slice("pages/".length) })),
+        entryPoints: [...pages].map(([name, file]) => ({ in: file, out: name.slice(prefix.length) })),
         outdir,
-        outbase: join(root, "src", "pages"),
+        outbase: pagesDir,
         // the project's tsconfig says react-jsx for type checking; the output is classic h() regardless
         tsconfigRaw: { compilerOptions: { jsx: "react", jsxFactory: "h", jsxFragmentFactory: "Fragment" } },
         jsx: "transform",
@@ -133,7 +167,7 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
         plugins: [pagePlugin],
     });
     return [...pages.keys()].map((name) => {
-        const js = join(outdir, name.slice("pages/".length) + ".js");
+        const js = join(outdir, name.slice(prefix.length) + ".js");
         return { name, js, map: js + ".map", buildId: "" };
     });
 }
@@ -147,6 +181,32 @@ async function rootRelativeSources(root: string, mapFile: string): Promise<void>
         return relative(root, resolve(dirname(mapFile), s)).split(sep).join("/");
     });
     await writeFile(mapFile, JSON.stringify(map));
+}
+
+/** Engine commit from the bytecode file header (quickjs-kmp `native/shim/quickjs_kmp.c`, `kmp_bc_header`). */
+async function engineCommit(bin: string): Promise<string> {
+    const bytes = await readFile(bin);
+    if (bytes.subarray(0, 4).toString("latin1") !== "QJKB" || bytes.length < 52) throw new Error(`${bin} is not quickjs-kmp bytecode`);
+    const commit = bytes.subarray(12, 52).toString("latin1");
+    if (!/^[0-9a-f]{40}$/.test(commit)) throw new Error(`${bin}: unexpected engine commit in the bytecode header`);
+    return commit;
+}
+
+/** `PROTOCOL` of the `tinyui-core` the pages resolve to, through its constants-only subpath export. */
+async function runtimeProtocol(root: string): Promise<number> {
+    const file = createRequire(join(root, "package.json")).resolve("tinyui-core/protocol");
+    const { PROTOCOL } = (await import(pathToFileURL(file).href)) as { PROTOCOL: unknown };
+    if (typeof PROTOCOL !== "number") throw new Error(`${file} does not export PROTOCOL`);
+    return PROTOCOL;
+}
+
+async function gitShortSha(root: string): Promise<string> {
+    try {
+        const { stdout } = await execFileAsync("git", ["rev-parse", "--short", "HEAD"], { cwd: root });
+        return stdout.trim() || "nogit";
+    } catch {
+        return "nogit";
+    }
 }
 
 const JSX_SHIM = "tinyui:jsx-shim";

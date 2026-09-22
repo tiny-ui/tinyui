@@ -72,7 +72,7 @@ tinyui/
 ├── packages/           所有 npm 包，目录名 = 包名去掉 scope（pnpm workspace）
 │   ├── core/           tinyui-core    JS 运行时（signal / effect / owner / h / For / Show / ref + cmd）+ 内置组件的 TS 类型（由 schema/ 生成，无运行时代码）；作为 ES 模块字节码内置
 │   ├── native/         tinyui-native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
-│   └── cli/            tinyui-cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`
+│   └── cli/            tinyui-cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`；`tinyui bundle` 产签名后的热下发目录，`tinyui keys generate` 产签名密钥对
 ├── compose/            app.tinyui:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
 ├── schema/             内置组件 schema 的唯一真值（TS DSL）→ `pnpm schema` 生成 packages/core 的类型与 compose/ 的注册 schema
 ├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
