@@ -138,10 +138,10 @@ class Updates(
 
 | 成员 | 语义 |
 |---|---|
-| `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4），进程内不变 |
+| `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果 |
 | `suspend fun check(pkg: String): CheckResult` | 只查一个包 |
-| `@Composable fun UpdatesPage(name, registry, sink, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
+| 顶层 `@Composable fun UpdatesPage(updates, name, registry, sink, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
 `CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
 

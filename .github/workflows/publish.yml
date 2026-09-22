@@ -35,7 +35,7 @@ jobs:
           echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
       - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck --no-daemon
       - name: Publish to Maven Central
-        run: ./gradlew :compose:publishAndReleaseToMavenCentral --no-configuration-cache --no-daemon
+        run: ./gradlew :compose:publishAndReleaseToMavenCentral :updates:publishAndReleaseToMavenCentral --no-configuration-cache --no-daemon
         env:
           ORG_GRADLE_PROJECT_VERSION_NAME: ${{ github.ref_name }}
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}

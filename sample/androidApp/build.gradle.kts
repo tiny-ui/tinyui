@@ -22,4 +22,5 @@ android {
 dependencies {
     implementation(project(":sample:shared"))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.okio)
 }

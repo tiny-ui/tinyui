@@ -59,6 +59,19 @@ importers:
         specifier: workspace:*
         version: link:../../packages/cli
 
+  sample/js-extra:
+    dependencies:
+      tinyui-core:
+        specifier: workspace:*
+        version: link:../../packages/core
+      tinyui-native:
+        specifier: workspace:*
+        version: link:../../packages/native
+    devDependencies:
+      tinyui-cli:
+        specifier: workspace:*
+        version: link:../../packages/cli
+
   schema:
     devDependencies:
       tinyui-cli:

@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - sample/js
+  - sample/js-extra
   - schema
 
 onlyBuiltDependencies:

@@ -21,6 +21,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":compose"))
+            implementation(project(":updates"))
+            implementation(libs.okio)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -31,8 +33,9 @@ kotlin {
     }
 }
 
-// JS 侧：pnpm 编三个包 → tinyui build 把 sample/js 的页面与运行时模块编成字节码 → 只把 .bin 与清单打成 Compose 资源
-val jsRoot = rootDir.resolve("sample/js")
+// JS 侧：pnpm 编三个包 → tinyui build 把每个示例包的页面与运行时模块编成字节码 → 只把 .bin 与清单打成 Compose 资源
+// 两个包演示多包模型（docs/updates.md §0）：各自的 JS 工程、密钥、资源子目录
+val jsPackages = mapOf("sample" to rootDir.resolve("sample/js"), "sample-extra" to rootDir.resolve("sample/js-extra"))
 val cliOut = layout.buildDirectory.dir("tinyui-cli")
 val quickjsKmpDir = (gradle as ExtensionAware).extra.properties["quickjs-kmp.dir"] as File?
 val qjsc: Provider<String> = providers.gradleProperty("tinyui.qjsc")
@@ -49,29 +52,40 @@ val buildJsPackages by tasks.registering(Exec::class) {
     outputs.dirs(rootDir.resolve("packages/core/dist"), rootDir.resolve("packages/native/dist"), rootDir.resolve("packages/cli/dist"))
 }
 
-val buildTinyUIPages by tasks.registering(Exec::class) {
+val buildTinyUIPages by tasks.registering {
     group = "build"
-    description = "tinyui build for sample/js"
-    dependsOn(buildJsPackages)
-    if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildHostTools"))
-    workingDir = jsRoot
-    inputs.dir(jsRoot.resolve("src"))
-    inputs.files(buildJsPackages.map { it.outputs.files })
-    inputs.property("qjsc", qjsc.orElse(""))
-    outputs.dir(cliOut)
-    val args = mutableListOf("node", rootDir.resolve("packages/cli/dist/bin.js").path, "build", "--root", jsRoot.path, "--out", cliOut.get().asFile.path)
-    qjsc.orNull?.let { args += listOf("--qjsc", it) }
-    commandLine(args)
+    description = "tinyui build for every sample package"
+}
+val packageBuilds = jsPackages.map { (pkg, jsRoot) ->
+    val name = "buildTinyUIPages" + pkg.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }
+    tasks.register<Exec>(name) {
+        group = "build"
+        description = "tinyui build for ${jsRoot.relativeTo(rootDir)}"
+        dependsOn(buildJsPackages)
+        if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildHostTools"))
+        workingDir = jsRoot
+        inputs.dir(jsRoot.resolve("src"))
+        inputs.file(jsRoot.resolve("tinyui.config.json"))
+        inputs.files(buildJsPackages.map { it.outputs.files })
+        inputs.property("qjsc", qjsc.orElse(""))
+        val out = cliOut.map { it.dir(pkg) }
+        outputs.dir(out)
+        val args = mutableListOf("node", rootDir.resolve("packages/cli/dist/bin.js").path, "build", "--root", jsRoot.path, "--out", out.get().asFile.path)
+        qjsc.orNull?.let { args += listOf("--qjsc", it) }
+        commandLine(args)
+    }.also { buildTinyUIPages.configure { dependsOn(it) } }
 }
 
 // one resource subdirectory per package (docs/updates.md §3): files/tinyui/<pkg>/
 val tinyUIResourcesRoot = layout.buildDirectory.dir("tinyui-resources")
 val collectTinyUIResources by tasks.registering(Sync::class) {
     // maps ride along for the debug-only failure screen (docs/build-chain.md); -Ptinyui.maps=false leaves them out
-    from(buildTinyUIPages) {
-        into("files/tinyui/sample")
-        include("**/*.bin", "manifest.json")
-        if (providers.gradleProperty("tinyui.maps").orNull != "false") include("**/*.js.map")
+    jsPackages.keys.forEachIndexed { i, pkg ->
+        from(packageBuilds[i]) {
+            into("files/tinyui/$pkg")
+            include("**/*.bin", "manifest.json")
+            if (providers.gradleProperty("tinyui.maps").orNull != "false") include("**/*.js.map")
+        }
     }
     // the whole root is synced, so a package directory from an earlier layout does not linger
     into(tinyUIResourcesRoot)
