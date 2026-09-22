@@ -220,12 +220,29 @@ class UpdatesTest {
         events.clear()
         val u = updates(embedded())
         assertEquals("HOME-v1", pageBytes(u.current("shop")))
-        u.rollBack("shop", "shop/home", PageFailure(PageError("E2", "shop/home", "cccccccc", "boom")))
+        u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E2", "shop/home", "cccccccc", "boom")))
         assertSame(u.embedded("shop"), u.current("shop"))
         assertEquals(UpdateEvent.RolledBack("shop", "v1", "shop/home", "E2", "cccccccc", "boom"), events.last())
         assertFalse(fs.exists(dir / "shop/installed/v1"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE), u.check("shop"))
         assertEquals("HOME-v0", pageBytes(updates(embedded()).current("shop")), "and stays embedded after a restart")
+    }
+
+    @Test
+    fun aRollbackOnlyDropsTheVersionThatFailedNotOneInstalledMeanwhile() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        val u = updates(embedded())
+        val running = u.current("shop")
+        assertEquals("v1", running.manifest.version)
+        publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z"))
+        assertEquals(CheckResult.Installed("v2"), u.check("shop"))
+        u.rollBack("shop", running, "shop/home", PageFailure(PageError("E6", "shop/home", "cccccccc", "boom")))
+        assertEquals("v1", (events.last() as UpdateEvent.RolledBack).version)
+        assertSame(u.embedded("shop"), u.current("shop"), "no more pages from the failed bundle in this process")
+        assertTrue(fs.exists(dir / "shop/installed/v2/manifest.json"), "the newer install stays")
+        assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"installed\":\"v2\"")
+        assertEquals("HOME-v2", pageBytes(updates(embedded()).current("shop")), "and runs from the next start")
     }
 
     @Test

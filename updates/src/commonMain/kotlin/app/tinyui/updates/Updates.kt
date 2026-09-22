@@ -101,15 +101,22 @@ class Updates internal constructor(
 
     internal fun embedded(pkg: String): Bundle = pkg(pkg).embedded
 
-    /** The installed package of [pkg] just failed a page (docs/updates.md §4.5): blacklist it and go back to embedded. */
-    internal fun rollBack(pkg: String, page: String, failure: PageFailure) {
+    /**
+     * A page of [bundle], an installed package of [pkg], failed (docs/updates.md §4.5): blacklist that version and go
+     * back to embedded. A newer version `check()` installed meanwhile is left alone, only the failed one is dropped.
+     */
+    internal suspend fun rollBack(pkg: String, bundle: Bundle, page: String, failure: PageFailure) {
         val p = pkg(pkg)
-        val version = p.installed ?: return
-        p.failed += version
-        p.installed = null
-        p.current = p.embedded
-        p.saveState()
-        runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
+        val version = bundle.manifest.version
+        p.lock.withLock {
+            if (version !in p.failed) p.failed += version
+            p.current = p.embedded
+            if (p.installed == version) {
+                p.installed = null
+                runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
+            }
+            p.saveState()
+        }
         onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
     }
 
