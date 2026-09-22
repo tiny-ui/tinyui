@@ -8,6 +8,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
@@ -174,6 +176,7 @@ class Updates internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 return CheckResult.Failed(null, FailStage.POINTER, e.message ?: e.toString())
             }
             val version = pointer.version
@@ -187,6 +190,7 @@ class Updates internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 return CheckResult.Failed(version, FailStage.MANIFEST, e.message ?: e.toString())
             }
             val trusted = embedded.manifest.publicKey
@@ -249,6 +253,7 @@ class Updates internal constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     return CheckResult.Failed(version, FailStage.DOWNLOAD, "$path: ${e.message ?: e}")
                 }
                 if (bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
