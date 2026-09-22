@@ -79,7 +79,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 私有化 | — | 只能挂进 Node 后端 | 部署同一份代码到自己的 Cloudflare 账号 |
 | 挡住什么 | CLI 直发；SaaS 期两份实现要保持一致 | 包必须运行时无关 | 投递 URL 形态一经发布不能变（旧 App 版本永远打它） |
 
-选 C。独立仓 `tinyui-updates-server`，Hono（Fetch API 之上的薄路由，Workers 原生、Node / Bun / Deno 同一份代码可跑），存储只用 KV + R2——绑定越少，私有化越接近一条 `wrangler deploy`；存储收在 `Storage` 接口后，D1（触发：控制台需要跨维度查询）与文件系统 + SQLite 的 Node 适配器（触发：出现非 Cloudflare 的私有化需求）各带触发条件。管理面先不做控制台：`ADMIN_TOKEN` 作 Worker secret + CLI。静态目录自托管在协议上仍然合法，是不想跑服务的人的出口。
+选 C。独立仓 `tinyui-updates-server`，Hono（Fetch API 之上的薄路由，Workers 原生、Node / Bun / Deno 同一份代码可跑），存储只用一个 R2 桶（2026-09-22 实现时从 KV + R2 收成 R2 单绑定：KV 最终一致会让吊销的 token 继续可用一分钟、发布后的指针在别的边缘节点读不到，R2 强一致且有条件写与前缀列举，元数据按版本 / channel 独立成对象后不需要任何读改写）——绑定越少，私有化越接近一条 `wrangler deploy`；存储收在 `Storage` 接口后，D1（触发：控制台需要跨维度查询）与文件系统 + SQLite 的 Node 适配器（触发：出现非 Cloudflare 的私有化需求）各带触发条件。管理面先不做控制台：`ADMIN_TOKEN` 作 Worker secret + CLI。静态目录自托管在协议上仍然合法，是不想跑服务的人的出口。
 
 许可证：服务端仓与主仓一致用 MIT；托管实例对外提供前重评（AGPL 能挡"拿它开托管服务"，私有化部署不受影响；单作者可对新版本换许可证）。
 
@@ -143,7 +143,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 回滚 | 重发上一个好包；无 `rollBackToEmbedded` |
 | 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256，覆盖 `<version>/manifest.json` 的原始字节，无规范化）；密钥按 (app, pkg)，发布方持私钥，服务端与客户端各验一次；公钥写在 `tinyui.config.json` 随 build 进 manifest，客户端只信内置包的 |
 | CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes`；`tinyui bundle --runtime-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<rv>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
-| 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，KV + R2，`Storage` 接口后置；内容按 (app, pkg, rv, version) 存，channel 是指针；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
+| 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，单 R2 桶，`Storage` 接口后置；内容按 (app, pkg, rv, version) 存，channel 是指针；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
 | 仓边界 | `tinyui-updates` 在主仓 `updates/` 模块，与 core 同版本发；服务端独立仓；协议只写在 updates.md，发布后字段只增不改 |
 
 ## 4. 后果
@@ -171,7 +171,6 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 | 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
 | 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情；MAU 按 app 内 `install` 去重，不因分包重复计数） | 托管实例对外收费；业界参照见 §4.4 |
 | 挂载标记：`UpdatesPage` 挂 installed 页面前落盘 `attempting`、首帧后清除，构造时残留计数达 2 即拉黑（CodePush `notifyAppReady` / Android A/B boot-success 同类） | 出现以 TinyUI 页面作启动首屏的宿主，或线上出现热下发包导致的崩溃循环。在此之前：启动 sha256 校验挡磁盘损坏；页面代码触发的引擎崩溃是确定性的、同一引擎 commit 在开发与 staging 就会复现，线上靠灰度 + 指针回滚 + `check()` 先于页面挂载 |
-| 指针改走强一致存储（R2） | KV 最终一致带来的最多约 60 秒回滚延迟成为运营问题 |
 | 增量传输 | 整包超过 1 MB |
 | 页内 `import()` 懒加载（接 `JsEngineConfig.moduleLoader`） | 出现单页字节码过大的页面 |
 

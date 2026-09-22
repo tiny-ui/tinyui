@@ -86,7 +86,7 @@ base = https://updates.tinyui.app/<app>/<channel>
 完整路径 = /<app>/<channel>/<pkg>/<rv>/current.json
 ```
 
-托管实例的指针存 KV，最终一致：写入后全球可见最多约 60 秒，回滚同样受此延迟。
+托管实例的指针、release 记录与 token 都存 R2（强一致）：发布、回滚、吊销 token 立即生效。代价是 `current.json` 的读取不走 KV 的边缘缓存，延迟略高，对 App 启动时的后台 `check()` 可接受。
 
 进 URL 的只有永久不变的身份：`app` 由实例管理员分配、全局唯一（§6.3）；`channel` 由宿主构建变体决定（`production` / `staging` / `dev`），是 App 级的部署环境而不是包级的；`pkg`、`rv` 见上。**组织 / 租户（计费主体）不进 URL**——它会改名、转让、拆合，只是 app 记录上的一个可改字段。
 

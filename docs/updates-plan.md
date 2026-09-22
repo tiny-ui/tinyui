@@ -63,14 +63,14 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 | 交付 | 要点 |
 |---|---|
-| 建仓 | pnpm + Hono + wrangler；vitest 用 `@cloudflare/vitest-pool-workers`；Cloudflare Git 集成 push 即 deploy；README 写私有化步骤：fork → 建 KV / R2 → 设 `ADMIN_TOKEN` → `wrangler deploy` → `tinyui apps create` → `tinyui packages create` |
-| 投递端点 | `GET /:app/:channel/:pkg/:rv/current.json`（KV，`no-store`）、`GET /:app/:channel/:pkg/:rv/:version/*`（R2，键为 (app, pkg, rv, version, path)，含 `manifest.json`，`channel` 不参与寻址，`immutable`） |
+| 建仓 | pnpm + Hono + wrangler；vitest 用 `@cloudflare/vitest-pool-workers`；Cloudflare Git 集成 push 即 deploy；README 写私有化步骤：fork → 建 R2 桶 → 设 `ADMIN_TOKEN` → `wrangler deploy` → `tinyui apps create` → `tinyui packages create` |
+| 投递端点 | `GET /:app/:channel/:pkg/:rv/current.json`（`no-store`）、`GET /:app/:channel/:pkg/:rv/:version/*`（键为 (app, pkg, rv, version, path)，含 `manifest.json`，`channel` 不参与寻址，`immutable`，流式） |
 | 发布端点 | `PUT /:app/:pkg/:rv/:version/*`（幂等，冲突 409）；`PUT /:app/:channel/:pkg/:rv/current.json`（token 归属与 channel 范围 → 取 R2 里 `<version>/manifest.json` 的原始字节，WebCrypto 验签，DER → r‖s 转换 → `name` == `:pkg`、`runtimeVersion` == `:rv`、`version` == 指针 `version`、`publicKey` == 登记值 → `<version>/` 齐全且 sha256 一致 → 记 release（含 `signature`）、切指针） |
 | 管理端点 | `/apps`（含可改 `org` 字段）、`/apps/:app/packages`、`/apps/:app/packages/:pkg/publicKey`、`/apps/:app/packages/:pkg/tokens`（带 `channels`；`ADMIN_TOKEN` secret；token 只存 sha256，签发只返回一次） |
 | release 端点 | `GET /:app/:pkg/:rv/releases`、`POST /:app/:channel/:pkg/:rv/pointer`（回滚与跨 channel 晋级同一操作） |
-| `Storage` 接口 | CF 适配器（KV + R2）+ 内存适配器（测试） |
+| `Storage` 接口 | R2 适配器（元数据与内容都在一个桶，元数据按版本 / channel 独立成对象，上传用条件写保证不可变）+ 内存适配器 |
 | 一致性测试 | 用 `tinyui-cli` 产的夹具包按 updates.md §6 顺序打：先指针后内容被拒、坏签名被拒、`name` 与路径不符被拒、指针 `version` 与 manifest 不符被拒、token 跨包 / 跨 channel 被拒、staging 发布后 production 指针晋级不重传、回滚后 `current.json` 带回该 version 的签名、改 rollout 后签名仍有效 |
-| 部署 | `updates.tinyui.app`（DNS 在 Cloudflare）、KV namespace、R2 桶、`ADMIN_TOKEN` |
+| 部署 | `updates.tinyui.app`（DNS 在 Cloudflare）、R2 桶、`ADMIN_TOKEN` |
 
 验收：本机 `wrangler dev` 起服务，M3 的 sample 把 base URL 换成它，整条链跑通。
 
