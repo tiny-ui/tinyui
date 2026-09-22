@@ -12,6 +12,8 @@ import kotlinx.serialization.json.jsonPrimitive
 class SourceMaps(maps: Map<String, String>) {
     private val entries: Map<String, Lazy<SourceMap>> = maps.mapValues { (_, json) -> lazy { SourceMap(json) } }
 
+    val isEmpty: Boolean get() = entries.isEmpty()
+
     /** Parses an engine stack (`    at fn (module:line:col)` per line), mapping the frames whose module has a map. */
     fun frames(stack: String?): List<StackFrame> {
         if (stack.isNullOrBlank()) return emptyList()

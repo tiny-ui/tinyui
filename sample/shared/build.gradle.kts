@@ -64,13 +64,17 @@ val buildTinyUIPages by tasks.registering(Exec::class) {
     commandLine(args)
 }
 
+// one resource subdirectory per package (docs/updates.md §3): files/tinyui/<pkg>/
+val tinyUIResourcesRoot = layout.buildDirectory.dir("tinyui-resources")
 val collectTinyUIResources by tasks.registering(Sync::class) {
     // maps ride along for the debug-only failure screen (docs/build-chain.md); -Ptinyui.maps=false leaves them out
     from(buildTinyUIPages) {
+        into("files/tinyui/sample")
         include("**/*.bin", "manifest.json")
         if (providers.gradleProperty("tinyui.maps").orNull != "false") include("**/*.js.map")
     }
-    into(layout.buildDirectory.dir("tinyui-resources/files/tinyui"))
+    // the whole root is synced, so a package directory from an earlier layout does not linger
+    into(tinyUIResourcesRoot)
 }
 
 // Compose's assets copy never deletes what an earlier build produced: a removed page would stay in the APK
@@ -80,5 +84,5 @@ tasks.matching { it.name.startsWith("copy") && it.name.endsWith("ComposeResource
 
 compose.resources {
     packageOfResClass = "app.tinyui.sample.res"
-    customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir.parentFile.parentFile }))
+    customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir }))
 }

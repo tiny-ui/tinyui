@@ -19,24 +19,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import app.tinyui.BuildManifest
+import org.jetbrains.compose.resources.MissingResourceException
+import app.tinyui.Bundle
 import app.tinyui.HostException
 import app.tinyui.HostServices
+import app.tinyui.LoadedPage
 import app.tinyui.HttpClient
 import app.tinyui.HttpRequest
 import app.tinyui.HttpResponse
 import app.tinyui.PageError
-import app.tinyui.PageModule
 import app.tinyui.PageSink
-import app.tinyui.RuntimeBundle
-import app.tinyui.SourceMaps
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIPage
 import app.tinyui.components.registerBuiltins
 import app.tinyui.sample.res.Res
 import app.tinyui.schema.ComponentRegistry
-
-private class Bundle(val runtime: RuntimeBundle, val page: PageModule, val maps: SourceMaps)
 
 /** App-level, built once (docs/adr-003 §3.3). */
 private val registry = ComponentRegistry().registerBuiltins()
@@ -63,30 +60,22 @@ private val services = HostServices(http = FakeTodos, deviceInfo = mapOf("app" t
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun App() {
-    var bundle by remember { mutableStateOf<Bundle?>(null) }
+    var page by remember { mutableStateOf<LoadedPage?>(null) }
     LaunchedEffect(Unit) {
-        val manifest = BuildManifest.parse(Res.readBytes("files/tinyui/manifest.json").decodeToString())
-        // debug builds ship the maps; without them (-Ptinyui.maps=false) stacks stay as the engine printed them
-        val maps = (manifest.runtime + manifest.pages).mapNotNull { name ->
-            runCatching { Res.readBytes("files/tinyui/${manifest.file(name)}.js.map").decodeToString() }.getOrNull()?.let { name to it }
-        }.toMap()
-        // stacks on the failure screen only when the maps came along, i.e. the same switch as -Ptinyui.maps
-        TinyUI.debug = maps.isNotEmpty()
-        bundle = Bundle(
-            RuntimeBundle(
-                core = Res.readBytes("files/tinyui/${manifest.file("tinyui-core")}.bin"),
-                native = Res.readBytes("files/tinyui/${manifest.file("tinyui-native")}.bin"),
-            ),
-            page = PageModule("sample/todos", Res.readBytes("files/tinyui/${manifest.file("sample/todos")}.bin"), manifest.buildId("sample/todos")),
-            maps = SourceMaps(maps),
-        )
+        val bundle = Bundle.load { path ->
+            try { Res.readBytes("files/tinyui/sample/$path") } catch (e: MissingResourceException) { null }
+        }
+        val loaded = bundle.page("sample/todos")
+        // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
+        TinyUI.debug = !loaded.sourceMaps.isEmpty
+        page = loaded
     }
     // pages name theme tokens only (docs/components.md §6); flipping the scheme here restyles them with no patch
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
         Surface(Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
-                val b = bundle
-                if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.page, registry, sink, services, sourceMaps = b.maps)
+                val p = page
+                if (p == null) Text("loading…") else TinyUIPage(p.runtime, p.module, registry, sink, services, sourceMaps = p.sourceMaps)
             }
         }
     }
