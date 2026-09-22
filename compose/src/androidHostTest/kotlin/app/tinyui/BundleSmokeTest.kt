@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 
 /** Loads what `tinyui build` produced for the sample through the real engine; skips when the sample was not built. */
 class BundleSmokeTest {
-    private val out = File("../sample/shared/build/tinyui-cli")
+    private val out = File("../sample/shared/build/tinyui-cli/sample")
 
     @Test
     fun builtBundlesLoadAndTheRuntimeComesUp() {

@@ -1,0 +1,15 @@
+{
+  "name": "tinyui-sample-extra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "tinyui-core": "workspace:*",
+    "tinyui-native": "workspace:*"
+  },
+  "devDependencies": {
+    "tinyui-cli": "workspace:*"
+  }
+}

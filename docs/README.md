@@ -74,6 +74,7 @@ tinyui/
 │   ├── native/         tinyui-native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
 │   └── cli/            tinyui-cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`；`tinyui bundle` 产签名后的热下发目录，`tinyui keys generate` 产签名密钥对
 ├── compose/            app.tinyui:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
+├── updates/            app.tinyui:tinyui-updates  KMP 库：热下发的校验、落盘、选择、回退（ADR-006 §2.4），依赖 compose/
 ├── schema/             内置组件 schema 的唯一真值（TS DSL）→ `pnpm schema` 生成 packages/core 的类型与 compose/ 的注册 schema
 ├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
 │   ├── js/             页面源码（pnpm workspace 成员），shared 的 Gradle 任务调 CLI 编成字节码打进 Compose 资源
@@ -94,7 +95,7 @@ tinyui/
 
 本地联调 quickjs-kmp：`local.properties` 写 `quickjs-kmp.dir=<仓路径>` 即 composite build 从源码构建，坐标映射由该仓 `gradle/composite-substitutions` 声明；CI 无 `local.properties`，解析 Maven 版本（catalog `quickjsKmp`）。
 
-约定：顶层只放这八个目录；新 npm 包进 `packages/`，新 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
+约定：顶层只放这九个目录；新 npm 包进 `packages/`；Kotlin 侧只有独立发 artifact 的库才占顶层目录（`updates/`，ADR-006 §2.4），其他 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 
 ## 实现期文档
 

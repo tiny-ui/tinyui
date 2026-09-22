@@ -19,6 +19,7 @@ dependencyResolutionManagement {
 rootProject.name = "tinyui"
 
 include(":compose")
+include(":updates")
 // as an included build of a host App only the library is wanted; the sample would drag its Node toolchain and app shell into that composite
 if (gradle.parent == null) {
     include(":sample:shared")

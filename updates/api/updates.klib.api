@@ -1,0 +1,296 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <tinyui:updates>
+final enum class app.tinyui.updates/FailStage : kotlin/Enum<app.tinyui.updates/FailStage> { // app.tinyui.updates/FailStage|null[0]
+    enum entry DOWNLOAD // app.tinyui.updates/FailStage.DOWNLOAD|null[0]
+    enum entry INTEGRITY // app.tinyui.updates/FailStage.INTEGRITY|null[0]
+    enum entry MANIFEST // app.tinyui.updates/FailStage.MANIFEST|null[0]
+    enum entry POINTER // app.tinyui.updates/FailStage.POINTER|null[0]
+    enum entry SIGNATURE // app.tinyui.updates/FailStage.SIGNATURE|null[0]
+    enum entry STORAGE // app.tinyui.updates/FailStage.STORAGE|null[0]
+
+    final val entries // app.tinyui.updates/FailStage.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.updates/FailStage> // app.tinyui.updates/FailStage.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): app.tinyui.updates/FailStage // app.tinyui.updates/FailStage.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.updates/FailStage> // app.tinyui.updates/FailStage.values|values#static(){}[0]
+}
+
+final enum class app.tinyui.updates/Mismatch : kotlin/Enum<app.tinyui.updates/Mismatch> { // app.tinyui.updates/Mismatch|null[0]
+    enum entry ENGINE // app.tinyui.updates/Mismatch.ENGINE|null[0]
+    enum entry NAME // app.tinyui.updates/Mismatch.NAME|null[0]
+    enum entry PROTOCOL // app.tinyui.updates/Mismatch.PROTOCOL|null[0]
+    enum entry RUNTIME_VERSION // app.tinyui.updates/Mismatch.RUNTIME_VERSION|null[0]
+    enum entry VERSION // app.tinyui.updates/Mismatch.VERSION|null[0]
+
+    final val entries // app.tinyui.updates/Mismatch.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.updates/Mismatch> // app.tinyui.updates/Mismatch.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): app.tinyui.updates/Mismatch // app.tinyui.updates/Mismatch.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.updates/Mismatch> // app.tinyui.updates/Mismatch.values|values#static(){}[0]
+}
+
+final enum class app.tinyui.updates/SkipReason : kotlin/Enum<app.tinyui.updates/SkipReason> { // app.tinyui.updates/SkipReason|null[0]
+    enum entry FAILED_BEFORE // app.tinyui.updates/SkipReason.FAILED_BEFORE|null[0]
+    enum entry INCOMPATIBLE // app.tinyui.updates/SkipReason.INCOMPATIBLE|null[0]
+    enum entry OLDER_THAN_EMBEDDED // app.tinyui.updates/SkipReason.OLDER_THAN_EMBEDDED|null[0]
+    enum entry ROLLOUT // app.tinyui.updates/SkipReason.ROLLOUT|null[0]
+
+    final val entries // app.tinyui.updates/SkipReason.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.updates/SkipReason> // app.tinyui.updates/SkipReason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): app.tinyui.updates/SkipReason // app.tinyui.updates/SkipReason.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.updates/SkipReason> // app.tinyui.updates/SkipReason.values|values#static(){}[0]
+}
+
+final enum class app.tinyui.updates/Source : kotlin/Enum<app.tinyui.updates/Source> { // app.tinyui.updates/Source|null[0]
+    enum entry EMBEDDED // app.tinyui.updates/Source.EMBEDDED|null[0]
+    enum entry INSTALLED // app.tinyui.updates/Source.INSTALLED|null[0]
+
+    final val entries // app.tinyui.updates/Source.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.updates/Source> // app.tinyui.updates/Source.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): app.tinyui.updates/Source // app.tinyui.updates/Source.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.updates/Source> // app.tinyui.updates/Source.values|values#static(){}[0]
+}
+
+final class app.tinyui.updates/Updates { // app.tinyui.updates/Updates|null[0]
+    constructor <init>(kotlin.collections/List<app.tinyui/Bundle>, kotlin/String, okio/Path, kotlin/String, kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray>, kotlin/Function1<app.tinyui.updates/UpdateEvent, kotlin/Unit> = ...) // app.tinyui.updates/Updates.<init>|<init>(kotlin.collections.List<app.tinyui.Bundle>;kotlin.String;okio.Path;kotlin.String;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.ByteArray>;kotlin.Function1<app.tinyui.updates.UpdateEvent,kotlin.Unit>){}[0]
+
+    final val runtimeVersion // app.tinyui.updates/Updates.runtimeVersion|{}runtimeVersion[0]
+        final fun <get-runtimeVersion>(): kotlin/String // app.tinyui.updates/Updates.runtimeVersion.<get-runtimeVersion>|<get-runtimeVersion>(){}[0]
+
+    final fun current(kotlin/String): app.tinyui/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
+    final suspend fun check(): kotlin.collections/Map<kotlin/String, app.tinyui.updates/CheckResult> // app.tinyui.updates/Updates.check|check(){}[0]
+    final suspend fun check(kotlin/String): app.tinyui.updates/CheckResult // app.tinyui.updates/Updates.check|check(kotlin.String){}[0]
+}
+
+sealed class app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult|null[0]
+    final class Failed : app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult.Failed|null[0]
+        constructor <init>(kotlin/String?, app.tinyui.updates/FailStage, kotlin/String) // app.tinyui.updates/CheckResult.Failed.<init>|<init>(kotlin.String?;app.tinyui.updates.FailStage;kotlin.String){}[0]
+
+        final val message // app.tinyui.updates/CheckResult.Failed.message|{}message[0]
+            final fun <get-message>(): kotlin/String // app.tinyui.updates/CheckResult.Failed.message.<get-message>|<get-message>(){}[0]
+        final val stage // app.tinyui.updates/CheckResult.Failed.stage|{}stage[0]
+            final fun <get-stage>(): app.tinyui.updates/FailStage // app.tinyui.updates/CheckResult.Failed.stage.<get-stage>|<get-stage>(){}[0]
+        final val version // app.tinyui.updates/CheckResult.Failed.version|{}version[0]
+            final fun <get-version>(): kotlin/String? // app.tinyui.updates/CheckResult.Failed.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String? // app.tinyui.updates/CheckResult.Failed.component1|component1(){}[0]
+        final fun component2(): app.tinyui.updates/FailStage // app.tinyui.updates/CheckResult.Failed.component2|component2(){}[0]
+        final fun component3(): kotlin/String // app.tinyui.updates/CheckResult.Failed.component3|component3(){}[0]
+        final fun copy(kotlin/String? = ..., app.tinyui.updates/FailStage = ..., kotlin/String = ...): app.tinyui.updates/CheckResult.Failed // app.tinyui.updates/CheckResult.Failed.copy|copy(kotlin.String?;app.tinyui.updates.FailStage;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/CheckResult.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/CheckResult.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/CheckResult.Failed.toString|toString(){}[0]
+    }
+
+    final class Installed : app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult.Installed|null[0]
+        constructor <init>(kotlin/String) // app.tinyui.updates/CheckResult.Installed.<init>|<init>(kotlin.String){}[0]
+
+        final val version // app.tinyui.updates/CheckResult.Installed.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/CheckResult.Installed.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/CheckResult.Installed.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): app.tinyui.updates/CheckResult.Installed // app.tinyui.updates/CheckResult.Installed.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/CheckResult.Installed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/CheckResult.Installed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/CheckResult.Installed.toString|toString(){}[0]
+    }
+
+    final class Skipped : app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult.Skipped|null[0]
+        constructor <init>(kotlin/String, app.tinyui.updates/SkipReason, kotlin.collections/Set<app.tinyui.updates/Mismatch> = ...) // app.tinyui.updates/CheckResult.Skipped.<init>|<init>(kotlin.String;app.tinyui.updates.SkipReason;kotlin.collections.Set<app.tinyui.updates.Mismatch>){}[0]
+
+        final val mismatch // app.tinyui.updates/CheckResult.Skipped.mismatch|{}mismatch[0]
+            final fun <get-mismatch>(): kotlin.collections/Set<app.tinyui.updates/Mismatch> // app.tinyui.updates/CheckResult.Skipped.mismatch.<get-mismatch>|<get-mismatch>(){}[0]
+        final val reason // app.tinyui.updates/CheckResult.Skipped.reason|{}reason[0]
+            final fun <get-reason>(): app.tinyui.updates/SkipReason // app.tinyui.updates/CheckResult.Skipped.reason.<get-reason>|<get-reason>(){}[0]
+        final val version // app.tinyui.updates/CheckResult.Skipped.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/CheckResult.Skipped.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/CheckResult.Skipped.component1|component1(){}[0]
+        final fun component2(): app.tinyui.updates/SkipReason // app.tinyui.updates/CheckResult.Skipped.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/Set<app.tinyui.updates/Mismatch> // app.tinyui.updates/CheckResult.Skipped.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., app.tinyui.updates/SkipReason = ..., kotlin.collections/Set<app.tinyui.updates/Mismatch> = ...): app.tinyui.updates/CheckResult.Skipped // app.tinyui.updates/CheckResult.Skipped.copy|copy(kotlin.String;app.tinyui.updates.SkipReason;kotlin.collections.Set<app.tinyui.updates.Mismatch>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/CheckResult.Skipped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/CheckResult.Skipped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/CheckResult.Skipped.toString|toString(){}[0]
+    }
+
+    final class UpToDate : app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult.UpToDate|null[0]
+        constructor <init>(kotlin/String) // app.tinyui.updates/CheckResult.UpToDate.<init>|<init>(kotlin.String){}[0]
+
+        final val version // app.tinyui.updates/CheckResult.UpToDate.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/CheckResult.UpToDate.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/CheckResult.UpToDate.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): app.tinyui.updates/CheckResult.UpToDate // app.tinyui.updates/CheckResult.UpToDate.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/CheckResult.UpToDate.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/CheckResult.UpToDate.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/CheckResult.UpToDate.toString|toString(){}[0]
+    }
+}
+
+sealed class app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent|null[0]
+    abstract val pkg // app.tinyui.updates/UpdateEvent.pkg|{}pkg[0]
+        abstract fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.pkg.<get-pkg>|<get-pkg>(){}[0]
+
+    final class Failed : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.Failed|null[0]
+        constructor <init>(kotlin/String, kotlin/String?, app.tinyui.updates/FailStage, kotlin/String) // app.tinyui.updates/UpdateEvent.Failed.<init>|<init>(kotlin.String;kotlin.String?;app.tinyui.updates.FailStage;kotlin.String){}[0]
+
+        final val message // app.tinyui.updates/UpdateEvent.Failed.message|{}message[0]
+            final fun <get-message>(): kotlin/String // app.tinyui.updates/UpdateEvent.Failed.message.<get-message>|<get-message>(){}[0]
+        final val pkg // app.tinyui.updates/UpdateEvent.Failed.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.Failed.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val stage // app.tinyui.updates/UpdateEvent.Failed.stage|{}stage[0]
+            final fun <get-stage>(): app.tinyui.updates/FailStage // app.tinyui.updates/UpdateEvent.Failed.stage.<get-stage>|<get-stage>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.Failed.version|{}version[0]
+            final fun <get-version>(): kotlin/String? // app.tinyui.updates/UpdateEvent.Failed.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.Failed.component1|component1(){}[0]
+        final fun component2(): kotlin/String? // app.tinyui.updates/UpdateEvent.Failed.component2|component2(){}[0]
+        final fun component3(): app.tinyui.updates/FailStage // app.tinyui.updates/UpdateEvent.Failed.component3|component3(){}[0]
+        final fun component4(): kotlin/String // app.tinyui.updates/UpdateEvent.Failed.component4|component4(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String? = ..., app.tinyui.updates/FailStage = ..., kotlin/String = ...): app.tinyui.updates/UpdateEvent.Failed // app.tinyui.updates/UpdateEvent.Failed.copy|copy(kotlin.String;kotlin.String?;app.tinyui.updates.FailStage;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.Failed.toString|toString(){}[0]
+    }
+
+    final class Installed : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.Installed|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // app.tinyui.updates/UpdateEvent.Installed.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val pkg // app.tinyui.updates/UpdateEvent.Installed.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.Installed.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.Installed.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/UpdateEvent.Installed.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.Installed.component1|component1(){}[0]
+        final fun component2(): kotlin/String // app.tinyui.updates/UpdateEvent.Installed.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): app.tinyui.updates/UpdateEvent.Installed // app.tinyui.updates/UpdateEvent.Installed.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.Installed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.Installed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.Installed.toString|toString(){}[0]
+    }
+
+    final class RolledBack : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.RolledBack|null[0]
+        constructor <init>(kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String) // app.tinyui.updates/UpdateEvent.RolledBack.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+        final val buildId // app.tinyui.updates/UpdateEvent.RolledBack.buildId|{}buildId[0]
+            final fun <get-buildId>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.buildId.<get-buildId>|<get-buildId>(){}[0]
+        final val kind // app.tinyui.updates/UpdateEvent.RolledBack.kind|{}kind[0]
+            final fun <get-kind>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.kind.<get-kind>|<get-kind>(){}[0]
+        final val message // app.tinyui.updates/UpdateEvent.RolledBack.message|{}message[0]
+            final fun <get-message>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.message.<get-message>|<get-message>(){}[0]
+        final val page // app.tinyui.updates/UpdateEvent.RolledBack.page|{}page[0]
+            final fun <get-page>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.page.<get-page>|<get-page>(){}[0]
+        final val pkg // app.tinyui.updates/UpdateEvent.RolledBack.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.RolledBack.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component1|component1(){}[0]
+        final fun component2(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component2|component2(){}[0]
+        final fun component3(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component3|component3(){}[0]
+        final fun component4(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component4|component4(){}[0]
+        final fun component5(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component5|component5(){}[0]
+        final fun component6(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.component6|component6(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): app.tinyui.updates/UpdateEvent.RolledBack // app.tinyui.updates/UpdateEvent.RolledBack.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.RolledBack.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.RolledBack.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.RolledBack.toString|toString(){}[0]
+    }
+
+    final class Running : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.Running|null[0]
+        constructor <init>(kotlin/String, kotlin/String, app.tinyui.updates/Source) // app.tinyui.updates/UpdateEvent.Running.<init>|<init>(kotlin.String;kotlin.String;app.tinyui.updates.Source){}[0]
+
+        final val pkg // app.tinyui.updates/UpdateEvent.Running.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.Running.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val source // app.tinyui.updates/UpdateEvent.Running.source|{}source[0]
+            final fun <get-source>(): app.tinyui.updates/Source // app.tinyui.updates/UpdateEvent.Running.source.<get-source>|<get-source>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.Running.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/UpdateEvent.Running.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.Running.component1|component1(){}[0]
+        final fun component2(): kotlin/String // app.tinyui.updates/UpdateEvent.Running.component2|component2(){}[0]
+        final fun component3(): app.tinyui.updates/Source // app.tinyui.updates/UpdateEvent.Running.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., app.tinyui.updates/Source = ...): app.tinyui.updates/UpdateEvent.Running // app.tinyui.updates/UpdateEvent.Running.copy|copy(kotlin.String;kotlin.String;app.tinyui.updates.Source){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.Running.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.Running.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.Running.toString|toString(){}[0]
+    }
+
+    final class Skipped : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.Skipped|null[0]
+        constructor <init>(kotlin/String, kotlin/String, app.tinyui.updates/SkipReason, kotlin.collections/Set<app.tinyui.updates/Mismatch> = ...) // app.tinyui.updates/UpdateEvent.Skipped.<init>|<init>(kotlin.String;kotlin.String;app.tinyui.updates.SkipReason;kotlin.collections.Set<app.tinyui.updates.Mismatch>){}[0]
+
+        final val mismatch // app.tinyui.updates/UpdateEvent.Skipped.mismatch|{}mismatch[0]
+            final fun <get-mismatch>(): kotlin.collections/Set<app.tinyui.updates/Mismatch> // app.tinyui.updates/UpdateEvent.Skipped.mismatch.<get-mismatch>|<get-mismatch>(){}[0]
+        final val pkg // app.tinyui.updates/UpdateEvent.Skipped.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.Skipped.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val reason // app.tinyui.updates/UpdateEvent.Skipped.reason|{}reason[0]
+            final fun <get-reason>(): app.tinyui.updates/SkipReason // app.tinyui.updates/UpdateEvent.Skipped.reason.<get-reason>|<get-reason>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.Skipped.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/UpdateEvent.Skipped.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.Skipped.component1|component1(){}[0]
+        final fun component2(): kotlin/String // app.tinyui.updates/UpdateEvent.Skipped.component2|component2(){}[0]
+        final fun component3(): app.tinyui.updates/SkipReason // app.tinyui.updates/UpdateEvent.Skipped.component3|component3(){}[0]
+        final fun component4(): kotlin.collections/Set<app.tinyui.updates/Mismatch> // app.tinyui.updates/UpdateEvent.Skipped.component4|component4(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ..., app.tinyui.updates/SkipReason = ..., kotlin.collections/Set<app.tinyui.updates/Mismatch> = ...): app.tinyui.updates/UpdateEvent.Skipped // app.tinyui.updates/UpdateEvent.Skipped.copy|copy(kotlin.String;kotlin.String;app.tinyui.updates.SkipReason;kotlin.collections.Set<app.tinyui.updates.Mismatch>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.Skipped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.Skipped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.Skipped.toString|toString(){}[0]
+    }
+
+    final class UpToDate : app.tinyui.updates/UpdateEvent { // app.tinyui.updates/UpdateEvent.UpToDate|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // app.tinyui.updates/UpdateEvent.UpToDate.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val pkg // app.tinyui.updates/UpdateEvent.UpToDate.pkg|{}pkg[0]
+            final fun <get-pkg>(): kotlin/String // app.tinyui.updates/UpdateEvent.UpToDate.pkg.<get-pkg>|<get-pkg>(){}[0]
+        final val version // app.tinyui.updates/UpdateEvent.UpToDate.version|{}version[0]
+            final fun <get-version>(): kotlin/String // app.tinyui.updates/UpdateEvent.UpToDate.version.<get-version>|<get-version>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.updates/UpdateEvent.UpToDate.component1|component1(){}[0]
+        final fun component2(): kotlin/String // app.tinyui.updates/UpdateEvent.UpToDate.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): app.tinyui.updates/UpdateEvent.UpToDate // app.tinyui.updates/UpdateEvent.UpToDate.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/UpdateEvent.UpToDate.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.updates/UpdateEvent.UpToDate.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.updates/UpdateEvent.UpToDate.toString|toString(){}[0]
+    }
+}
+
+final val app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop|#static{}app_tinyui_updates_CheckResult$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop|#static{}app_tinyui_updates_CheckResult_Failed$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop|#static{}app_tinyui_updates_CheckResult_Installed$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop|#static{}app_tinyui_updates_CheckResult_Skipped$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop|#static{}app_tinyui_updates_CheckResult_UpToDate$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop|#static{}app_tinyui_updates_UpdateEvent$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop|#static{}app_tinyui_updates_UpdateEvent_Failed$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Installed$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Installed$stableprop|#static{}app_tinyui_updates_UpdateEvent_Installed$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_RolledBack$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_RolledBack$stableprop|#static{}app_tinyui_updates_UpdateEvent_RolledBack$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Running$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Running$stableprop|#static{}app_tinyui_updates_UpdateEvent_Running$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop|#static{}app_tinyui_updates_UpdateEvent_Skipped$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop|#static{}app_tinyui_updates_UpdateEvent_UpToDate$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_Updates$stableprop // app.tinyui.updates/app_tinyui_updates_Updates$stableprop|#static{}app_tinyui_updates_Updates$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop // app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop|#static{}app_tinyui_updates_Updates_State_$serializer$stableprop[0]
+
+final fun app.tinyui.updates/UpdatesPage(app.tinyui.updates/Updates, kotlin/String, app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/HostServices?, kotlin/String?, androidx.compose.ui/Modifier?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui.updates/UpdatesPage|UpdatesPage(app.tinyui.updates.Updates;kotlin.String;app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.HostServices?;kotlin.String?;androidx.compose.ui.Modifier?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter|app_tinyui_updates_CheckResult$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter|app_tinyui_updates_CheckResult_Failed$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop_getter|app_tinyui_updates_CheckResult_Installed$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop_getter|app_tinyui_updates_CheckResult_Skipped$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop_getter|app_tinyui_updates_CheckResult_UpToDate$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop_getter|app_tinyui_updates_UpdateEvent$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop_getter|app_tinyui_updates_UpdateEvent_Failed$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Installed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Installed$stableprop_getter|app_tinyui_updates_UpdateEvent_Installed$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_RolledBack$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_RolledBack$stableprop_getter|app_tinyui_updates_UpdateEvent_RolledBack$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Running$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Running$stableprop_getter|app_tinyui_updates_UpdateEvent_Running$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop_getter|app_tinyui_updates_UpdateEvent_Skipped$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter|app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_Updates$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_Updates$stableprop_getter|app_tinyui_updates_Updates$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop_getter|app_tinyui_updates_Updates_State_$serializer$stableprop_getter(){}[0]
