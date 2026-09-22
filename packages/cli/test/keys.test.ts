@@ -18,6 +18,9 @@ describe("keys", () => {
         assert.ok(!isPublicKey("not base64!"));
         assert.ok(!isPublicKey(Buffer.alloc(65, 2).toString("base64")), "wrong prefix");
         assert.ok(!isPublicKey(Buffer.from(pair.publicKey, "base64").subarray(0, 64).toString("base64")), "wrong length");
+        const off = Buffer.from(pair.publicKey, "base64");
+        off[64] ^= 1;
+        assert.ok(!isPublicKey(off.toString("base64")), "well-formed but not on the curve");
     });
 
     it("signs DER-encoded ECDSA over the exact bytes and verifies with the raw point", () => {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -10,9 +10,10 @@ import { generateKeyPair, verify } from "../src/keys.ts";
 import { findQjsc } from "../src/qjsc.ts";
 
 const fixtures = join(import.meta.dirname, "fixtures");
-const signingKey = join(fixtures, "keys", "signing-key.pem");
-const config = JSON.parse(await readFile(join(fixtures, "app", "tinyui.config.json"), "utf8")) as { name: string; publicKey: string };
 const qjsc = await findQjsc();
+// the signing key lives only in this process: nothing under test/ holds a private key
+const pair = generateKeyPair();
+const config = { name: "fixture", publicKey: pair.publicKey };
 
 /** A `tinyui build` output written by hand: bundle only needs the manifest and the `.bin` files it lists. */
 async function fakeDist(dir: string, edit: (m: Manifest) => void = () => {}): Promise<string> {
@@ -44,7 +45,12 @@ async function fakeDist(dir: string, edit: (m: Manifest) => void = () => {}): Pr
 
 describe("tinyui bundle", () => {
     let tmp: string;
-    before(async () => { tmp = await mkdtemp(join(tmpdir(), "tinyui-bundle-")); });
+    let signingKey: string;
+    before(async () => {
+        tmp = await mkdtemp(join(tmpdir(), "tinyui-bundle-"));
+        signingKey = join(tmp, "signing-key.pem");
+        await writeFile(signingKey, pair.privateKeyPem);
+    });
     after(() => rm(tmp, { recursive: true, force: true }));
 
     it("writes current.json next to an immutable <version>/ holding manifest.json and the bytecode", async () => {
@@ -101,10 +107,35 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist, runtimeVersion: "1", signingKey: other }), /does not match the publicKey/);
     });
 
-    it("refuses a build whose bytecode changed since manifest.json was written", async () => {
+    it("refuses a build whose bytecode changed since manifest.json was written, touching nothing", async () => {
         const dist = await fakeDist(join(tmp, "dist-stale"));
         await writeFile(join(dist, "pages", "home.bin"), "tampered");
         await assert.rejects(bundle({ dist, runtimeVersion: "1", signingKey }), /does not match manifest.hashes/);
+        await assert.rejects(readdir(join(dist, "ota")), /ENOENT/, "nothing was written");
+    });
+
+    it("keeps a version immutable: the same build again is fine, a different one is refused", async () => {
+        const dist = await fakeDist(join(tmp, "dist-immutable"));
+        const first = await bundle({ dist, runtimeVersion: "1", signingKey, rollout: 10 });
+        const again = await bundle({ dist, runtimeVersion: "1", signingKey, rollout: 90 });
+        assert.equal((JSON.parse(await readFile(again.pointer, "utf8")) as Pointer).rollout, 90);
+        assert.ok((await readFile(first.manifest)).equals(await readFile(again.manifest)));
+        const rebuilt = await fakeDist(join(tmp, "dist-immutable-2"), (m) => { m.createdAt = "2026-09-22T10:00:00Z"; });
+        await assert.rejects(bundle({ dist: rebuilt, runtimeVersion: "1", signingKey, out: join(dist, "ota") }), /already holds a different build/);
+    });
+
+    it("never lets a version, runtime version or file path leave its directory", async () => {
+        const escaping = await fakeDist(join(tmp, "dist-escape"), (m) => { m.version = "../../escape"; });
+        await assert.rejects(bundle({ dist: escaping, runtimeVersion: "1", signingKey }), /manifest version must be a single path segment/);
+        const dot = await fakeDist(join(tmp, "dist-dot"), (m) => { m.version = ".."; });
+        await assert.rejects(bundle({ dist: dot, runtimeVersion: "1", signingKey }), /manifest version must be a single path segment/);
+        const dist = await fakeDist(join(tmp, "dist-rv-escape"));
+        await assert.rejects(bundle({ dist, runtimeVersion: "..", signingKey }), /runtime version must be a single path segment/);
+        const files = await fakeDist(join(tmp, "dist-files"), (m) => { m.files["tinyui-core"] = "../outside/core"; });
+        await mkdir(join(tmp, "outside"), { recursive: true });
+        await writeFile(join(tmp, "outside", "core.bin"), "x");
+        await assert.rejects(bundle({ dist: files, runtimeVersion: "1", signingKey }), /points outside/);
+        await assert.rejects(readdir(join(tmp, "escape")), /ENOENT/);
     });
 
     it("refuses a --js-only build, a manifest from an older CLI and a bad runtime version", async () => {
@@ -113,12 +144,17 @@ describe("tinyui bundle", () => {
         const old = await fakeDist(join(tmp, "dist-old"), (m) => { delete (m as Partial<Manifest>).publicKey; });
         await assert.rejects(bundle({ dist: old, runtimeVersion: "1", signingKey }), /has no "publicKey"/);
         const dist = await fakeDist(join(tmp, "dist-rv"));
-        await assert.rejects(bundle({ dist, runtimeVersion: "1/2", signingKey }), /runtime version must match/);
+        await assert.rejects(bundle({ dist, runtimeVersion: "1/2", signingKey }), /runtime version must be a single path segment/);
     });
 
     it("bundles a real build end to end", { skip: !qjsc && "qjsc-kmp not found" }, async () => {
+        const root = join(tmp, "app");
+        await cp(join(fixtures, "app"), root, { recursive: true });
+        await writeFile(join(root, "tinyui.config.json"), JSON.stringify(config));
+        // the copy sits outside the workspace, so it borrows this package's node_modules for tinyui-core / tinyui-native
+        await symlink(join(import.meta.dirname, "..", "node_modules"), join(root, "node_modules"));
         const dist = join(tmp, "real");
-        const built = await build({ root: join(fixtures, "app"), out: dist });
+        const built = await build({ root, out: dist });
         const result = await bundle({ dist, runtimeVersion: "1", signingKey });
         const pointer = JSON.parse(await readFile(result.pointer, "utf8")) as Pointer;
         const bytes = await readFile(result.manifest);

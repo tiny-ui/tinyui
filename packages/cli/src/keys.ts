@@ -18,9 +18,14 @@ export function publicKeyOf(privateKeyPem: string): string {
     return rawPoint(createPublicKey(createPrivateKey(privateKeyPem)));
 }
 
+/** Canonical base64 of a 65-byte `04‖X‖Y` whose coordinates are a point on P-256. */
 export function isPublicKey(publicKey: string): boolean {
-    const bytes = Buffer.from(publicKey, "base64");
-    return bytes.length === 65 && bytes[0] === 0x04 && bytes.toString("base64") === publicKey;
+    try {
+        fromRawPoint(publicKey);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /** DER-encoded ECDSA signature over [data], base64. */
@@ -38,8 +43,10 @@ function rawPoint(key: KeyObject): string {
 }
 
 function fromRawPoint(publicKey: string): KeyObject {
-    if (!isPublicKey(publicKey)) throw new Error("public key is not a P-256 uncompressed point in base64");
     const bytes = Buffer.from(publicKey, "base64");
+    if (bytes.length !== 65 || bytes[0] !== 0x04 || bytes.toString("base64") !== publicKey) {
+        throw new Error("public key is not a P-256 uncompressed point in base64");
+    }
     const x = bytes.subarray(1, 33).toString("base64url");
     const y = bytes.subarray(33, 65).toString("base64url");
     return createPublicKey({ key: { kty: "EC", crv: "P-256", x, y }, format: "jwk" });

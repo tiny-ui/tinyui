@@ -121,11 +121,12 @@ describe("tinyui build", () => {
         }
     });
 
-    it("takes --version as is", async () => {
+    it("takes --version as is, if it can be a directory name", async () => {
         const dir = await mkdtemp(join(tmpdir(), "tinyui-version-"));
         try {
             const r = await build({ root, out: dir, jsOnly: true, version: "1.2.3" });
             assert.equal(JSON.parse(await readFile(r.manifest, "utf8")).version, "1.2.3");
+            await assert.rejects(build({ root, out: dir, jsOnly: true, version: "../x" }), /single path segment/);
         } finally {
             await rm(dir, { recursive: true, force: true });
         }

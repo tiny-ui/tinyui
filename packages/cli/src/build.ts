@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { TransformError, transformJsx } from "./transform.ts";
@@ -66,6 +67,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     const root = resolve(options.root);
     const out = resolve(options.out ?? join(root, "dist"));
     const config = await loadConfig(root);
+    if (options.version !== undefined && !isPathSegment(options.version)) throw new Error(`version must be a single path segment, got "${options.version}"`);
     const pagesDir = join(root, config.pages);
     const pageNames = await discoverPages(config.name, pagesDir);
     if (pageNames.size === 0) throw new Error(`no pages found under ${pagesDir}`);
