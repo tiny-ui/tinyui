@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
-import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
 import { isPackageName } from "./config.ts";
 import { isPublicKey, publicKeyOf, sign } from "./keys.ts";
@@ -85,9 +85,15 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
             await copyFile(source, file);
         }
         await writeFile(join(staging, "manifest.json"), signed);
-        // only an interrupted earlier run leaves the directory without a manifest
-        if (await stat(versionDir).catch(() => null)) await rm(versionDir, { recursive: true });
-        await rename(staging, versionDir);
+        try {
+            await rename(staging, versionDir);
+        } catch (e) {
+            // the directory appeared meanwhile: never replace it, only accept it if it is this same build
+            await rm(staging, { recursive: true, force: true });
+            const now = await readFile(manifestFile).catch(() => null);
+            if (!now) throw new Error(`${versionDir} exists without a manifest.json; remove it and run again`, { cause: e });
+            if (!now.equals(signed)) throw new Error(`${versionDir} already holds a different build; a version is immutable, build again with a new version`);
+        }
     }
     const pointer: Pointer = { version: manifest.version, rollout, signature: sign(privateKeyPem, signed) };
     const pointerFile = join(dir, "current.json");
@@ -99,7 +105,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
 function within(root: string, file: string): boolean {
     const rel = relative(root, file);
-    return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+    return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
 async function readManifest(dist: string): Promise<Manifest> {

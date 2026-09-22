@@ -139,6 +139,8 @@ describe("tinyui build", () => {
             const config = JSON.parse(await readFile(join(root, "tinyui.config.json"), "utf8"));
             await writeFile(join(bare, "tinyui.config.json"), JSON.stringify({ ...config, pages: "../elsewhere" }));
             await assert.rejects(build({ root: bare, jsOnly: true }), /"pages" must be a directory inside the project root/);
+            await writeFile(join(bare, "tinyui.config.json"), JSON.stringify({ ...config, pages: "..pages" }));
+            await assert.rejects(build({ root: bare, jsOnly: true }), /no pages found under .*\.\.pages/, "a dot-dot prefix is still inside the root");
         } finally {
             await rm(bare, { recursive: true, force: true });
         }

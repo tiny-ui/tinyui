@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { isPublicKey } from "./keys.ts";
 
 export const CONFIG_FILE = "tinyui.config.json";
@@ -22,7 +22,7 @@ export function isPackageName(name: string): boolean {
 function insideRoot(root: string, dir: string): boolean {
     if (dir === "" || isAbsolute(dir)) return false;
     const rel = relative(root, resolve(root, dir));
-    return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+    return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
 
 export async function loadConfig(root: string): Promise<TinyUIConfig> {

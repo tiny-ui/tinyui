@@ -132,6 +132,11 @@ describe("tinyui bundle", () => {
         assert.deepEqual((await readdir(first.dir)).filter((f) => f.endsWith(".tmp")), [], "no staging left behind");
         const rebuilt = await fakeDist(join(tmp, "dist-immutable-2"), (m) => { m.createdAt = "2026-09-22T10:00:00Z"; });
         await assert.rejects(bundle({ dist: rebuilt, runtimeVersion: "1", signingKey, out: join(dist, "ota") }), /already holds a different build/);
+        // a directory without a manifest is never cleaned up on the caller's behalf
+        const partial = await fakeDist(join(tmp, "dist-partial"));
+        await mkdir(join(partial, "ota", "fixture", "1", "20260922T090000Z-3f2a1c", "runtime"), { recursive: true });
+        await assert.rejects(bundle({ dist: partial, runtimeVersion: "1", signingKey }), /exists without a manifest.json/);
+        assert.deepEqual((await readdir(join(partial, "ota", "fixture", "1"))).filter((f) => f.endsWith(".tmp")), []);
     });
 
     it("never lets a version, runtime version or file path leave its directory", async () => {
