@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.MissingResourceException
 import app.tinyui.Bundle
 import app.tinyui.HostException
 import app.tinyui.HostServices
@@ -61,7 +62,9 @@ private val services = HostServices(http = FakeTodos, deviceInfo = mapOf("app" t
 fun App() {
     var page by remember { mutableStateOf<LoadedPage?>(null) }
     LaunchedEffect(Unit) {
-        val bundle = Bundle.load { path -> runCatching { Res.readBytes("files/tinyui/sample/$path") }.getOrNull() }
+        val bundle = Bundle.load { path ->
+            try { Res.readBytes("files/tinyui/sample/$path") } catch (e: MissingResourceException) { null }
+        }
         val loaded = bundle.page("sample/todos")
         // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
         TinyUI.debug = !loaded.sourceMaps.isEmpty

@@ -95,5 +95,10 @@ class BundleTest {
         assertFailsWith<IllegalArgumentException> { BuildManifest.parse("""{"runtime":[],"pages":[],"files":{},"buildIds":{}}""") }
         val bundled = BuildManifest.parse(manifest.removeSuffix("}") + ""","runtimeVersion":"1"}""")
         assertEquals("1", bundled.runtimeVersion)
+        assertFailsWith<IllegalArgumentException>("a JSON null is not an identity") {
+            BuildManifest.parse("""{"runtime":[],"pages":[],"files":{},"buildIds":{},"name":null,"publicKey":null}""")
+        }
+        val nulls = BuildManifest.parse(manifest.removeSuffix("}") + ""","runtimeVersion":null}""")
+        assertNull(nulls.runtimeVersion)
     }
 }

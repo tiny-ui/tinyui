@@ -1,7 +1,8 @@
 package app.tinyui
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.int
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -33,7 +34,8 @@ class BuildManifest(
             val root = Json.parseToJsonElement(json).jsonObject
             val names = { key: String -> root[key]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList() }
             val strings = { key: String -> root[key]?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap() }
-            val string = { key: String -> root[key]?.jsonPrimitive?.content ?: "" }
+            // a JSON null is an absent value, not the string "null"
+            val string = { key: String -> root[key]?.jsonPrimitive?.contentOrNull ?: "" }
             val name = string("name")
             val publicKey = string("publicKey")
             require(name.isNotEmpty() && publicKey.isNotEmpty()) { "manifest.json has no package identity (name / publicKey); rebuild with a current tinyui-cli" }
@@ -47,9 +49,9 @@ class BuildManifest(
                 version = string("version"),
                 createdAt = string("createdAt"),
                 engine = string("engine"),
-                protocol = root["protocol"]?.jsonPrimitive?.int ?: 0,
+                protocol = root["protocol"]?.jsonPrimitive?.intOrNull ?: 0,
                 hashes = strings("hashes"),
-                runtimeVersion = root["runtimeVersion"]?.jsonPrimitive?.content,
+                runtimeVersion = root["runtimeVersion"]?.jsonPrimitive?.contentOrNull,
             )
         }
     }
