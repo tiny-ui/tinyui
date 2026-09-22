@@ -1,5 +1,5 @@
-import { readFile, readdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { readFile, readdir, realpath } from "node:fs/promises";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
 import { isPathSegment, type Pointer } from "./bundle.ts";
 import { segments, type UpdatesClient, type UploadResult } from "./client.ts";
@@ -50,8 +50,9 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
 
     const files = [...new Set(Object.values(manifest.files).map((path) => `${path}.bin`)), "manifest.json"];
     const results: UploadResult[] = [];
+    const versionDir = join(local.dir, version);
     await inParallel(files, concurrency, async (path) => {
-        const bytes = path === "manifest.json" ? local.manifestBytes : await readFile(join(local.dir, version, path));
+        const bytes = path === "manifest.json" ? local.manifestBytes : await readInside(versionDir, path);
         const result = await client.upload(`${prefix}${segments(...path.split("/"))}`, bytes);
         results.push(result);
         options.onUpload?.(result);
@@ -89,10 +90,13 @@ async function load(dir: string): Promise<LocalBundle> {
     if (typeof pointer.version !== "string" || typeof pointer.signature !== "string" || typeof pointer.rollout !== "number") {
         throw new Error(`${join(dir, "current.json")} is not a pointer file; expected version / rollout / signature`);
     }
+    if (!Number.isInteger(pointer.rollout) || pointer.rollout < 0 || pointer.rollout > 100) {
+        throw new Error(`${join(dir, "current.json")}: rollout must be an integer from 0 to 100, got ${pointer.rollout}`);
+    }
     if (!isPathSegment(pointer.version)) throw new Error(`${join(dir, "current.json")}: "${pointer.version}" is not a single path segment`);
     const manifestFile = join(dir, pointer.version, "manifest.json");
-    const manifestBytes = await readFile(manifestFile).catch(() => {
-        throw new Error(`${manifestFile} is missing; current.json points at a version that was not bundled here`);
+    const manifestBytes = await readInside(join(dir, pointer.version), "manifest.json").catch((e: unknown) => {
+        throw new Error(`cannot read ${manifestFile} (${(e as Error).message}); current.json points at a version that was not bundled here`);
     });
     const manifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")) as Manifest & { runtimeVersion?: string };
     for (const key of ["name", "version", "runtimeVersion"] as const) {
@@ -108,6 +112,16 @@ async function load(dir: string): Promise<LocalBundle> {
         }
     }
     return { dir, pointer: pointer as Pointer, manifestBytes, manifest: manifest as Manifest & { runtimeVersion: string } };
+}
+
+/** Lexical checks do not stop a symlink: a bundle from elsewhere could point at any file on the machine. */
+async function readInside(versionDir: string, path: string): Promise<Uint8Array> {
+    const file = join(versionDir, path);
+    const real = await realpath(file);
+    const root = await realpath(versionDir);
+    const rel = relative(root, real);
+    if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new Error(`${file} leaves ${versionDir}; a bundle only publishes its own files`);
+    return readFile(real);
 }
 
 async function subdirectories(dir: string): Promise<string[]> {

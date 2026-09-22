@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -161,6 +161,26 @@ describe("tinyui publish", () => {
         // zero workers would upload nothing and still move the pointer
         await assert.rejects(publish({ client, dir: await bundled("workers"), app: "demo", channel: "staging", concurrency: 0 }), /concurrency must be a positive integer/);
         assert.deepEqual(requestsSince(mark), []);
+    });
+
+    it("refuses a symlink out of the version directory, and a pointer rollout outside 0-100", async () => {
+        const dir = await bundled("symlink");
+        const secret = join(tmp, "secret.txt");
+        await writeFile(secret, "not this package's to publish");
+        await rm(join(dir, "fixture", "1", VERSION, "pages", "home.bin"));
+        await symlink(secret, join(dir, "fixture", "1", VERSION, "pages", "home.bin"));
+        const mark = server.requests.length;
+        // lexical checks pass here; only resolving the link catches it
+        await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /leaves .*a bundle only publishes its own files/);
+        assert.ok(!server.requests.slice(mark).some((r) => r.body.includes("not this package's to publish")));
+
+        const wide = await bundled("wide-rollout");
+        const pointerFile = join(wide, "fixture", "1", "current.json");
+        const pointer = JSON.parse(await readFile(pointerFile, "utf8")) as Record<string, unknown>;
+        await writeFile(pointerFile, JSON.stringify({ ...pointer, rollout: 101 }));
+        const before = server.requests.length;
+        await assert.rejects(publish({ client, dir: wide, app: "demo", channel: "staging" }), /rollout must be an integer from 0 to 100/);
+        assert.deepEqual(requestsSince(before), []);
     });
 
     it("passes the server's own words through", async () => {

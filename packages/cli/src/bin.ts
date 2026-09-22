@@ -277,7 +277,8 @@ function pathSegment(value: string, what: string): string {
 }
 
 function percentage(value: string, what: string): number {
-    const parsed = Number(value);
+    // Number("") and Number(" ") are both 0, which would silently pause a rollout
+    const parsed = value.trim() === "" ? NaN : Number(value);
     if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) throw new Error(`${what} must be an integer from 0 to 100, got "${value}"`);
     return parsed;
 }
