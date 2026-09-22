@@ -61,6 +61,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     for (const [module, path] of Object.entries(manifest.files)) {
         const source = resolve(dist, path + ".bin");
         if (!within(dist, source)) throw new Error(`manifest.files["${module}"] points outside ${dist}: ${path}`);
+        // an output path is a URL path once the package is served; tinyui build refuses these at the source
+        if (!path.split("/").every(isPathSegment)) throw new Error(`manifest.files["${module}"] = "${path}": every segment must match [A-Za-z0-9._-]+ to survive the delivery URL`);
         const expected = manifest.hashes[module];
         const actual = createHash("sha256").update(await readFile(source)).digest("hex");
         if (actual !== expected) throw new Error(`${source} does not match manifest.hashes (${actual} vs ${expected}); rerun tinyui build`);

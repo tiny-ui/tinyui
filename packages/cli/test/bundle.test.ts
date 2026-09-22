@@ -8,6 +8,7 @@ import { build, type Manifest } from "../src/build.ts";
 import { bundle, type Pointer } from "../src/bundle.ts";
 import { generateKeyPair, verify } from "../src/keys.ts";
 import { findQjsc } from "../src/qjsc.ts";
+import { fakeDist as writeFakeDist } from "./helpers.ts";
 
 const fixtures = join(import.meta.dirname, "fixtures");
 const qjsc = await findQjsc();
@@ -15,33 +16,7 @@ const qjsc = await findQjsc();
 const pair = generateKeyPair();
 const config = { name: "fixture", publicKey: pair.publicKey };
 
-/** A `tinyui build` output written by hand: bundle only needs the manifest and the `.bin` files it lists. */
-async function fakeDist(dir: string, edit: (m: Manifest) => void = () => {}): Promise<string> {
-    const files = { "tinyui-core": "runtime/core", "tinyui-native": "runtime/native", "fixture/home": "pages/home", "fixture/订单": "pages/订单" };
-    const hashes: Record<string, string> = {};
-    for (const [module, path] of Object.entries(files)) {
-        const bytes = Buffer.concat([Buffer.from("QJKB"), Buffer.alloc(8), Buffer.from("a".repeat(40)), Buffer.from(module)]);
-        await mkdir(join(dir, path, ".."), { recursive: true });
-        await writeFile(join(dir, path + ".bin"), bytes);
-        hashes[module] = createHash("sha256").update(bytes).digest("hex");
-    }
-    const manifest: Manifest = {
-        runtime: ["tinyui-core", "tinyui-native"],
-        pages: ["fixture/home", "fixture/订单"],
-        files,
-        buildIds: Object.fromEntries(Object.keys(files).map((m) => [m, "00000000"])),
-        name: config.name,
-        publicKey: config.publicKey,
-        version: "20260922T090000Z-3f2a1c",
-        createdAt: "2026-09-22T09:00:00Z",
-        engine: "a".repeat(40),
-        protocol: 1,
-        hashes,
-    };
-    edit(manifest);
-    await writeFile(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-    return dir;
-}
+const fakeDist = (dir: string, edit?: (m: Manifest) => void) => writeFakeDist(dir, config.publicKey, edit);
 
 describe("tinyui bundle", () => {
     let tmp: string;
@@ -62,7 +37,7 @@ describe("tinyui bundle", () => {
         assert.deepEqual((await readdir(versionDir, { recursive: true })).filter((f) => f.includes(".")).sort(), [
             "manifest.json",
             "pages/home.bin",
-            "pages/订单.bin",
+            "pages/orders.bin",
             "runtime/core.bin",
             "runtime/native.bin",
         ]);
@@ -83,7 +58,7 @@ describe("tinyui bundle", () => {
         const bytes = await readFile(result.manifest);
         assert.ok(verify(config.publicKey, bytes, pointer.signature));
         // non-ASCII module names survive as written: no canonicalization on any side
-        assert.match(bytes.toString("utf8"), /"fixture\/订单"/);
+        assert.match(bytes.toString("utf8"), /"fixture\/orders"/);
         const reserialized = Buffer.from(JSON.stringify(JSON.parse(bytes.toString("utf8"))));
         assert.ok(!verify(config.publicKey, reserialized, pointer.signature), "a re-serialization is a different message");
     });
@@ -166,6 +141,11 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: extra, runtimeVersion: "1", signingKey }), /"hashes" does not cover exactly/);
         const dist = await fakeDist(join(tmp, "dist-rv"));
         await assert.rejects(bundle({ dist, runtimeVersion: "1/2", signingKey }), /runtime version must be a single path segment/);
+    });
+
+    it("refuses an output path that would not survive the delivery URL", async () => {
+        const chinese = await fakeDist(join(tmp, "dist-nonascii"), (m) => { m.files["fixture/home"] = "pages/订单"; });
+        await assert.rejects(bundle({ dist: chinese, runtimeVersion: "1", signingKey }), /every segment must match \[A-Za-z0-9\._-\]\+ to survive the delivery URL/);
     });
 
     it("bundles a real build end to end", { skip: !qjsc && "qjsc-kmp not found" }, async () => {
