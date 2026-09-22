@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { isPublicKey } from "./keys.ts";
 
 export const CONFIG_FILE = "tinyui.config.json";
@@ -17,6 +17,12 @@ export interface TinyUIConfig {
 /** Package name: module name prefix and a path segment on the server and on disk (docs/updates.md §0). */
 export function isPackageName(name: string): boolean {
     return /^[a-z0-9-]+$/.test(name);
+}
+
+function insideRoot(root: string, dir: string): boolean {
+    if (dir === "" || isAbsolute(dir)) return false;
+    const rel = relative(root, resolve(root, dir));
+    return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
 export async function loadConfig(root: string): Promise<TinyUIConfig> {
@@ -39,6 +45,8 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
     if (typeof publicKey !== "string" || !isPublicKey(publicKey)) {
         throw new Error(`${file}: "publicKey" must be a P-256 uncompressed point in base64 (65 bytes, 04-prefixed); tinyui keys generate prints one`);
     }
-    if (pages !== undefined && (typeof pages !== "string" || pages === "")) throw new Error(`${file}: "pages" must be a directory path`);
+    if (pages !== undefined && (typeof pages !== "string" || !insideRoot(root, pages))) {
+        throw new Error(`${file}: "pages" must be a directory inside the project root`);
+    }
     return { name, publicKey, pages: pages ?? "src/pages" };
 }

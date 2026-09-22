@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, generateKeyPairSync } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -124,9 +124,12 @@ describe("tinyui bundle", () => {
     it("keeps a version immutable: the same build again is fine, a different one is refused", async () => {
         const dist = await fakeDist(join(tmp, "dist-immutable"));
         const first = await bundle({ dist, runtimeVersion: "1", signingKey, rollout: 10 });
+        const before = await stat(first.manifest);
         const again = await bundle({ dist, runtimeVersion: "1", signingKey, rollout: 90 });
         assert.equal((JSON.parse(await readFile(again.pointer, "utf8")) as Pointer).rollout, 90);
         assert.ok((await readFile(first.manifest)).equals(await readFile(again.manifest)));
+        assert.equal((await stat(again.manifest)).mtimeMs, before.mtimeMs, "an identical version is left untouched");
+        assert.deepEqual((await readdir(first.dir)).filter((f) => f.endsWith(".tmp")), [], "no staging left behind");
         const rebuilt = await fakeDist(join(tmp, "dist-immutable-2"), (m) => { m.createdAt = "2026-09-22T10:00:00Z"; });
         await assert.rejects(bundle({ dist: rebuilt, runtimeVersion: "1", signingKey, out: join(dist, "ota") }), /already holds a different build/);
     });
@@ -152,6 +155,10 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: jsOnly, runtimeVersion: "1", signingKey }), /has no bytecode/);
         const old = await fakeDist(join(tmp, "dist-old"), (m) => { delete (m as Partial<Manifest>).publicKey; });
         await assert.rejects(bundle({ dist: old, runtimeVersion: "1", signingKey }), /has no "publicKey"/);
+        const missing = await fakeDist(join(tmp, "dist-missing"), (m) => { delete m.files["tinyui-native"]; });
+        await assert.rejects(bundle({ dist: missing, runtimeVersion: "1", signingKey }), /"files" does not cover exactly/);
+        const extra = await fakeDist(join(tmp, "dist-extra"), (m) => { m.hashes["ghost"] = "00"; });
+        await assert.rejects(bundle({ dist: extra, runtimeVersion: "1", signingKey }), /"hashes" does not cover exactly/);
         const dist = await fakeDist(join(tmp, "dist-rv"));
         await assert.rejects(bundle({ dist, runtimeVersion: "1/2", signingKey }), /runtime version must be a single path segment/);
     });

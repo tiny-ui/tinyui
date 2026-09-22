@@ -132,10 +132,13 @@ describe("tinyui build", () => {
         }
     });
 
-    it("refuses a root without tinyui.config.json", async () => {
+    it("refuses a root without tinyui.config.json, and a pages directory outside the root", async () => {
         const bare = await mkdtemp(join(tmpdir(), "tinyui-noconfig-"));
         try {
             await assert.rejects(build({ root: bare, jsOnly: true }), /tinyui\.config\.json not found/);
+            const config = JSON.parse(await readFile(join(root, "tinyui.config.json"), "utf8"));
+            await writeFile(join(bare, "tinyui.config.json"), JSON.stringify({ ...config, pages: "../elsewhere" }));
+            await assert.rejects(build({ root: bare, jsOnly: true }), /"pages" must be a directory inside the project root/);
         } finally {
             await rm(bare, { recursive: true, force: true });
         }

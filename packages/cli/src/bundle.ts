@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomBytes } from "node:crypto";
+import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { Manifest } from "./build.ts";
 import { isPackageName } from "./config.ts";
@@ -76,15 +76,24 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     if (existing && !existing.equals(signed)) {
         throw new Error(`${versionDir} already holds a different build; a version is immutable, build again with a new version`);
     }
-    for (const { source, target } of files) {
-        const file = join(versionDir, target);
-        await mkdir(dirname(file), { recursive: true });
-        await copyFile(source, file);
+    // a version directory appears complete or not at all: staged next to it, renamed into place; the pointer likewise
+    if (!existing) {
+        const staging = `${versionDir}.${randomBytes(4).toString("hex")}.tmp`;
+        for (const { source, target } of files) {
+            const file = join(staging, target);
+            await mkdir(dirname(file), { recursive: true });
+            await copyFile(source, file);
+        }
+        await writeFile(join(staging, "manifest.json"), signed);
+        // only an interrupted earlier run leaves the directory without a manifest
+        if (await stat(versionDir).catch(() => null)) await rm(versionDir, { recursive: true });
+        await rename(staging, versionDir);
     }
-    await writeFile(manifestFile, signed);
     const pointer: Pointer = { version: manifest.version, rollout, signature: sign(privateKeyPem, signed) };
     const pointerFile = join(dir, "current.json");
-    await writeFile(pointerFile, JSON.stringify(pointer, null, 2) + "\n");
+    const pointerStaging = `${pointerFile}.${randomBytes(4).toString("hex")}.tmp`;
+    await writeFile(pointerStaging, JSON.stringify(pointer, null, 2) + "\n");
+    await rename(pointerStaging, pointerFile);
     return { dir, version: manifest.version, pointer: pointerFile, manifest: manifestFile };
 }
 
@@ -101,8 +110,25 @@ async function readManifest(dist: string): Promise<Manifest> {
     } catch (e) {
         throw new Error(`cannot read ${file}: ${(e as Error).message}`);
     }
-    for (const key of ["name", "publicKey", "version", "createdAt", "files", "hashes"] as const) {
-        if (raw[key] === undefined) throw new Error(`${file} has no "${key}"; rebuild with a current tinyui-cli`);
+    for (const key of ["name", "publicKey", "version", "createdAt", "engine"] as const) {
+        if (typeof raw[key] !== "string") throw new Error(`${file} has no "${key}"; rebuild with a current tinyui-cli`);
+    }
+    if (typeof raw.protocol !== "number") throw new Error(`${file} has no "protocol"; rebuild with a current tinyui-cli`);
+    const names = (key: "runtime" | "pages") => {
+        const list = raw[key];
+        if (!Array.isArray(list) || !list.every((m) => typeof m === "string")) throw new Error(`${file}: "${key}" must list module names`);
+        return list as string[];
+    };
+    const table = (key: "files" | "hashes" | "buildIds") => {
+        const map = raw[key];
+        if (typeof map !== "object" || map === null || !Object.values(map).every((v) => typeof v === "string")) throw new Error(`${file}: "${key}" must map module names to strings`);
+        return map as Record<string, string>;
+    };
+    const modules = [...names("runtime"), ...names("pages")];
+    if (new Set(modules).size !== modules.length) throw new Error(`${file}: a module is listed twice`);
+    for (const key of ["files", "hashes", "buildIds"] as const) {
+        const keys = Object.keys(table(key)).sort();
+        if (keys.join("\n") !== [...modules].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "runtime" and "pages"`);
     }
     return raw as Manifest;
 }
