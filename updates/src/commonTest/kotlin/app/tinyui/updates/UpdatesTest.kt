@@ -6,7 +6,6 @@ import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.test.runTest
 import okio.ByteString.Companion.encodeUtf8
-import okio.FileSystem
 import okio.IOException
 import okio.Path
 import kotlin.random.Random
@@ -22,20 +21,20 @@ import kotlin.test.assertTrue
 
 class UpdatesTest {
     // the real file system on both platforms (okio's fake one does not link on iOS with this Kotlin), a fresh directory per test
-    private val fs = FileSystem.SYSTEM
-    private val root: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "tinyui-updates-test-${Random.nextLong().toULong()}"
+    private val fs = platformFileSystem
+    private val root: Path = temporaryDirectory() / "tinyui-updates-test-${Random.nextLong().toULong()}"
     private val dir: Path = root / "tinyui"
-
-    @AfterTest
-    fun cleanUp() {
-        fs.deleteRecursively(root)
-    }
     private val server = HashMap<String, ByteArray>()
     private val events = ArrayList<UpdateEvent>()
     private val fetch: suspend (String) -> ByteArray = { path -> server[path] ?: throw IOException("404 $path") }
 
     /** Anything but the literal "bad" verifies: the real algorithm has its own test. */
     private val lenient = SignatureVerifier { _, _, signature -> signature != "bad" }
+
+    @AfterTest
+    fun cleanUp() {
+        fs.deleteRecursively(root)
+    }
 
     private fun manifest(
         name: String = "shop",
@@ -100,6 +99,8 @@ class UpdatesTest {
         assertEquals(FailStage.POINTER, (u.check("shop") as CheckResult.Failed).stage, "404")
         server["shop/1/current.json"] = "not json".encodeToByteArray()
         assertEquals(FailStage.POINTER, (u.check("shop") as CheckResult.Failed).stage)
+        server["shop/1/current.json"] = """{"version":"v1","rollout":"all","signature":"ok"}""".encodeToByteArray()
+        assertEquals(FailStage.POINTER, (u.check("shop") as CheckResult.Failed).stage, "a rollout that is not an integer is not a default")
         publish(manifest(), pointerVersion = "../escape")
         val escaped = assertIs<CheckResult.Failed>(u.check("shop"))
         assertEquals(FailStage.POINTER, escaped.stage)

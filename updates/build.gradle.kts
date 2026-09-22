@@ -15,7 +15,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":compose"))
-            implementation(libs.okio)
+            implementation(libs.quickjs.kmp)
+            api(libs.okio)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(libs.kotlinx.coroutines.core)

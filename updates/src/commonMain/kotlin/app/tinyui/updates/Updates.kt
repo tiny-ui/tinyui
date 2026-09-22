@@ -6,7 +6,6 @@ import app.tinyui.PageFailure
 import app.tinyui.PageHost
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
@@ -47,11 +46,11 @@ class Updates internal constructor(
         installId: String,
         fetch: suspend (path: String) -> ByteArray,
         onEvent: (UpdateEvent) -> Unit = {},
-    ) : this(packages, runtimeVersion, dir, installId, fetch, onEvent, FileSystem.SYSTEM, QuickJs.upstreamCommit, PageHost.PROTOCOL, PlatformSignatureVerifier)
+    ) : this(packages, runtimeVersion, dir, installId, fetch, onEvent, platformFileSystem, QuickJs.upstreamCommit, PageHost.PROTOCOL, PlatformSignatureVerifier)
 
     private val packages: Map<String, Package>
     private val checkLock = Mutex()
-    private var inFlight: Deferred<Map<String, CheckResult>>? = null
+    private var inFlight: CompletableDeferred<Map<String, CheckResult>>? = null
 
     init {
         require(packages.isNotEmpty()) { "Updates needs at least one embedded package" }
@@ -76,10 +75,10 @@ class Updates internal constructor(
 
     /** Runs the check for every package at once; a second call while one is running joins it. */
     suspend fun check(): Map<String, CheckResult> {
-        val run = checkLock.withLock {
-            inFlight ?: CompletableDeferred<Map<String, CheckResult>>().also { inFlight = it }
+        val (run, owner) = checkLock.withLock {
+            inFlight?.let { it to false } ?: CompletableDeferred<Map<String, CheckResult>>().also { inFlight = it }.let { it to true }
         }
-        if (run !is CompletableDeferred) return run.await()
+        if (!owner) return run.await()
         try {
             val results = coroutineScope { packages.keys.map { pkg -> async { pkg to check(pkg) } }.map { it.await() } }.toMap()
             run.complete(results)
@@ -92,7 +91,11 @@ class Updates internal constructor(
         }
     }
 
-    suspend fun check(pkg: String): CheckResult = pkg(pkg).check().also { onEvent(it.toEvent(pkg)) }
+    /** One package; two calls for the same package at once run one after the other. */
+    suspend fun check(pkg: String): CheckResult {
+        val p = pkg(pkg)
+        return p.lock.withLock { p.check() }.also { onEvent(it.toEvent(pkg)) }
+    }
 
     internal fun embedded(pkg: String): Bundle = pkg(pkg).embedded
 
@@ -124,6 +127,7 @@ class Updates internal constructor(
     private inner class Package(val embedded: Bundle) {
         val name: String = embedded.name
         val root: Path = dir / name
+        val lock = Mutex()
         var installed: String? = null
         val failed = ArrayList<String>()
         var current: Bundle = embedded
@@ -212,25 +216,11 @@ class Updates internal constructor(
             try {
                 fs.deleteRecursively(stagingRoot)
                 fs.createDirectories(staging)
-                for (module in manifest.runtime + manifest.pages) {
-                    val path = manifest.file(module) + ".bin"
-                    val bytes = try {
-                        fetch("$name/$runtimeVersion/$version/$path")
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        discard()
-                        return CheckResult.Failed(version, FailStage.DOWNLOAD, "$path: ${e.message ?: e}")
-                    }
-                    if (bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
-                        discard()
-                        return CheckResult.Failed(version, FailStage.INTEGRITY, "$path does not match manifest.hashes")
-                    }
-                    val file = staging / path
-                    file.parent?.let { fs.createDirectories(it) }
-                    fs.write(file) { write(bytes) }
+                val failure = downloadInto(staging, manifest, manifestBytes)
+                if (failure != null) {
+                    discard()
+                    return failure
                 }
-                fs.write(staging / MANIFEST) { write(manifestBytes) }
                 val target = root / INSTALLED / version
                 fs.createDirectories(root / INSTALLED)
                 fs.deleteRecursively(target)
@@ -239,11 +229,37 @@ class Updates internal constructor(
                 installed = version
                 saveState()
                 fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) }
+            } catch (e: CancellationException) {
+                discard()
+                throw e
             } catch (e: IOException) {
                 discard()
                 return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
             }
             return CheckResult.Installed(version)
+        }
+
+        /** Every file of [manifest] into [staging], each checked against `hashes`; null once all are there. */
+        private suspend fun downloadInto(staging: Path, manifest: BuildManifest, manifestBytes: ByteArray): CheckResult.Failed? {
+            val version = manifest.version
+            for (module in manifest.runtime + manifest.pages) {
+                val path = manifest.file(module) + ".bin"
+                val bytes = try {
+                    fetch("$name/$runtimeVersion/$version/$path")
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    return CheckResult.Failed(version, FailStage.DOWNLOAD, "$path: ${e.message ?: e}")
+                }
+                if (bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
+                    return CheckResult.Failed(version, FailStage.INTEGRITY, "$path does not match manifest.hashes")
+                }
+                val file = staging / path
+                file.parent?.let { fs.createDirectories(it) }
+                fs.write(file) { write(bytes) }
+            }
+            fs.write(staging / MANIFEST) { write(manifestBytes) }
+            return null
         }
 
         private fun readState() {
@@ -265,7 +281,7 @@ class Updates internal constructor(
         val root = Json.parseToJsonElement(text).jsonObject
         val version = root["version"]?.jsonPrimitive?.content ?: throw IllegalArgumentException("current.json has no version")
         val signature = root["signature"]?.jsonPrimitive?.content ?: throw IllegalArgumentException("current.json has no signature")
-        val rollout = root["rollout"]?.jsonPrimitive?.intOrNull ?: 100
+        val rollout = root["rollout"]?.let { it.jsonPrimitive.intOrNull ?: throw IllegalArgumentException("current.json rollout is not an integer: $it") } ?: 100
         return Pointer(version, rollout.coerceIn(0, 100), signature)
     }
 
@@ -282,4 +298,5 @@ class Updates internal constructor(
     }
 }
 
-private fun FileSystem.listOrNull(dir: Path): List<Path>? = runCatching { list(dir) }.getOrNull()
+/** okio declares `FileSystem.SYSTEM` per platform, not in common code. */
+internal expect val platformFileSystem: FileSystem

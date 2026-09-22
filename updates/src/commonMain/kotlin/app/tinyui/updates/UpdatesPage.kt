@@ -41,7 +41,8 @@ fun UpdatesPage(
     TinyUIPage(
         page.runtime, page.module, registry, sink, services, propsJson, modifier, page.sourceMaps,
         error = { failure ->
-            if (page.bundle !== updates.embedded(pkg)) {
+            // only the failures that mean the package cannot run here (docs/updates.md §4.5)
+            if ((failure.kind == "E2" || failure.kind == "E6") && page.bundle !== updates.embedded(pkg)) {
                 LaunchedEffect(failure) {
                     updates.rollBack(pkg, page.module.name, failure)
                     bundle = updates.embedded(pkg)
