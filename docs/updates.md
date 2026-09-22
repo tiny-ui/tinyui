@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -37,11 +37,9 @@ pages/**/*.bin
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个） |
 | `protocol` | `tinyui build` | 所含 `tinyui-core` 的 `PROTOCOL`，读自子路径导出 `tinyui-core/protocol`（只含常量，不在 Node 里执行运行时模块） |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.bin` 的 sha256 hex，键与 `files` 一致 |
-| `runtimeVersion` | `tinyui bundle` | 发布目标，等于宿主声明值 |
-| `signature` | `tinyui bundle` | §7；覆盖除 `signature` 与 `rollout` 之外的全部字段（含 `name`、`publicKey`、`runtimeVersion`） |
-| `rollout` | `tinyui bundle`，服务端可改 | 0～100 的整数，缺省 100；投递策略，不在签名内 |
+| `runtimeVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
-内置包的 manifest 没有 `runtimeVersion` / `signature` / `rollout`——宿主知道自己的 runtimeVersion，内置包不参与灰度、不验签。
+签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包的 manifest 没有 `runtimeVersion`，也没有指针文件——宿主知道自己的 runtimeVersion，内置包不参与灰度、不验签。
 
 ### 1.2 `tinyui bundle`
 
@@ -52,10 +50,13 @@ tinyui bundle --runtime-version <rv> --signing-key <私钥 PEM> [--rollout <p>] 
 读 `tinyui build` 的输出目录，写：
 
 ```
-dist/ota/<pkg>/<rv>/manifest.json            build 的 manifest + runtimeVersion + signature + rollout
+dist/ota/<pkg>/<rv>/current.json             指针：{ "version", "rollout", "signature" }
+dist/ota/<pkg>/<rv>/<version>/manifest.json  build 的 manifest + runtimeVersion，写定后不再变
 dist/ota/<pkg>/<rv>/<version>/runtime/*.bin
 dist/ota/<pkg>/<rv>/<version>/pages/**/*.bin
 ```
+
+`current.json` 只有三个字段：`version` 指向哪个目录；`rollout` 0～100 的整数，缺省 100，服务端可改；`signature` 是对 `<version>/manifest.json` 原始字节的签名（§7）。指针里只有投递策略与签名值，没有任何需要签名保护的字段。
 
 这个目录是包的最终形态：交给 `tinyui publish` 上传，或者原样放到任何静态目录（§2.2）——它的布局就是 §2 客户端要请求的路径。`.js.map` 不进包，发布方归档 build 输出目录以便按 `buildId` 离线对映射（build-chain.md §7）。
 
@@ -65,13 +66,15 @@ dist/ota/<pkg>/<rv>/<version>/pages/**/*.bin
 
 | 路径 | 内容 | 缓存 |
 |---|---|---|
-| `<pkg>/<rv>/manifest.json` | 可变指针 | `Cache-Control: no-store` |
-| `<pkg>/<rv>/<version>/<files[module]>.bin` | 不可变内容 | `Cache-Control: public, max-age=31536000, immutable` |
+| `<pkg>/<rv>/current.json` | 可变指针 | `Cache-Control: no-store` |
+| `<pkg>/<rv>/<version>/manifest.json` | 不可变，签名覆盖其原始字节 | `Cache-Control: public, max-age=31536000, immutable` |
+| `<pkg>/<rv>/<version>/<files[module]>.bin` | 不可变内容 | 同上 |
 
 - `pkg` 库从内置 manifest 读，`rv` 宿主给；宿主只拼 base，一个 App 不管几个包都是一个 base URL、一个 `fetch`
 - 请求不带 query、不带自定义 header、不带任何设备信息；宿主的 `fetch` 实现可以自行加 header 或按路径分流到不同来源，库不知情
 - 同一 `<version>` 目录下的文件永不改内容（改内容必换 version），CDN 因此不会陈旧
-- 回滚 = 指针换回上一个好包的 manifest；灰度 = 改其中的 `rollout`
+- 无更新时客户端只下载指针（约 100 字节）；`manifest.json` 与文件只在有新 version 且中签时才取
+- 回滚 = `current.json` 的 `version` 与 `signature` 换回上一版；灰度 = 改 `rollout`；两者都不碰 `<version>/` 下的任何文件
 - 投递面没有鉴权：包在安装包里本来就能反出来；来源与完整性由签名（§7）保证
 
 ### 2.1 托管与私有化实例
@@ -80,8 +83,10 @@ dist/ota/<pkg>/<rv>/<version>/pages/**/*.bin
 
 ```
 base = https://updates.tinyui.app/<app>/<channel>
-完整路径 = /<app>/<channel>/<pkg>/<rv>/manifest.json
+完整路径 = /<app>/<channel>/<pkg>/<rv>/current.json
 ```
+
+托管实例的指针存 KV，最终一致：写入后全球可见最多约 60 秒，回滚同样受此延迟。
 
 进 URL 的只有永久不变的身份：`app` 由实例管理员分配、全局唯一（§6.3）；`channel` 由宿主构建变体决定（`production` / `staging` / `dev`），是 App 级的部署环境而不是包级的；`pkg`、`rv` 见上。**组织 / 租户（计费主体）不进 URL**——它会改名、转让、拆合，只是 app 记录上的一个可改字段。
 
@@ -125,6 +130,8 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
+**接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。指针回滚对已装上的用户生效靠的是下一次 `check()` 装上回退版本；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 指针回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
+
 文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`），是本 artifact 独有的依赖，core 库不引入。ECDSA 验签走平台 API（§7）。
 
 ### 4.2 API 面
@@ -142,9 +149,9 @@ class Updates(
 |---|---|---|
 | `Running` | 构造时每包一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
 | `UpToDate` | `check()` | `version` |
-| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `ENGINE` / `PROTOCOL` / `RUNTIME_VERSION` 的集合 |
+| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `RUNTIME_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
-| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
+| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
 这些字段由下面的遥测产品功能倒推而来；事件在库里定形，上报到哪里（宿主埋点、更新服务的控制台）是宿主的事。控制台的一切视图都按 (app, pkg) 切，采用率的分母 `install` 按 app 去重（ADR-006 §4.3）。
@@ -175,22 +182,25 @@ class Updates(
 ### 4.3 `check(pkg)` 状态机
 
 ```
-fetch <pkg>/<rv>/manifest.json ─解析失败──────────────────────────────▶ Failed(manifest)
+fetch <pkg>/<rv>/current.json ─解析失败──────────────────────────────▶ Failed(pointer)
   │
-  ├─ signature 缺失或用内置 publicKey 验签失败 ────────────────────────▶ Failed(signature)   // 上报
-  ├─ name ≠ pkg / runtimeVersion ≠ 宿主值 / engine ≠ QuickJs.upstreamCommit / protocol ≠ PROTOCOL
-  │                                                                  ▶ Skipped(incompatible)   // 发错目录，上报
   ├─ version == installed.version 或 version ∈ failed ────────────────▶ UpToDate / Skipped(failed)
-  ├─ createdAt ≤ embedded.createdAt ───────────────────────────────────▶ Skipped(older-than-embedded)
   ├─ hash(installId + ":" + pkg + ":" + version) % 100 ≥ rollout ─────▶ Skipped(rollout)
+  │
+  ▼ fetch <pkg>/<rv>/<version>/manifest.json，拿到原始字节
+  ├─ 用内置 publicKey 对原始字节验 signature 失败 ─────────────────────▶ Failed(signature)   // 上报
+  ├─ 解析失败 ────────────────────────────────────────────────────────▶ Failed(manifest)
+  ├─ name ≠ pkg / version ≠ 指针 version / runtimeVersion ≠ 宿主值
+  │  / engine ≠ QuickJs.upstreamCommit / protocol ≠ PROTOCOL ─────────▶ Skipped(incompatible)   // 发错目录，上报
+  ├─ createdAt ≤ embedded.createdAt ───────────────────────────────────▶ Skipped(older-than-embedded)
   │
   ▼ 逐文件 fetch <pkg>/<rv>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
-  ▼ 写入 manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed
+  ▼ manifest 原始字节写入 staging/<version>/manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed
   ▼ Installed(version)   // 下次启动生效
 ```
 
-签名先于一切：签名不对的 manifest 里任何字段都不可信，包括 `rollout`。验签用的公钥永远是内置 manifest 的，下载 manifest 的 `publicKey` 不参与验签。掷骰以 `pkg` 与 `version` 为盐：每个包每次发布独立抽样（monorepo 里同一次 CI 产出的多个包 `version` 可能相同，不加 `pkg` 会让它们的灰度人群重合）；已装上的用户不因 `rollout` 下调而回退。
+manifest 一到手先验签再解析：签名不对的 manifest 里任何字段都不可信。验签用的公钥永远是内置 manifest 的，下载 manifest 的 `publicKey` 不参与验签。指针不在签名内，篡改它最多让客户端跳过更新或去取一个本就合法的包，与切断网络等价。掷骰哈希是 sha256 前 4 字节按大端读作无符号整数再取模 100，以 `pkg` 与 `version` 为盐：每个包每次发布独立抽样（monorepo 里同一次 CI 产出的多个包 `version` 可能相同，不加 `pkg` 会让它们的灰度人群重合）；已装上的用户不因 `rollout` 下调而回退。
 
 ### 4.4 启动选择
 
@@ -202,7 +212,9 @@ fetch <pkg>/<rv>/manifest.json ─解析失败───────────�
 <dir>/<pkg>/installed/<version>/  manifest.json + runtime/ + pages/
 ```
 
-构造时对每个包：`installed` 存在、目录完整（manifest 里的每个文件都在）、`name` 等于包名、`runtimeVersion` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded` → `current(pkg) = installed`，否则 `= embedded`。`createdAt` 不新于内置的 installed 当场删除（App 升级带来了更新的内置包）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重算 sha256、不重验签：落盘前已核对，之后的损坏由 §4.5 兜底。
+`state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
+
+构造时对每个包：`installed` 存在、`name` 等于包名、`runtimeVersion` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置或 `runtimeVersion` 不等于宿主值的 installed 当场删除（App 升级带来了更新的内置包或 bump 了 rv）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
 
 ### 4.5 失败回退
 
@@ -229,21 +241,21 @@ fetch <pkg>/<rv>/manifest.json ─解析失败───────────�
 
 | 请求 | 语义 | 服务端校验 |
 |---|---|---|
-| `PUT /<app>/<pkg>/<rv>/<version>/<path>`，body 为文件字节 | 上传内容 | 幂等；同路径已有不同内容 → 409（version 不可变） |
-| `PUT /<app>/<channel>/<pkg>/<rv>/manifest.json`，body 为 manifest | 写指针，即发布 | token 覆盖该 channel；路径 `<pkg>` == `name`、`<rv>` == `runtimeVersion`；`publicKey` == 该包登记的公钥且签名有效（§7）；`files` 列出的每个文件已在 `<version>/` 下且 sha256 与 `hashes` 一致；通过后记录 release、切指针 |
+| `PUT /<app>/<pkg>/<rv>/<version>/<path>`，body 为文件字节 | 上传内容，含 `manifest.json` | 幂等；同路径已有不同内容 → 409（version 不可变） |
+| `PUT /<app>/<channel>/<pkg>/<rv>/current.json`，body 为指针 | 写指针，即发布 | token 覆盖该 channel；`<version>/manifest.json` 已上传，用该包登记的公钥对它的原始字节验 `signature`（§7）；manifest 的 `name` == `<pkg>`、`runtimeVersion` == `<rv>`、`version` == 指针 `version`、`publicKey` == 登记值；`files` 列出的每个文件已在 `<version>/` 下且 sha256 与 `hashes` 一致；通过后记录 release（含 `signature`）、切指针 |
 
 顺序由 CLI 保证：内容先、指针后。指针请求在内容不齐时拒绝，所以乱序不会产生半个包。
 
-`tinyui publish --url <实例> --app <app> --channel <c> --token <t> [--dir dist/ota]`：读 §1.2 的目录（包名从 manifest 来），先 PUT 全部文件（已存在的跳过），再 PUT manifest。
+`tinyui publish --url <实例> --app <app> --channel <c> --token <t> [--dir dist/ota]`：读 §1.2 的目录（包名从 manifest 来），先 PUT `<version>/` 下全部文件含 `manifest.json`（已存在的跳过），再 PUT `current.json`。
 
 ### 6.2 管理 release
 
 | 请求 | 语义 |
 |---|---|
 | `GET /<app>/<pkg>/<rv>/releases` | 已发布的 version 列表：`createdAt`、各 channel 的指针与 `rollout` |
-| `POST /<app>/<channel>/<pkg>/<rv>/pointer`，body `{ "version": …, "rollout"?: … }` | 指针指向 (app, pkg, rv) 下任一已发布 version——回滚与跨 channel 晋级是同一个操作；或只改当前指针的 `rollout` |
+| `POST /<app>/<channel>/<pkg>/<rv>/pointer`，body `{ "version": …, "rollout"?: … }` | 指针指向 (app, pkg, rv) 下任一已发布 version——回滚与跨 channel 晋级是同一个操作；或只改当前指针的 `rollout`。服务端用记录里该 version 的 `signature` 重写 `current.json` |
 
-服务端按 version 保存每份已发布的 manifest，指针切换不需要重新上传；改 `rollout` 只改指针副本，签名不受影响（§7）。CLI：`tinyui releases list` / `rollback <version>` / `rollout <p>` / `promote <version> --to <channel>`。
+服务端按 version 保存 release 记录（`createdAt`、`signature`），指针切换不需要重新上传；改 `rollout` 只改指针，签名不受影响（§7）。CLI：`tinyui releases list` / `rollback <version>` / `rollout <p>` / `promote <version> --to <channel>`。
 
 ### 6.3 管理 app 与包（`ADMIN_TOKEN`）
 
@@ -259,8 +271,8 @@ CLI：`tinyui apps create` / `tinyui packages create` / `tinyui tokens create` /
 
 ## 7. 签名
 
-- 算法 **ECDSA P-256 + SHA-256**，签名值 DER 编码后 base64 写入 `signature`（Java 与 iOS 原生都出 / 收 DER；WebCrypto 是 r‖s，服务端验签前转一次，约 20 行）。选它而非 ed25519：两端零依赖——Android `java.security.Signature("SHA256withECDSA")`，iOS `Security.framework` 的 `SecKeyVerifySignature`（C API，Kotlin/Native 可调；ed25519 在 iOS 只有 Swift-only 的 CryptoKit）
-- 被签内容：manifest 去掉 `signature` 与 `rollout` 后的规范化 JSON——键按字典序、无空白、值只有字符串 / 整数 / 数组 / 对象（RFC 8785 的这个子集两端各自实现，约 30 行）。`rollout` 排除是为了服务端能改灰度比例而不碰私钥；篡改它最多改变谁拿到一个本就合法的包。`name` 与 `runtimeVersion` 在签名内，所以一个包的产物不可能被发成另一个包或另一个 rv
+- 算法 **ECDSA P-256 + SHA-256**，签名值 DER 编码后 base64 写入 `current.json` 的 `signature`（Java 与 iOS 原生都出 / 收 DER；WebCrypto 是 r‖s，服务端验签前转一次，约 20 行）。选它而非 ed25519：两端零依赖——Android `java.security.Signature("SHA256withECDSA")`，iOS `Security.framework` 的 `SecKeyVerifySignature`（C API，Kotlin/Native 可调；ed25519 在 iOS 只有 Swift-only 的 CryptoKit）
+- 被签内容：`<version>/manifest.json` 文件的**原始字节**。`bundle` 写定该文件后对字节签名，此后任何一端都不重新序列化，客户端与服务端拿到的字节就是被签的字节，不存在规范化这一步（DSSE、JWS、Expo code signing、APT 的通行做法；多端各实现一份规范化 JSON 是 TUF 早期路线，任一处偏差即全部客户端拒收全部更新且只能发 App 修）。签名值放在指针 `current.json` 里；指针与 `rollout` 不在签名内，服务端因此能改灰度比例、切回滚而不碰私钥，篡改指针最多改变谁拿到一个本就合法的包。`name` 与 `runtimeVersion` 在签名内，所以一个包的产物不可能被发成另一个包或另一个 rv
 - 公钥格式统一为 **X9.63 未压缩点（`04‖X‖Y`，65 字节）的 base64**：iOS `SecKeyCreateWithData` 直接收，WebCrypto `importKey("raw")` 直接收，Android 侧加固定 26 字节的 P-256 SPKI DER 头再交 `X509EncodedKeySpec`——三处都不用解析 PEM。`tinyui.config.json` 的 `publicKey`、manifest 的 `publicKey`、`POST /apps/<app>/packages` 的 `publicKey`、`keys generate` 的公钥输出都是它
 - 密钥按 (app, pkg) 一对：`tinyui keys generate` 产私钥 PEM（PKCS#8）与上述格式的公钥。私钥只在该包发布方的 CI（`tinyui bundle --signing-key`）；公钥两处登记——包的 `tinyui.config.json`（随 build 进 manifest，随内置包进 App，是客户端的信任锚），服务端包记录（§6.3）。服务端永远接触不到私钥：token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认。一个团队持有的私钥只能签自己的包
 - **下载的 manifest 里的 `publicKey` 永远不是信任来源**，客户端只拿它与内置的比对以给出诊断信息

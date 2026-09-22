@@ -1,6 +1,6 @@
 # 热下发实施计划
 
-- 状态：已定（2026-09-19；同日按多包模型修订）；进度在此更新，不回改 ADR-006 / updates.md
+- 状态：已定（2026-09-19；同日按多包模型修订；2026-09-22 按签名改签原始字节、指针文件 `current.json`、启动 sha256 校验修订）；进度在此更新，不回改 ADR-006 / updates.md
 - 来源：[ADR-006](./adr-006-hot-updates.md)、[updates.md](./updates.md)；roadmap 第 7 条的展开
 - 范围：四个仓（tinyui、tinyui-updates-server、quickjs-kmp、各 App 的 JS 工程与宿主）七个里程碑；每个里程碑独立验收、独立合入
 
@@ -26,10 +26,10 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | 模块名改 `<pkg>/<相对路径>` | esbuild 入口 → `-n <pkg>/home`，`import.meta.url = tinyui:<pkg>/home`；manifest 的 `pages` / `files` / `buildIds` / `hashes` 键随之改；sample 包名 `sample`，`sample/shared` 与 CLI 测试里的 `pages/…` 全部改 |
 | `manifest.json` 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes` | `name` / `publicKey` 抄配置；`engine` 从第一个 `.bin` 的文件头读（`QJKB` 起偏移 12 的 40 字节 hex）；`protocol` 读 `tinyui-core/protocol` 子路径导出，core 包加这个入口 |
 | `tinyui keys generate` | Node `crypto.generateKeyPairSync("ec", { namedCurve: "P-256" })`；输出私钥 PKCS#8 PEM 与 X9.63 裸点 base64 公钥（updates.md §7） |
-| `tinyui bundle --runtime-version --signing-key [--rollout] [--out]` | 规范化 JSON → `crypto.sign("sha256", …, { dsaEncoding: "der" })` → `dist/ota/<pkg>/<rv>/manifest.json` + `<pkg>/<rv>/<version>/…`；签名私钥的公钥必须等于 manifest 的 `publicKey`，否则拒绝 |
-| 测试 | 夹具目录 → 字段齐全、模块名带包名、`hashes` 对得上、签名可用公钥验回、改 `rollout` 不破坏签名、私钥与 `publicKey` 不配对被拒、缺配置文件被拒 |
+| `tinyui bundle --runtime-version --signing-key [--rollout] [--out]` | manifest 加 `runtimeVersion` 后写定为 `<pkg>/<rv>/<version>/manifest.json`，对该文件字节 `crypto.sign("sha256", …, { dsaEncoding: "der" })`，签名与 `version` / `rollout` 写 `<pkg>/<rv>/current.json`；`.bin` 复制进 `<version>/`；签名私钥的公钥必须等于 manifest 的 `publicKey`，否则拒绝 |
+| 测试 | 夹具目录 → 字段齐全、模块名带包名、`hashes` 对得上、`current.json` 的签名可用公钥对 `manifest.json` 字节验回、改 `current.json` 的 `rollout` 不影响验签、私钥与 `publicKey` 不配对被拒、缺配置文件被拒 |
 
-验收：`sample/js` 跑 `tinyui build && tinyui bundle`，双端显示 `tinyui:sample/home`，产出目录用 `openssl dgst -sha256 -verify` 验过签名。
+验收：`sample/js` 跑 `tinyui build && tinyui bundle`，双端显示 `tinyui:sample/home`，产出目录用 `openssl dgst -sha256 -verify` 对 `<version>/manifest.json` 验 `current.json` 里的签名。
 
 ## M2 · core 库 `Bundle`
 
@@ -49,10 +49,10 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | 交付 | 要点 |
 |---|---|
 | 模块骨架 | 依赖 `compose` + okio；复用 `build-logic` convention；publish.yml 加 artifact，与 `tinyui` 同版本同 tag |
-| `Updates` | updates.md §4.1 构造参数（`packages: List<Bundle>`，重名 / engine 不符构造抛错）；§4.3 状态机按包各跑，`check()` 并行；`<dir>/<pkg>/state.json`；staging → installed 改名；§4.4 启动选择，含清理不属于任何内置包的目录 |
+| `Updates` | updates.md §4.1 构造参数（`packages: List<Bundle>`，重名 / engine 不符构造抛错）；§4.3 状态机按包各跑（指针 → 掷骰 → manifest 原始字节验签 → 校验 → 下载），`check()` 并行；`<dir>/<pkg>/state.json` 临时文件加 rename 写入；staging → installed 改名；§4.4 启动选择：逐文件重算 sha256（读到的字节直接喂 `Bundle`）、删 `createdAt` 旧于内置或 rv 不匹配的 installed、清理不属于任何内置包的目录 |
 | 验签 expect/actual | Android：裸点加 26 字节 SPKI 头 → `KeyFactory("EC")` → `Signature("SHA256withECDSA")`；iOS：`SecKeyCreateWithData`（`kSecAttrKeyTypeECSECPrimeRandom`）→ `SecKeyVerifySignature(kSecKeyAlgorithmECDSASignatureMessageX962SHA256)`，cinterop 用 `platform.Security` |
 | `UpdatesPage` | `name` 取第一个 `/` 前为包 → `current(pkg).page(name)` → `TinyUIPage`；E2 / E6 且来自该包 installed → 拉黑 + 换该包 embedded 重挂（§4.5） |
-| 测试 | 假 `fetch` 按协议喂：签名错（含公钥轮换的诊断信息）、`name` 不匹配、engine 不匹配、旧于内置、rollout 不中、sha256 错、全通过各一条；两个包一坏一好互不影响；启动选择四种情况 + 清理被去掉的包；Android host 与 iOS simulator 各跑一遍验签 |
+| 测试 | 假 `fetch` 按协议喂：指针解析失败、签名错（含公钥轮换的诊断信息）、`name` 不匹配、manifest `version` 与指针不符、engine 不匹配、旧于内置、rollout 不中、sha256 错、全通过各一条；两个包一坏一好互不影响；启动选择四种情况 + installed 文件被改一个字节即回内置并 `Failed(integrity)` + 清理被去掉的包与 rv 不匹配的 installed；Android host 与 iOS simulator 各跑一遍验签 |
 | sample | 第二个包 `sample-extra`（一页即可）验多包；一个开关把 base URL 指向本机 `python3 -m http.server` 起的 `dist/ota/`，手动验"下次启动生效"与回退 |
 
 验收：sample 在 Android 与 iOS 模拟器上从本机静态目录装上新包、重启生效；故意给一个包发坏包（改一个 `.bin` 字节、或页面顶层 `throw`）能回退并收到带 `pkg` 的 `RolledBack`，另一个包不受影响。
@@ -64,12 +64,12 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | 交付 | 要点 |
 |---|---|
 | 建仓 | pnpm + Hono + wrangler；vitest 用 `@cloudflare/vitest-pool-workers`；Cloudflare Git 集成 push 即 deploy；README 写私有化步骤：fork → 建 KV / R2 → 设 `ADMIN_TOKEN` → `wrangler deploy` → `tinyui apps create` → `tinyui packages create` |
-| 投递端点 | `GET /:app/:channel/:pkg/:rv/manifest.json`（KV，`no-store`）、`GET /:app/:channel/:pkg/:rv/:version/*`（R2，键为 (app, pkg, rv, version, path)，`channel` 不参与寻址，`immutable`） |
-| 发布端点 | `PUT /:app/:pkg/:rv/:version/*`（幂等，冲突 409）；`PUT /:app/:channel/:pkg/:rv/manifest.json`（token 归属与 channel 范围 → `name` == `:pkg`、`runtimeVersion` == `:rv`、`publicKey` == 登记值 → WebCrypto 验签，DER → r‖s 转换 → `<version>/` 齐全且 sha256 一致 → 记 release、切指针） |
+| 投递端点 | `GET /:app/:channel/:pkg/:rv/current.json`（KV，`no-store`）、`GET /:app/:channel/:pkg/:rv/:version/*`（R2，键为 (app, pkg, rv, version, path)，含 `manifest.json`，`channel` 不参与寻址，`immutable`） |
+| 发布端点 | `PUT /:app/:pkg/:rv/:version/*`（幂等，冲突 409）；`PUT /:app/:channel/:pkg/:rv/current.json`（token 归属与 channel 范围 → 取 R2 里 `<version>/manifest.json` 的原始字节，WebCrypto 验签，DER → r‖s 转换 → `name` == `:pkg`、`runtimeVersion` == `:rv`、`version` == 指针 `version`、`publicKey` == 登记值 → `<version>/` 齐全且 sha256 一致 → 记 release（含 `signature`）、切指针） |
 | 管理端点 | `/apps`（含可改 `org` 字段）、`/apps/:app/packages`、`/apps/:app/packages/:pkg/publicKey`、`/apps/:app/packages/:pkg/tokens`（带 `channels`；`ADMIN_TOKEN` secret；token 只存 sha256，签发只返回一次） |
 | release 端点 | `GET /:app/:pkg/:rv/releases`、`POST /:app/:channel/:pkg/:rv/pointer`（回滚与跨 channel 晋级同一操作） |
 | `Storage` 接口 | CF 适配器（KV + R2）+ 内存适配器（测试） |
-| 一致性测试 | 用 `tinyui-cli` 产的夹具包按 updates.md §6 顺序打：先指针后内容被拒、坏签名被拒、`name` 与路径不符被拒、token 跨包 / 跨 channel 被拒、staging 发布后 production 指针晋级不重传、回滚后指针变化、改 rollout 后签名仍有效 |
+| 一致性测试 | 用 `tinyui-cli` 产的夹具包按 updates.md §6 顺序打：先指针后内容被拒、坏签名被拒、`name` 与路径不符被拒、指针 `version` 与 manifest 不符被拒、token 跨包 / 跨 channel 被拒、staging 发布后 production 指针晋级不重传、回滚后 `current.json` 带回该 version 的签名、改 rollout 后签名仍有效 |
 | 部署 | `updates.tinyui.app`（DNS 在 Cloudflare）、KV namespace、R2 桶、`ADMIN_TOKEN` |
 
 验收：本机 `wrangler dev` 起服务，M3 的 sample 把 base URL 换成它，整条链跑通。

@@ -1,6 +1,6 @@
 # ADR-006 · 热下发：整包原子、宿主 runtimeVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest）；实现待开
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项）；实现待开
 - 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的完整产物，整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `runtimeVersion`，引擎 commit 与 patch 协议号只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 指针换回上一个好包；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
 - 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
 - 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则
@@ -64,7 +64,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 纯静态目录 | 对象存储 / CDN | 零代码，服务端不能做决策 |
 | 专用更新服务 | `GET /updates?runtimeVersion&platform&appVersion&deviceId…`（Expo 协议、CodePush、Shorebird） | 能力全，但客户端协议绑死服务端实现，每个宿主得自建一套 |
 | 托管 SaaS | EAS Update / App Center CodePush / Shorebird | 各绑各的客户端；CodePush 2025 已退役。排除 |
-| **两次 GET，指针与内容分离** | 客户端只 `fetch(相对路径)`：一次拿 `manifest.json`（可变，`no-store`），N 次拿 `<version>/<file>`（不可变，`immutable`） | 静态目录是最小实现，动态端点是同协议下的服务端升级，客户端不改 |
+| **两次 GET，指针与内容分离** | 客户端只 `fetch(相对路径)`：一次拿指针 `current.json`（可变，`no-store`，约 100 字节），有新版本且中签时再拿 `<version>/manifest.json` 与 `<version>/<file>`（不可变，`immutable`） | 静态目录是最小实现，动态端点是同协议下的服务端升级，客户端不改 |
 
 选最后一种。库只定义"客户端会请求什么路径"，不定义"服务端怎么决定"——这是 §2.4 在服务端的投影。请求不带任何设备 / 版本信息；app 与渠道（staging / production）折在 base URL 里，库只知道包名（从内置 manifest 读）与 runtimeVersion，没有 app / channel 概念；定向发布不做，"能不能跑"归 runtimeVersion，"想不想给"要做就 bump runtimeVersion 或宿主在自己的 `fetch` 里加 header 让服务端判，库不知情。
 
@@ -97,7 +97,11 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 逐文件 sha256 锁内容，manifest 签名锁来源。签名进 MVP 而不推迟：租户从托管实例拉可执行代码，实例对租户就是"不受自己控制的第三方"，HTTPS + sha256 过不了任何安全评审。私钥只在发布方 CI，服务端登记公钥并在发布时验签，客户端再验一次——token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认，服务永远只是搬运工。
 
-客户端的公钥从哪来：宿主逐包传入 vs 写在包的 `tinyui.config.json`、随 build 进 manifest、随内置包进 App。选后者：信任根同样是 App 二进制，但包变成自描述（名字、公钥、rv 都在 manifest 里），宿主接线缩到 `(包列表, rv, dir, installId, fetch)`，多包下"N 把公钥与 N 个包一一对应"这类接线错误没有发生的地方；公钥轮换本来就要 App 发版，与"换内置包"是同一个事件。唯一要写死的规则：**下载的 manifest 里的 `publicKey` 永远不是信任来源**，验签只用内置包的那份。算法 ECDSA P-256 + SHA-256：Android `java.security`、iOS `Security.framework` C API 两端零依赖；ed25519 在 iOS 只有 Swift-only 的 CryptoKit，Kotlin/Native 调不到。
+客户端的公钥从哪来：宿主逐包传入 vs 写在包的 `tinyui.config.json`、随 build 进 manifest、随内置包进 App。选后者：信任根同样是 App 二进制，但包变成自描述（名字、公钥、rv 都在 manifest 里），宿主接线缩到 `(包列表, rv, dir, installId, fetch)`，多包下"N 把公钥与 N 个包一一对应"这类接线错误没有发生的地方；公钥轮换本来就要 App 发版，与"换内置包"是同一个事件。唯一要写死的规则：**下载的 manifest 里的 `publicKey` 永远不是信任来源**，验签只用内置包的那份。
+
+被签内容是 `<version>/manifest.json` 的原始字节，不是规范化 JSON。原拟把 `rollout` 留在 manifest 里、签名覆盖去掉它之后的规范化 JSON（RFC 8785 子集），代价是 Node、Kotlin、Workers 三端各实现一份规范化，任一处偏差（非 ASCII 模块名的转义、新增字段类型）即全部客户端拒收全部更新，且只能发 App 修——这是 TUF 早期路线，后来被 DSSE 取代的原因正在于此。签原始字节是 DSSE / JWS / Expo code signing / APT 的通行做法。随之指针与 manifest 分成两个文件：可变的 `current.json` 只含 `version` / `rollout` / `signature`（对应 Sparkle appcast、OCI tag），manifest 进不可变路径。副产品：无更新时只下指针，manifest 可进 CDN 缓存。挡住的是"往指针里放需要签名保护的字段"。
+
+算法 ECDSA P-256 + SHA-256：Android `java.security`、iOS `Security.framework` C API 两端零依赖；ed25519 在 iOS 只有 Swift-only 的 CryptoKit，Kotlin/Native 调不到。
 
 ### 2.10 多包：一个 App 由几个包组成
 
@@ -132,13 +136,13 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 兼容键 | 宿主声明的 `runtimeVersion`，作服务端路径；`engine` / `protocol` 只校验 |
 | 启用规则 | 下发包 `version ≠ installed` 且 `createdAt` 新于内置才装；App 升级带来更新的内置包时自动弃掉 installed；不能用下发把 App 降到比内置更老 |
 | 生效时机 | 下次进程启动 |
-| 失败语义 | 下发包的页面报 E2 / E6 → 当场用内置包重挂这一页，整包持久化拉黑并上报；E5 不算失败。一个 (runtime, page) 对永远来自同一个包；不同页面可以短暂来自不同包（各自独立 Runtime） |
+| 失败语义 | 下发包的页面报 E2 / E6 → 当场用内置包重挂这一页，整包持久化拉黑并上报；E5 不算失败。启动时重算 installed 包 sha256，不一致同样拉黑。进程级崩溃不在库的回退范围：出口是灰度 + 指针回滚 + "`check()` 先于任何页面挂载"的接入约定，挂载标记见 §4.3。一个 (runtime, page) 对永远来自同一个包；不同页面可以短暂来自不同包（各自独立 Runtime） |
 | 库的边界 | `tinyui-updates` 独立 artifact；`Updates(packages: List<Bundle>, …)` 以一组包为单位做校验 / 落盘 / 选择 / 回退；不做网络、调度、UI；宿主给内置包列表、`fetch(path)`、`installId`、存储目录、`runtimeVersion`，不传公钥 |
-| 服务端协议 | 两次 GET；`<base>/<pkg>/<rv>/manifest.json`（`no-store`）+ `<base>/<pkg>/<rv>/<version>/…`（`immutable`）；请求不带参数；base = `/<app>/<channel>`，组织不进 URL |
+| 服务端协议 | 指针 + 内容；`<base>/<pkg>/<rv>/current.json`（`no-store`，只含 `version` / `rollout` / `signature`）+ `<base>/<pkg>/<rv>/<version>/…`（`immutable`，含 `manifest.json`）；请求不带参数；base = `/<app>/<channel>`，组织不进 URL |
 | 灰度 | manifest `rollout` 百分比，客户端按 `installId` 掷骰 |
 | 回滚 | 重发上一个好包；无 `rollBackToEmbedded` |
-| 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256）；密钥按 (app, pkg)，发布方持私钥，服务端与客户端各验一次；公钥写在 `tinyui.config.json` 随 build 进 manifest，客户端只信内置包的 |
-| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes`；`tinyui bundle --runtime-version --signing-key` 产出签名后的上传目录 `dist/ota/<pkg>/<rv>/`；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
+| 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256，覆盖 `<version>/manifest.json` 的原始字节，无规范化）；密钥按 (app, pkg)，发布方持私钥，服务端与客户端各验一次；公钥写在 `tinyui.config.json` 随 build 进 manifest，客户端只信内置包的 |
+| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes`；`tinyui bundle --runtime-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<rv>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
 | 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，KV + R2，`Storage` 接口后置；内容按 (app, pkg, rv, version) 存，channel 是指针；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
 | 仓边界 | `tinyui-updates` 在主仓 `updates/` 模块，与 core 同版本发；服务端独立仓；协议只写在 updates.md，发布后字段只增不改 |
 
@@ -166,6 +170,8 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 | 服务端 D1 | 控制台需要跨维度查询；遥测立项时随 eventbase 的 migrations 到位 |
 | 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
 | 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情；MAU 按 app 内 `install` 去重，不因分包重复计数） | 托管实例对外收费；业界参照见 §4.4 |
+| 挂载标记：`UpdatesPage` 挂 installed 页面前落盘 `attempting`、首帧后清除，构造时残留计数达 2 即拉黑（CodePush `notifyAppReady` / Android A/B boot-success 同类） | 出现以 TinyUI 页面作启动首屏的宿主，或线上出现热下发包导致的崩溃循环。在此之前：启动 sha256 校验挡磁盘损坏；页面代码触发的引擎崩溃是确定性的、同一引擎 commit 在开发与 staging 就会复现，线上靠灰度 + 指针回滚 + `check()` 先于页面挂载 |
+| 指针改走强一致存储（R2） | KV 最终一致带来的最多约 60 秒回滚延迟成为运营问题 |
 | 增量传输 | 整包超过 1 MB |
 | 页内 `import()` 懒加载（接 `JsEngineConfig.moduleLoader`） | 出现单页字节码过大的页面 |
 
