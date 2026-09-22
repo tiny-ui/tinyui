@@ -99,7 +99,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | M1 CLI 产包与签名（含配置文件与模块名改名） | 已完成（PR #13，2026-09-22）：`tinyui.config.json`、模块名 `<pkg>/…`、manifest 扩展、`keys generate`、`bundle` 签原始字节写 `current.json`；sample 包名 `sample` |
 | M2 core `Bundle` | 已完成（2026-09-22）：`BuildManifest` 解析 §1.1 全部字段（缺 `name` / `publicKey` 即失败），`BundleFiles` / `Bundle` / `LoadedPage`，`SourceMaps.isEmpty`；sample 资源目录改 `files/tinyui/sample/`，Android host 冒烟测试改走 `Bundle` |
 | M3 `updates/` 模块 | 已完成（2026-09-22）：`Updates` 状态机与启动选择（含 sha256 重算、原子 state.json）、两端 ECDSA 验签（Android `java.security`、iOS `Security.framework`）、`UpdatesPage` E2 / E6 回退；sample 加第二个包 `sample-extra`，Android 模拟器从本机 `http.server` 装包、重启生效、坏包回退并 `RolledBack` 全部验过 |
-| M4 服务 MVP | 已完成（tiny-ui/tinyui-updates-server PR #1，2026-09-22）：Hono + 单 R2 桶，投递 / 发布 / release / 管理四组端点，Workers 运行时一致性测试 12 条；已部署 `updates.tinyui.app`（R2 桶 `tinyui-updates`，`ADMIN_TOKEN` 存 HarlonWang/secrets 的 `tinyui-updates/admin-token.txt`），Cloudflare Git 集成未做，仍手动 `wrangler deploy --config wrangler.tinyui.toml` |
+| M4 服务 MVP | 已完成（tiny-ui/tinyui-updates-server PR #1，2026-09-22）：Hono + 单 R2 桶，投递 / 发布 / release / 管理四组端点，Workers 运行时一致性测试 12 条；已部署 `updates.tinyui.app`（R2 桶 `tinyui-updates`，`ADMIN_TOKEN` 存 HarlonWang/secrets 的 `tinyui-updates/admin-token.txt`），Cloudflare Workers Builds 已连 tiny-ui/tinyui-updates-server 的 main，push 即部署（`wrangler deploy --config wrangler.tinyui.toml`） |
 | M5 CLI 发布与管理 | 待开 |
 | M6 TrendingAI 接入 | 待开 |
 | M7 第二个 App | 待开；前置 `qjsc-kmp` 平台包待开 |
