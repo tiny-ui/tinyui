@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type { Manifest } from "./build.ts";
-import { publicKeyOf, sign } from "./keys.ts";
+import { isPackageName } from "./config.ts";
+import { isPublicKey, publicKeyOf, sign } from "./keys.ts";
 
 export interface BundleOptions {
     /** `tinyui build` output directory. */
@@ -47,6 +48,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
     const manifest = await readManifest(dist);
     if (!isPathSegment(manifest.version)) throw new Error(`manifest version must be a single path segment, got "${manifest.version}"`);
+    if (!isPackageName(manifest.name)) throw new Error(`manifest name must match [a-z0-9-]+, got "${manifest.name}"`);
+    if (!isPublicKey(manifest.publicKey)) throw new Error(`manifest publicKey is not a P-256 uncompressed point in base64`);
     const privateKeyPem = await readFile(options.signingKey, "utf8");
     if (publicKeyOf(privateKeyPem) !== manifest.publicKey) {
         throw new Error(`${options.signingKey} does not match the publicKey in ${dist}/manifest.json (tinyui.config.json)`);

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -100,11 +100,18 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist, runtimeVersion: "1", signingKey, rollout: 101 }), /rollout must be an integer from 0 to 100/);
     });
 
-    it("refuses a signing key that does not match the package's publicKey", async () => {
+    it("refuses a signing key that does not match the package's publicKey, or a publicKey that is not P-256", async () => {
         const dist = await fakeDist(join(tmp, "dist-key"));
         const other = join(tmp, "other.pem");
         await writeFile(other, generateKeyPair().privateKeyPem);
         await assert.rejects(bundle({ dist, runtimeVersion: "1", signingKey: other }), /does not match the publicKey/);
+        const p384 = generateKeyPairSync("ec", { namedCurve: "P-384" });
+        const { x, y } = p384.publicKey.export({ format: "jwk" }) as { x: string; y: string };
+        const point = Buffer.concat([Buffer.from([4]), Buffer.from(x, "base64url"), Buffer.from(y, "base64url")]).toString("base64");
+        const wrongCurve = await fakeDist(join(tmp, "dist-p384"), (m) => { m.publicKey = point; });
+        const p384Key = join(tmp, "p384.pem");
+        await writeFile(p384Key, p384.privateKey.export({ type: "pkcs8", format: "pem" }));
+        await assert.rejects(bundle({ dist: wrongCurve, runtimeVersion: "1", signingKey: p384Key }), /not a P-256/);
     });
 
     it("refuses a build whose bytecode changed since manifest.json was written, touching nothing", async () => {
@@ -131,6 +138,8 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: dot, runtimeVersion: "1", signingKey }), /manifest version must be a single path segment/);
         const dist = await fakeDist(join(tmp, "dist-rv-escape"));
         await assert.rejects(bundle({ dist, runtimeVersion: "..", signingKey }), /runtime version must be a single path segment/);
+        const name = await fakeDist(join(tmp, "dist-name"), (m) => { m.name = "../pkg"; });
+        await assert.rejects(bundle({ dist: name, runtimeVersion: "1", signingKey }), /manifest name must match/);
         const files = await fakeDist(join(tmp, "dist-files"), (m) => { m.files["tinyui-core"] = "../outside/core"; });
         await mkdir(join(tmp, "outside"), { recursive: true });
         await writeFile(join(tmp, "outside", "core.bin"), "x");

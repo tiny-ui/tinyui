@@ -14,7 +14,10 @@ export interface TinyUIConfig {
     pages: string;
 }
 
-const NAME = /^[a-z0-9-]+$/;
+/** Package name: module name prefix and a path segment on the server and on disk (docs/updates.md §0). */
+export function isPackageName(name: string): boolean {
+    return /^[a-z0-9-]+$/.test(name);
+}
 
 export async function loadConfig(root: string): Promise<TinyUIConfig> {
     const file = join(root, CONFIG_FILE);
@@ -32,7 +35,7 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
     }
     if (typeof raw !== "object" || raw === null) throw new Error(`${file}: expected an object`);
     const { name, publicKey, pages } = raw as Record<string, unknown>;
-    if (typeof name !== "string" || !NAME.test(name)) throw new Error(`${file}: "name" must match ${NAME}`);
+    if (typeof name !== "string" || !isPackageName(name)) throw new Error(`${file}: "name" must match [a-z0-9-]+`);
     if (typeof publicKey !== "string" || !isPublicKey(publicKey)) {
         throw new Error(`${file}: "publicKey" must be a P-256 uncompressed point in base64 (65 bytes, 04-prefixed); tinyui keys generate prints one`);
     }
