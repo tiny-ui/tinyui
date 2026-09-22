@@ -19,6 +19,12 @@ export function isPackageName(name: string): boolean {
     return /^[a-z0-9-]+$/.test(name);
 }
 
+/** App, channel and package names share this rule; a value that breaks it would also break out of its path segment. */
+export function requireName(kind: string, value: string): string {
+    if (!isPackageName(value)) throw new Error(`${kind} must match [a-z0-9-]+, got "${value}"`);
+    return value;
+}
+
 function insideRoot(root: string, dir: string): boolean {
     if (dir === "" || isAbsolute(dir)) return false;
     const rel = relative(root, resolve(root, dir));

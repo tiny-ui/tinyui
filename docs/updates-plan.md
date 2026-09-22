@@ -78,7 +78,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 仓：tinyui，`packages/cli`。约 200 行。
 
-`tinyui publish` / `apps create` / `packages create` / `tokens create|revoke` / `releases list|rollback|rollout|promote`，全是对 M4 端点的薄封装；`--url` 缺省 `https://updates.tinyui.app`。测试对着内存适配器起的本地服务跑。
+`tinyui publish` / `apps create` / `packages create` / `tokens create|revoke` / `releases list|rollback|rollout|promote`，全是对 M4 端点的薄封装；`--url` 缺省 `https://updates.tinyui.app`。凭据只从 `$TINYUI_TOKEN` / `$TINYUI_ADMIN_TOKEN` 读，不给 `--token`；`--app` 可用 `$TINYUI_APP`，`--channel` 必须显式。测试对着本仓 `node:http` 起的薄 fake 跑（只回应协议的形状，不复刻验签与 sha256 校验——那些归服务端仓的测试），端到端另跑一次真服务端。
 
 ## M6 · TrendingAI 接入
 
@@ -100,6 +100,6 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | M2 core `Bundle` | 已完成（2026-09-22）：`BuildManifest` 解析 §1.1 全部字段（缺 `name` / `publicKey` 即失败），`BundleFiles` / `Bundle` / `LoadedPage`，`SourceMaps.isEmpty`；sample 资源目录改 `files/tinyui/sample/`，Android host 冒烟测试改走 `Bundle` |
 | M3 `updates/` 模块 | 已完成（2026-09-22）：`Updates` 状态机与启动选择（含 sha256 重算、原子 state.json）、两端 ECDSA 验签（Android `java.security`、iOS `Security.framework`）、`UpdatesPage` E2 / E6 回退；sample 加第二个包 `sample-extra`，Android 模拟器从本机 `http.server` 装包、重启生效、坏包回退并 `RolledBack` 全部验过 |
 | M4 服务 MVP | 已完成（tiny-ui/tinyui-updates-server PR #1，2026-09-22）：Hono + 单 R2 桶，投递 / 发布 / release / 管理四组端点，Workers 运行时一致性测试 12 条；已部署 `updates.tinyui.app`（R2 桶 `tinyui-updates`，`ADMIN_TOKEN` 存 HarlonWang/secrets 的 `tinyui-updates/admin-token.txt`），Cloudflare Workers Builds 已连 tiny-ui/tinyui-updates-server 的 main，push 即部署（`wrangler deploy --config wrangler.tinyui.toml`） |
-| M5 CLI 发布与管理 | 待开 |
+| M5 CLI 发布与管理 | 已完成（2026-09-22）：`publish`（发现 bundle 目录、并发上传、指针最后）、`apps` / `packages`（含 `rotate-key`）/ `tokens` / `releases` 四组命令；凭据只走环境变量，`--app` / `--channel` / `--pkg` 按名字规则校验；CLI 侧契约测试 15 条，另对本地 `wrangler dev` 起的真服务端跑通发布 / 幂等重发 / 晋级 / 改灰度 / 回滚 / 跨 channel 被拒 / 吊销即时生效 |
 | M6 TrendingAI 接入 | 待开 |
 | M7 第二个 App | 待开；前置 `qjsc-kmp` 平台包待开 |
