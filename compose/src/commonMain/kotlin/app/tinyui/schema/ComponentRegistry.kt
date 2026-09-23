@@ -28,6 +28,8 @@ class ComponentRegistry {
 
     fun schema(type: String): ComponentSchema? = entries[type]?.schema
 
+    internal val schemas: List<ComponentSchema> get() = entries.values.map { it.schema }.filter { it.type != PLACEHOLDER }
+
     @Composable
     fun Render(type: String, scope: NodeScope) {
         (entries[type] ?: entries.getValue(PLACEHOLDER)).component.Render(scope)

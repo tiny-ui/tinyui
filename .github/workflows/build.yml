@@ -28,7 +28,7 @@ jobs:
           git clone --depth 1 --branch "$version" https://github.com/HarlonWang/quickjs-kmp.git "$RUNNER_TEMP/quickjs-kmp"
           (cd "$RUNNER_TEMP/quickjs-kmp" && ./gradlew :library:buildNativeHostJni --no-daemon)
           echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
-      - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:androidApp:assembleDebug --no-daemon
+      - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:shared:testAndroidHostTest :sample:androidApp:assembleDebug --no-daemon
 
   pnpm:
     runs-on: ubuntu-latest

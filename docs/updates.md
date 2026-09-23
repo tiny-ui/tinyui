@@ -151,6 +151,14 @@ class Updates(
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 版本）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已随发版带出去的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
+快照由 `HostSnapshot.render(host, hostVersion)` 从宿主的 `TinyUIHost` 生成（所以能力必须在 App 级注册，native-api.md §7），检查写成宿主自己的 host 侧单元测试，照 sample 的 `HostSnapshotTest`：
+
+- 当前 `hostVersion` 的快照文件不存在，或与 `render` 结果不同 → 失败，提示加 `hostVersion`
+- 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果。这等于人声明"这个版本还没随发版带出去"；本地不判断版本是否已发，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4），发版 CI 在那里失败
+- `hostVersion` 在宿主里只写一处常量，`Updates(hostVersion = …)` 与这个测试都读它
+
+测试只构造 `TinyUIHost`、不执行任何能力与组件，所以能在 JVM 上跑；能力实现需要的仓库类对象在测试里传假的即可。
+
 **接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。指针回滚对已装上的用户生效靠的是下一次 `check()` 装上回退版本；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 指针回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
 
 文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`），是本 artifact 独有的依赖，core 库不引入。ECDSA 验签走平台 API（§7）。
@@ -162,7 +170,7 @@ class Updates(
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果 |
 | `suspend fun check(pkg: String): CheckResult` | 只查一个包 |
-| 顶层 `@Composable fun UpdatesPage(updates, name, registry, sink, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
+| 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
 `CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
 
@@ -247,7 +255,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ## 5. 与既有契约的关系
 
-- `PageHost` / `TinyUIPage` / patch 协议 / schema / `PageSink` 不变；`Updates` 全部搭在 `Bundle` 与 `TinyUIPage` 之上
+- `PageHost` / `TinyUIPage` / patch 协议 / schema / `PageSink` 不因热下发而变（M6 把组件、能力、sink 收进 App 级 `TinyUIHost` 是为了宿主快照，见 native-api.md §7）；`Updates` 全部搭在 `Bundle` 与 `TinyUIPage` 之上
 - 引擎的 `JsEngineConfig.moduleLoader` 不接入：它服务页内 `import()`，不是页面级分发（ADR-006 §4.3）
 - `PageError` 不加字段：`buildId` 已能定位到具体 build，`RolledBack` 事件带 `pkg` 与 `version`
 - 跨包的 params / store / events 约定在 app-model.md §7，热下发只保证每个包内部一致
@@ -320,15 +328,21 @@ hostVersion 2
 tinyui 0.3.0
 
 components
-  ta.Icon     name: string, tint?: color, size?: dp
-  ta.Loading  color?: color, size?: dp
+  ta.Icon     name: string, size?: dp = 24, tint?: color = primary; layout
+  ta.Rating   value: number; events onChange(value: number); commands reset(); layout
 
 capabilities
   checkout.start
   coupon.apply
 ```
 
-前两行固定；`components` 与 `capabilities` 两段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）；每项缩进两格、一行一项、按名排序。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，其后供人阅读、供宿主侧检查判断 schema 是否变了，CLI 核对只看名字。宿主组件只列带点的，内置组件随 `tinyui` 版本。
+前两行固定；`components` 与 `capabilities` 两段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）；每项缩进两格、一行一项、按名排序，名字补空格对齐。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，CLI 核对只看名字；其后是给人看、也给宿主侧检查判断 schema 变没变的完整 schema，改哪一处都会让快照不同：
+
+- 各段以 `; ` 分隔，依次为 props、`events …`、`commands …`、`children`、`layout`，没有的段省略
+- prop 按名排序，`名字: 类型`；可选的名字后加 `?`，有默认值加 ` = 默认值`，只在创建时读的加 ` (initial)`；枚举写 `enum(a|b)`，取值排序
+- 事件与命令按名排序，参数写在括号里，参数按名排序，类型为 `string` / `number` / `boolean`
+
+宿主组件只列带点的，内置组件随 `tinyui` 版本。
 
 | 请求 | 凭据 | 语义 |
 |---|---|---|

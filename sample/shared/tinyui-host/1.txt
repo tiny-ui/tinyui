@@ -1,0 +1,6 @@
+hostVersion 1
+tinyui 0.0.0-local
+
+components
+
+capabilities

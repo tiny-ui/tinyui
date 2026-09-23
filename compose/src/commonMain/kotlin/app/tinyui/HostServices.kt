@@ -4,7 +4,7 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update
 
-/** What the host App provides to pages (docs/native-api.md); every part has a default that does nothing. */
+/** What the host provides to one mount (docs/native-api.md); every part has a default that does nothing. App-wide parts live in [TinyUIHost]. */
 class HostServices(
     val navigator: Navigator = Navigator.None,
     val store: Store = InMemoryStore(),
@@ -14,14 +14,9 @@ class HostServices(
     val events: EventBus = EventBus(),
     /** Extra values merged into `device.info` (docs/native-api.md §1). */
     val deviceInfo: Map<String, String> = emptyMap(),
-    /** J3 `host.call` by name (docs/native-api.md §7); names the framework already uses are rejected. */
-    val capabilities: Map<String, HostCapability> = emptyMap(),
+    /** This mount's objects that capabilities read through [PageContext] (docs/native-api.md §7). */
+    val locals: List<PageLocalValue<*>> = emptyList(),
 ) {
-    init {
-        val taken = capabilities.keys.filter { it in FrameworkCapabilities }
-        require(taken.isEmpty()) { "capabilities $taken are framework names" }
-    }
-
     companion object {
         /** One shared instance, so a page whose host passes nothing keeps a stable `remember` key. */
         val Default = HostServices()
@@ -82,11 +77,6 @@ class HttpResponse(val status: Int, val bodyJson: String)
 
 /** An E3 failure with one of the codes in docs/native-api.md §6. */
 class HostException(val code: String, message: String) : Exception(message)
-
-/** One host-defined J3 capability: [argsJson] is the object JS passed; returns JSON text, or null for `undefined`. Throw [HostException] for E3 codes. */
-fun interface HostCapability {
-    suspend fun call(argsJson: String): String?
-}
 
 /** Names the framework dispatches itself (J2 / J3 / J4), listed in the mount manifest ahead of the host's. */
 internal val FrameworkCapabilities = listOf("device.info", "i18n.t", "config.get", "store.get", "store.set", "navigation.push", "navigation.pop", "events.emit", "http.request", "timer.schedule")
