@@ -1,6 +1,6 @@
 {
   "name": "tinyui-native",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TinyUI host capability API for business code: http, storage, toast, navigation, i18n.",
   "license": "MIT",
   "type": "module",
