@@ -60,6 +60,8 @@ export interface Manifest {
     /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
     engine: string;
     protocol: number;
+    /** Version of the `tinyui-core` the runtime modules came from: which built-in components the pages may use. */
+    tinyui: string;
     /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
     /** Page module name → the host capabilities and host components it uses (docs/updates.md §1.3). */
@@ -113,6 +115,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         createdAt,
         engine: runtime[0]?.bin ? await engineCommit(runtime[0].bin) : "",
         protocol: await runtimeProtocol(root),
+        tinyui: await tinyuiVersion(root),
         hashes,
         requires,
     };
@@ -225,6 +228,18 @@ async function runtimeProtocol(root: string): Promise<number> {
     const { PROTOCOL } = (await import(pathToFileURL(file).href)) as { PROTOCOL: unknown };
     if (typeof PROTOCOL !== "number") throw new Error(`${file} does not export PROTOCOL`);
     return PROTOCOL;
+}
+
+async function tinyuiVersion(root: string): Promise<string> {
+    // the package's exports map hides package.json, so walk up from a file it does export
+    let dir = dirname(createRequire(join(root, "package.json")).resolve("tinyui-core/protocol"));
+    for (;;) {
+        const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8").catch(() => "{}")) as { name?: string; version?: string };
+        if (pkg.name === "tinyui-core" && pkg.version) return pkg.version;
+        const parent = dirname(dir);
+        if (parent === dir) throw new Error("cannot find the version of tinyui-core");
+        dir = parent;
+    }
 }
 
 async function gitShortSha(root: string): Promise<string> {

@@ -2,7 +2,7 @@
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "./admin.ts";
+import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
 import { build } from "./build.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
@@ -18,6 +18,9 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
        tinyui apps create <id> --name <n> [--org <o>]
+       tinyui apps tokens create <app>
+       tinyui apps tokens revoke <app> --id <token-id>
+       tinyui hosts upload <snapshot> --host-version <n> [--app <a>]
        tinyui packages create <pkg> --public-key <k> [--app <a>]
        tinyui packages rotate-key <pkg> --public-key <k> [--app <a>]
        tinyui tokens create <pkg> --channels <a,b> [--app <a>]
@@ -58,7 +61,8 @@ publish    upload a bundle and move the channel pointer (docs/updates.md §6.1)
 
 the publishing and management commands talk to --url, default ${DEFAULT_URL} (or $TINYUI_UPDATES_URL)
   $${TOKEN_ENV}        publish token, for publish and releases
-  $${ADMIN_TOKEN_ENV}  instance admin token, for apps, packages and tokens
+  $${ADMIN_TOKEN_ENV}  the instance's admin token or an app token, for apps, packages, tokens and hosts;
+                       only the admin token creates apps and app tokens (docs/updates.md §6)
   $TINYUI_APP          default for --app
   --pkg defaults to "name" in ./tinyui.config.json
 `;
@@ -148,9 +152,10 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     apps: {
-        options: { ...URL_OPTION, name: { type: "string" }, org: { type: "string" } },
+        options: { ...URL_OPTION, name: { type: "string" }, org: { type: "string" }, id: { type: "string" } },
         run: async (v, positionals) => {
-            if (positionals[1] !== "create") throw new Error("apps: expected `apps create <id>`");
+            if (positionals[1] === "tokens") return appTokens(v, positionals);
+            if (positionals[1] !== "create") throw new Error("apps: expected `apps create <id>` or `apps tokens create|revoke <app>`");
             const id = required(positionals[2], "apps create: an app id is required");
             const record = await createApp(adminClient(v), {
                 id: requireName("an app id", id),
@@ -203,11 +208,42 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             return 0;
         },
     },
+    hosts: {
+        options: { ...URL_OPTION, app: { type: "string" }, "host-version": { type: "string" } },
+        run: async (v, positionals) => {
+            if (positionals[1] !== "upload") throw new Error("hosts: expected `hosts upload <snapshot> --host-version <n>`");
+            const file = required(positionals[2], "hosts upload: the snapshot file is required");
+            const hostVersion = required(v["host-version"], "hosts upload: --host-version is required");
+            if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
+            const app = await appId(v);
+            const result = await uploadHostSnapshot(adminClient(v), app, hostVersion, await readFile(file));
+            process.stderr.write(`${app} host version ${hostVersion}: ${result.existing ? "already uploaded with these bytes" : "snapshot uploaded"}\n`);
+            process.stdout.write(`${result.sha256}\n`);
+            return 0;
+        },
+    },
     releases: {
         options: RELEASE_OPTIONS,
         run: async (v, positionals) => releases(v, positionals),
     },
 };
+
+async function appTokens(v: Values, positionals: string[]): Promise<number> {
+    const action = positionals[2];
+    if (action !== "create" && action !== "revoke") throw new Error("apps tokens: expected `apps tokens create <app>` or `apps tokens revoke <app> --id <token-id>`");
+    const app = requireName("an app id", required(positionals[3] ?? (v["app"] as string | undefined), `apps tokens ${action}: an app id is required`));
+    const client = adminClient(v);
+    if (action === "revoke") {
+        const id = pathSegment(required(v["id"], "apps tokens revoke: --id is required (keep the id from apps tokens create)"), "--id");
+        await revokeAppToken(client, app, id);
+        process.stderr.write(`app token ${id} of ${app} revoked\n`);
+        return 0;
+    }
+    const issued = await createAppToken(client, app);
+    process.stderr.write(`app token ${issued.id} for ${app}; it manages everything under ${app} and is shown once\n`);
+    process.stdout.write(`${issued.token}\n`);
+    return 0;
+}
 
 async function releases(v: Values, positionals: string[]): Promise<number> {
     const action = positionals[1];

@@ -1,7 +1,7 @@
 export { build, RUNTIME_MODULES } from "./build.ts";
 export type { BuildOptions, BuildResult, BuiltModule, Manifest } from "./build.ts";
-export { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "./admin.ts";
-export type { AppRecord, IssuedToken, PackageRecord, Releases } from "./admin.ts";
+export { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, readHostSnapshot, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
+export type { AppRecord, HostSnapshotResult, IssuedAppToken, IssuedToken, PackageRecord, Releases } from "./admin.ts";
 export { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 export type { BundleOptions, BundleResult, Pointer } from "./bundle.ts";
 export { ADMIN_TOKEN_ENV, DEFAULT_URL, requireSecureUrl, requireToken, resolveUrl, segments, TOKEN_ENV, UpdatesClient, UpdatesError, URL_ENV } from "./client.ts";
@@ -11,6 +11,8 @@ export type { TinyUIConfig } from "./config.ts";
 export { generateKeyPair, publicKeyOf, isPublicKey, sign, verify } from "./keys.ts";
 export type { KeyPair } from "./keys.ts";
 export { publish } from "./publish.ts";
+export { parseHostSnapshot } from "./snapshot.ts";
+export type { HostSnapshot } from "./snapshot.ts";
 export type { PublishOptions, PublishResult } from "./publish.ts";
 export { compileModule, findQjsc } from "./qjsc.ts";
 export { analyzePage, RequiresError } from "./requires.ts";

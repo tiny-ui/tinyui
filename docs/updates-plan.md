@@ -110,12 +110,12 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | 5 | 签名私钥 | GitHub secret + `HarlonWang/secrets` 备份一份，本机生成后即删 |
 | 6 | `installId` | 复用 TrendingAI 的 `getOrCreateInstallId()`，`Updates` 事件接进埋点 |
 | 7 | 命名 | 包名 `trendingai`（页面 `trendingai/subscription`），线上 app id `trendingai`；宿主层面标识页面（深链、埋点页面名、日志）用 `tinyui:trendingai/subscription`，`navigation.push` 仍用不带前缀的 |
-| 8 | JS 侧填错目标宿主版本 | 发布前核对（updates.md §1.3）：`tinyui build` 把每页用到的能力名与宿主组件名写进 manifest 的 `requires`；`bundle` 从热下发服务读目标版本的宿主快照比对，不通过即拒绝出包。快照由宿主 CI 在发 App 版本时上传，每版本只写一次。铁律：`host.call` 的名字必须是字面量、宿主组件必须能静态解析（build-chain.md §5.1）。设备侧核对暂不做 |
+| 8 | JS 侧填错目标宿主版本 | 发布前核对（updates.md §1.3）：`tinyui build` 把每页用到的能力名与宿主组件名写进 manifest 的 `requires`；`publish` 上传前从热下发服务读目标版本的宿主快照比对，不通过即拒绝发布（`bundle` 保持离线）。快照由宿主 CI 在发 App 版本时上传，每版本只写一次。铁律：`host.call` 的名字必须是字面量、宿主组件必须能静态解析（build-chain.md §5.1）。设备侧核对暂不做 |
 | 9 | 服务端凭据分层 | 在实例 `ADMIN_TOKEN` 与包的发布 token 之间补 app token：一个 app 的完整管理权（注册包、公钥、签发发布 token、上传宿主快照），暂不细分权限范围；宿主 CI 用它上传快照；本 app 的发布 token 可读快照。权限与 URL 挂在 app（一个宿主 App）上，不挂在租户（`org`，可改可转让）上（updates.md §6） |
 
 交付：
 
-- **tinyui**：`tinyui build` 静态找出每页用到的能力与宿主组件写进 manifest 的 `requires`，违反 build-chain.md §5.1 即失败；`tinyui bundle` 从服务端读目标宿主版本的快照核对（updates.md §1.3）；宿主契约快照——导出宿主组件 schema、能力名、tinyui 版本为稳定排序的文本，存 `tinyui-host/<hostVersion>.txt`；检查任务（当前宿主与快照不符即失败）与生成任务（已随发版带出的版本拒绝覆盖），任务名做时定。前置：宿主能力能集中枚举（TrendingAI 现在散在各 Screen 里注册）。`tinyui:` 前缀约定写进 app-model.md
+- **tinyui**：`tinyui build` 静态找出每页用到的能力与宿主组件写进 manifest 的 `requires`，违反 build-chain.md §5.1 即失败；`tinyui publish` 上传前读目标宿主版本的快照核对（updates.md §1.3，快照格式 §6.4）；宿主契约快照——导出宿主组件 schema、能力名、tinyui 版本为稳定排序的文本，存 `tinyui-host/<hostVersion>.txt`；检查任务（当前宿主与快照不符即失败）与生成任务（已随发版带出的版本拒绝覆盖），任务名做时定。前置：宿主能力能集中枚举（TrendingAI 现在散在各 Screen 里注册）。`tinyui:` 前缀约定写进 app-model.md
 - **trendingai-tinyui**：先恢复可构建——依赖从 `link:` 换成 npm 的 0.3.0，加 `tinyui.config.json`（`name: "trendingai"`，公钥），模块名 `pages/subscription` → `trendingai/subscription`；`keys generate`，私钥写进 GitHub secret 与 `HarlonWang/secrets` 的 `tinyui-updates/signing/trendingai/trendingai.pem`；CI：合 main → build → `bundle --host-version <值>` → `publish --channel staging`，`hostVersion` 取 workflow 里的一个变量（抄宿主仓当前值；抄错时由 `bundle` 对照服务端的宿主快照拒绝出包，见拍板第 8 点）；`production` environment 设人工批准，手动 workflow 跑 `releases promote / rollback / rollout`
 - **服务端代码**：app token 的签发与吊销、各管理端点改为认 app token（updates.md §6.3）；宿主快照的上传与读取端点（§6.4，每个 (app, hostVersion) 只写一次）；CLI 配套 `apps tokens`、`hosts upload`
 - **服务端（线上，不可逆，执行前列命令确认）**：`apps create trendingai --name TrendingAI`（`org` 留空）；签一枚 app token 给 TrendingAI 宿主 CI 上传快照；`packages create trendingai --app trendingai`（登记公钥）；两枚发布 token，CI 用的限 `staging`，production environment 用的限 `production`
@@ -139,5 +139,5 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | M5.1 改名 `hostVersion` | 已完成（2026-09-23，tinyui PR #17、tinyui-updates-server PR #2，服务端已部署）：manifest 字段、Kotlin API、CLI `--host-version`、服务端路由与校验、文档全部改名；CLI、`Updates` 构造、服务端路径与 manifest 五处限定正整数；共用签名夹具换钥重签，Android host 与 iOS 模拟器两端验签通过 |
 | M5.2 `qjsc-kmp` 平台包 | 已完成（2026-09-23，quickjs-kmp PR #13 与 0.1.2、tinyui PR #18）：入口包 `qjsc-kmp` + `@qjsc-kmp/{darwin-arm64,darwin-x64,linux-x64,linux-arm64}`，Linux 为 musl 全静态；首版本地发布，之后随 quickjs-kmp 的 tag 经 OIDC 发布；`tinyui-cli` 依赖它并由测试钉住与 `quickjsKmp` 同版本，CI 不再现编 `qjsc-kmp` |
 | tinyui 0.3.0 | 已发（2026-09-23）：npm `tinyui-core` / `tinyui-native` / `tinyui-cli`，Maven `app.tinyui:tinyui` 与首发的 `app.tinyui:tinyui-updates`；`tinyui-cli` 带 `qjsc-kmp@0.1.2` |
-| M6 TrendingAI 接入 | 进行中：拍板八点（2026-09-23）；`tinyui build` 写 `requires` 已完成（PR #19，TrendingAI 订阅页实测 5 个能力、2 个宿主组件）；下一步服务端快照端点与宿主 CI 凭据，再做 `bundle` 核对 |
+| M6 TrendingAI 接入 | 进行中：拍板八点（2026-09-23）；`tinyui build` 写 `requires` 已完成（PR #19，TrendingAI 订阅页实测 5 个能力、2 个宿主组件）；服务端 app token 与快照端点、CLI 的 `apps tokens` / `hosts upload` 与 `publish` 核对进行中 |
 | M7 第二个 App | 待开 |

@@ -6,11 +6,13 @@ import { after, before, describe, it } from "node:test";
 import { bundle } from "../src/bundle.ts";
 import { UpdatesClient, UpdatesError } from "../src/client.ts";
 import { generateKeyPair } from "../src/keys.ts";
+import { uploadHostSnapshot } from "../src/admin.ts";
 import { publish } from "../src/publish.ts";
 import { fakeDist, startFakeServer, type FakeServer } from "./helpers.ts";
 
 const pair = generateKeyPair();
 const VERSION = "20260922T090000Z-3f2a1c";
+const HOST_1 = "hostVersion 1\ntinyui 0.3.0\n\ncomponents\n  ta.Icon  name: string\n\ncapabilities\n  billing.prices\n";
 const FILES = ["runtime/core.bin", "runtime/native.bin", "pages/home.bin", "pages/orders.bin", "manifest.json"];
 
 describe("tinyui publish", () => {
@@ -25,6 +27,8 @@ describe("tinyui publish", () => {
         await writeFile(signingKey, pair.privateKeyPem);
         server = await startFakeServer();
         client = new UpdatesClient({ url: server.url, token: "publish-token" });
+        // what host version 1 of demo provides: exactly what the fixture's pages use
+        await uploadHostSnapshot(client, "demo", "1", new TextEncoder().encode(HOST_1));
     });
     after(async () => {
         await server.close();
@@ -53,8 +57,10 @@ describe("tinyui publish", () => {
         assert.equal(result.existing, 0);
 
         const sent = requestsSince(mark);
+        // the host check reads the target's snapshot before any upload
+        assert.equal(sent[0], "GET /apps/demo/hosts/1");
         assert.deepEqual(
-            sent.slice(0, -1).sort(),
+            sent.slice(1, -1).sort(),
             FILES.map((f) => `PUT /demo/fixture/1/${VERSION}/${f}`).sort(),
         );
         assert.equal(sent.at(-1), "PUT /demo/staging/fixture/1/current.json");
@@ -126,7 +132,7 @@ describe("tinyui publish", () => {
         const mark = server.requests.length;
         const result = await publish({ client, dir: renamed, app: "demo", channel: "staging" });
         assert.equal(result.pkg, "fixture");
-        assert.ok(requestsSince(mark).every((r) => r.includes("/demo/fixture/1/") || r === "PUT /demo/staging/fixture/1/current.json"));
+        assert.ok(requestsSince(mark).every((r) => r.includes("/demo/fixture/1/") || r === "PUT /demo/staging/fixture/1/current.json" || r === "GET /apps/demo/hosts/1"));
     });
 
     it("checks the pointer against the manifest locally, before uploading anything", async () => {
@@ -181,6 +187,27 @@ describe("tinyui publish", () => {
         const before = server.requests.length;
         await assert.rejects(publish({ client, dir: wide, app: "demo", channel: "staging" }), /rollout must be an integer from 0 to 100/);
         assert.deepEqual(requestsSince(before), []);
+    });
+
+    it("checks the package against what the target host version provides before uploading anything", async () => {
+        const mark = server.requests.length;
+        const refuse = async (label: string, edit: Parameters<typeof fakeDist>[2], message: RegExp) => {
+            const dir = await bundled(label, edit);
+            await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), message);
+        };
+        await refuse("coupon", (m) => { m.requires["fixture/home"]!.capabilities.push("coupon.apply"); },
+            /cannot go to host version 1 of demo[\s\S]*fixture\/home calls coupon\.apply/);
+        await refuse("badge", (m) => { m.requires["fixture/orders"]!.components.push("ta.Badge"); },
+            /fixture\/orders uses host component ta\.Badge/);
+        await refuse("newer-tinyui", (m) => { m.tinyui = "0.4.0"; }, /built with tinyui 0\.4\.0, the host runs tinyui 0\.3\.0/);
+        await refuse("old-manifest", (m) => { delete (m as Partial<typeof m>).requires; }, /rebuild it with a current tinyui-cli/);
+        // nothing but the snapshot reads went out
+        assert.ok(server.requests.slice(mark).every((r) => r.method === "GET" && r.path === "/apps/demo/hosts/1"));
+    });
+
+    it("refuses a host version nobody uploaded a snapshot for", async () => {
+        const dir = await bundled("no-snapshot");
+        await assert.rejects(publish({ client, dir, app: "other", channel: "staging" }), /host version 1 of other has no snapshot[\s\S]*tinyui hosts upload/);
     });
 
     it("passes the server's own words through", async () => {
