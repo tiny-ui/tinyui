@@ -84,6 +84,33 @@ describe("host requirements of a page", () => {
         rejects(`${CORE}const make = h;\n`, /h may only be called/);
     });
 
+    it("refuses a second declaration of host or h rather than resolving around it", () => {
+        // name-based resolution would otherwise skip the real import silently and omit what it needs
+        rejects(`${NATIVE}function f(host) { return host; }\nhost.call("a.b");\n`, /host is declared more than once/);
+        rejects(`${CORE}${TA}function f() { const h = 1; return h; }\nfunction P() { return h(ta.Icon, null); }\n`, /h is declared more than once/);
+    });
+
+    it("follows namespace imports of the runtime modules through their members, and only there", () => {
+        const native = `import * as native from "tinyui-native";\n`;
+        assert.deepEqual(analyzePage("shop/home", `${native}native.host.call("a.b");\nnative.http.get("x");\n`).capabilities, ["a.b"]);
+        rejects(`${native}const n = "x";\nnative.host.call(n);\n`, /must be a string literal/);
+        rejects(`${native}const hh = native.host;\n`, /host may only appear as host\.call/);
+        rejects(`${native}function use(n) {}\nuse(native);\n`, /use the tinyui-native namespace only as native\.<export>/);
+        rejects(`${native}native["host"].call("a.b");\n`, /use the tinyui-native namespace only as native\.<export>/);
+        const core = `import * as core from "tinyui-core";\n`;
+        assert.deepEqual(analyzePage("shop/home", `${core}${TA}function P() { return core.h(core.Column, null, core.h(ta.Icon, null)); }\n`).components, ["ta.Icon"]);
+        rejects(`${core}const make = core.h;\n`, /h may only be called/);
+    });
+
+    it("reads an object's members at their initial value only while nothing can change them", () => {
+        const render = `function P() { return h(ta.Icon, null); }\n`;
+        rejects(`${CORE}${TA}ta.Icon = "ta.New";\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}ta.Icon += "x";\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}delete ta.Icon;\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}Object.assign(ta, { Icon: "ta.New" });\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}var ta = { Icon: "ta.Icon", set() { this.Icon = "ta.New"; } };\nta.set();\n${render}`, /cannot tell which component this is/);
+    });
+
     it("reports every problem of a page at once, each under the module it comes from", () => {
         const code = `${CORE}${NATIVE}// src/host/index.ts\nconst n = "x";\nhost.call(n);\n// src/pages/home.tsx\nfunction P(p) { return h(p.c, null); }\n`;
         assert.throws(() => analyzePage("shop/home", code), (e: unknown) => {

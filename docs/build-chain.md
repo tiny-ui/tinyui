@@ -90,8 +90,9 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 热下发发布前要核对"这个包用到的宿主能力与宿主组件，目标宿主版本都提供"（updates.md §1.3），所以 `tinyui build` 必须能从页面代码里找全这些名字，两条硬规则，违反即构建失败：
 
-- **`host.call` 的第一个参数是字符串字面量**：`host.call("billing.prices")` 可以，`host.call(`analytics.${kind}`)` 或把名字放进变量都不行，要改写成若干个明确的字面量调用。`host` 也只能以 `host.call(…)` 的形式使用，不能赋给别的变量或传出去
-- **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行
+- **`host.call` 的第一个参数是字符串字面量**：`host.call("billing.prices")` 可以，`host.call(`analytics.${kind}`)` 或把名字放进变量都不行，要改写成若干个明确的字面量调用。`host` 也只能以 `host.call(…)` 的形式使用，不能赋给别的变量或传出去；整体导入时（`import * as native`）只能写 `native.host.call(…)` 这类按成员的用法
+- **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行；`ta` 这类组件对象不能被改写、删属性或整个传出去
+- 页面里不要再声明名叫 `host`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
 
 内置组件不受限（随 tinyui 版本走，发布前核对版本相等即可）。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
 

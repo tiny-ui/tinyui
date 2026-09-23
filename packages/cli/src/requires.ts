@@ -29,42 +29,86 @@ export function analyzePage(page: string, code: string): PageRequires {
     const { program, errors } = parseSync(`${page}.js`, code, { lang: "js", sourceType: "module" });
     if (errors.length) throw new RequiresError(`${page}: cannot parse the bundled page: ${errors[0]!.message}`);
     const bindings = collectBindings(program as unknown as AnyNode);
+    const trusted = constantObjects(program as unknown as AnyNode, bindings);
     const problems: string[] = [];
+    const shadowed = new Set<string>();
     const components = new Set<string>();
     const capabilities = new Set<string>();
     const problem = (node: AnyNode, message: string) => problems.push(`  ${origin(code, node.start)}: ${snippet(code, node)}\n    ${message}`);
 
+    const useHost = (ref: AnyNode) => {
+        const call = hostCall(ref, (ref as AnyNode & { parentNode?: AnyNode })["parentNode"] ?? null);
+        if (!call) return problem(ref, "host may only appear as host.call(\"<name>\", …) (docs/build-chain.md §5.1)");
+        const target = literal((call["arguments"] as AnyNode[])[0]);
+        if (target === undefined) return problem(call, "the first argument of host.call must be a string literal (docs/build-chain.md §5.1)");
+        capabilities.add(target);
+    };
+    const useH = (ref: AnyNode) => {
+        const call = (ref as AnyNode & { parentNode?: AnyNode })["parentNode"];
+        if (call?.type !== "CallExpression" || call["callee"] !== ref) return problem(ref, "h may only be called, not passed around (docs/build-chain.md §5.1)");
+        const type = (call["arguments"] as AnyNode[])[0];
+        if (!type) return problem(call, "h() needs a component type");
+        for (const resolved of componentTypes(type, bindings, trusted)) {
+            if (resolved === null) problem(type, "cannot tell which component this is: write the tag directly (<ta.Icon />, <Column />), a string literal, or a choice between such (docs/build-chain.md §5.1)");
+            else if (resolved.includes(".")) components.add(resolved);
+        }
+    };
+
     walk(program as unknown as AnyNode, null, (node, parent) => {
         if (node.type !== "Identifier" || !isReference(node, parent)) return;
         const name = node["name"] as string;
-        const binding = only(bindings.get(name));
-        if (binding?.kind === "native" && binding.imported === "host") {
-            const call = hostCall(node, parent);
-            if (!call) return problem(node, "host may only appear as host.call(\"<name>\", …) (docs/build-chain.md §5.1)");
-            const target = literal((call["arguments"] as AnyNode[])[0]);
-            if (target === undefined) return problem(call, "the first argument of host.call must be a string literal (docs/build-chain.md §5.1)");
-            capabilities.add(target);
-        } else if (binding?.kind === "core" && binding.imported === "h" && parent?.type === "CallExpression" && parent["callee"] === node) {
-            const type = (parent["arguments"] as AnyNode[])[0];
-            if (!type) return problem(parent, "h() needs a component type");
-            for (const resolved of componentTypes(type, bindings)) {
-                if (resolved === null) problem(type, "cannot tell which component this is: write the tag directly (<ta.Icon />, <Column />), a string literal, or a choice between such (docs/build-chain.md §5.1)");
-                else if (resolved.includes(".")) components.add(resolved);
+        const list = bindings.get(name) ?? [];
+        // resolution goes by name, not scope: a second declaration of a name the runtime modules export makes every use ambiguous
+        if (list.length > 1 && list.some(isRuntimeImport)) {
+            if (!shadowed.has(name)) problem(node, `${name} is declared more than once in this page; rename the local one so every use of the import can be followed (docs/build-chain.md §5.1)`);
+            shadowed.add(name);
+            return;
+        }
+        const binding = only(list);
+        if (binding?.kind === "native" && binding.imported === "host") return useHost(node);
+        if (binding?.kind === "core" && binding.imported === "h") return useH(node);
+        if ((binding?.kind === "native" || binding?.kind === "core") && binding.imported === "*") {
+            // a namespace import is followed through its members, and only there: passed whole it could reach host or h unseen
+            if (parent?.type !== "MemberExpression" || parent["object"] !== node || parent["computed"]) {
+                return problem(node, `use the ${binding.kind === "native" ? "tinyui-native" : "tinyui-core"} namespace only as ${name}.<export> (docs/build-chain.md §5.1)`);
             }
-        } else if (binding?.kind === "core" && binding.imported === "h") {
-            problem(node, "h may only be called, not passed around (docs/build-chain.md §5.1)");
+            const member = (parent["property"] as AnyNode)["name"];
+            if (binding.kind === "native" && member === "host") return useHost(parent);
+            if (binding.kind === "core" && member === "h") return useH(parent);
         }
     });
     if (problems.length) throw new RequiresError(`${page} uses its host in a way tinyui build cannot follow:\n${problems.join("\n")}`);
     return { components: [...components].sort(), capabilities: [...capabilities].sort() };
 }
 
+function isRuntimeImport(binding: Binding): boolean {
+    return (binding.kind === "core" || binding.kind === "native") && binding.imported !== "default";
+}
+
+/**
+ * The object constants whose members can be read at their initial value: every use is a plain `obj.key` read.
+ * One written to, deleted from, called through or passed anywhere could hold something else by render time.
+ */
+function constantObjects(program: AnyNode, bindings: Map<string, Binding[]>): Set<string> {
+    const candidates = new Set([...bindings].filter(([, list]) => list.length === 1 && list[0]!.kind === "object").map(([name]) => name));
+    const spoiled = new Set<string>();
+    walk(program, null, (node, parent) => {
+        if (node.type !== "Identifier" || !candidates.has(node["name"] as string) || !isReference(node, parent)) return;
+        const member = parent?.type === "MemberExpression" && parent["object"] === node && !parent["computed"] ? parent : undefined;
+        const use = (member as AnyNode & { parentNode?: AnyNode } | undefined)?.["parentNode"];
+        const written = use && ((use.type === "AssignmentExpression" && use["left"] === member) || use.type === "UpdateExpression"
+            || (use.type === "UnaryExpression" && use["operator"] === "delete") || (use.type === "CallExpression" && use["callee"] === member));
+        if (!member || written) spoiled.add(node["name"] as string);
+    });
+    return new Set([...candidates].filter((name) => !spoiled.has(name)));
+}
+
 /** The type names [node] can evaluate to; `null` for one that cannot be known statically. */
-function componentTypes(node: AnyNode, bindings: Map<string, Binding[]>): (string | null)[] {
+function componentTypes(node: AnyNode, bindings: Map<string, Binding[]>, trusted: Set<string>): (string | null)[] {
     const text = literal(node);
     if (text !== undefined) return [text];
-    if (node.type === "ConditionalExpression") return [...componentTypes(node["consequent"] as AnyNode, bindings), ...componentTypes(node["alternate"] as AnyNode, bindings)];
-    if (node.type === "ParenthesizedExpression") return componentTypes(node["expression"] as AnyNode, bindings);
+    if (node.type === "ConditionalExpression") return [...componentTypes(node["consequent"] as AnyNode, bindings, trusted), ...componentTypes(node["alternate"] as AnyNode, bindings, trusted)];
+    if (node.type === "ParenthesizedExpression") return componentTypes(node["expression"] as AnyNode, bindings, trusted);
     if (node.type === "Identifier") {
         const binding = only(bindings.get(node["name"] as string));
         // built-ins resolve to their own undotted names; local function components render through h calls analysed on their own
@@ -77,7 +121,7 @@ function componentTypes(node: AnyNode, bindings: Map<string, Binding[]>): (strin
         const key = (node["property"] as AnyNode)["name"] as string;
         const binding = object.type === "Identifier" ? only(bindings.get(object["name"] as string)) : undefined;
         if (binding?.kind === "core" && binding.imported === "*") return [key];
-        if (binding?.kind !== "object" || !binding.init) return [null];
+        if (binding?.kind !== "object" || !binding.init || !trusted.has(object["name"] as string)) return [null];
         for (const property of binding.init["properties"] as AnyNode[]) {
             if (property.type !== "Property" || property["computed"]) continue;
             const name = propertyName(property["key"] as AnyNode);
@@ -96,6 +140,7 @@ function collectBindings(program: AnyNode): Map<string, Binding[]> {
     const bindings = new Map<string, Binding[]>();
     const add = (name: string, binding: Binding) => bindings.set(name, [...(bindings.get(name) ?? []), binding]);
     const addPattern = (pattern: AnyNode | null | undefined) => {
+        if (pattern?.type === "Identifier") return add(pattern["name"] as string, { kind: "other" });
         if (pattern) walk(pattern, null, (n, parent) => { if (n.type === "Identifier" && isBindingIdentifier(n, parent)) add(n["name"] as string, { kind: "other" }); });
     };
     walk(program, null, (node) => {
