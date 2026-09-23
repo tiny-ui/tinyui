@@ -113,6 +113,7 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | 8 | JS 侧填错目标宿主版本 | 发布前核对（updates.md §1.3）：`tinyui build` 把每页用到的能力名与宿主组件名写进 manifest 的 `requires`；`publish` 上传前从热下发服务读目标版本的宿主快照比对，不通过即拒绝发布（`bundle` 保持离线）。快照由宿主 CI 在发 App 版本时上传，每版本只写一次。铁律：`host.call` 的名字必须是字面量、宿主组件必须能静态解析（build-chain.md §5.1）。设备侧核对暂不做 |
 | 9 | 服务端凭据分层 | 在实例 `ADMIN_TOKEN` 与包的发布 token 之间补 app token：一个 app 的完整管理权（注册包、公钥、签发发布 token、上传宿主快照），暂不细分权限范围；宿主 CI 用它上传快照；本 app 的发布 token 可读快照。权限与 URL 挂在 app（一个宿主 App）上，不挂在租户（`org`，可改可转让）上（updates.md §6） |
 | 10 | 宿主契约怎么枚举 | 能力名的真值在宿主 Kotlin；能力像组件一样 App 级注册（`CapabilityRegistry`），`HostCapability.call(argsJson, page)` 经 `PageLocal` 拿某一屏的对象；组件注册表、能力注册表、`PageSink` 合成 App 级 `TinyUIHost` 交给 `TinyUIPage` / `UpdatesPage`（native-api.md §7）。快照由库的 `HostSnapshot.render` 生成，检查是宿主自己的 host 侧单元测试，`-Ptinyui.updateHostSnapshot` 写入；已发版本的冻结只靠服务端 409（updates.md §4.1） |
+| 11 | 指针指向不新于内置的版本 | 期望状态即跑内置：等于内置版本时直接 `UpToDate`（不取 manifest、不看 rollout）；已装了更新版本的删掉，结果 `Reverted`，下次启动跑内置；比内置更旧的同样回到内置。内置包由 `tinyui pull` 取 `production` 当时那版（updates.md §1.4、§4.3） |
 
 交付：
 

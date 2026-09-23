@@ -133,6 +133,33 @@ class UpdatesTest {
     }
 
     @Test
+    fun aPointerAtTheEmbeddedVersionIsUpToDateWithoutFetchingItsManifest() = runTest {
+        server["shop/1/current.json"] = """{"version":"v0","rollout":100,"signature":"ok"}""".encodeToByteArray()
+        assertEquals(CheckResult.UpToDate("v0"), updates(embedded()).check("shop"), "v0 is embedded, no manifest on the server was needed")
+    }
+
+    @Test
+    fun rollingThePointerBackToEmbeddedOrOlderDropsTheInstalledPackage() = runTest {
+        publish(manifest())
+        assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
+        server["shop/1/current.json"] = """{"version":"v0","rollout":0,"signature":"ok"}""".encodeToByteArray()
+        events.clear()
+        val u = updates(embedded())
+        assertEquals("HOME-v1", pageBytes(u.current("shop")))
+        assertEquals(CheckResult.Reverted("v0"), u.check("shop"), "back to embedded whatever the rollout")
+        assertEquals(UpdateEvent.Reverted("shop", "v0"), events.last())
+        assertEquals("HOME-v1", pageBytes(u.current("shop")), "the process keeps what it started with")
+        assertFalse(fs.exists(dir / "shop/installed/v1"))
+        assertEquals("HOME-v0", pageBytes(updates(embedded()).current("shop")))
+
+        publish(manifest())
+        assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
+        publish(manifest(version = "vOld", createdAt = "2026-09-22T08:00:00Z"))
+        assertEquals(CheckResult.Reverted("vOld"), updates(embedded()).check("shop"), "older than embedded: embedded is the closest")
+        assertEquals(CheckResult.Skipped("vOld", SkipReason.OLDER_THAN_EMBEDDED), updates(embedded()).check("shop"), "nothing left to drop")
+    }
+
+    @Test
     fun rolloutIsARepeatableDiceRollPerInstallPackageAndVersion() = runTest {
         publish(manifest(), rollout = 0)
         assertEquals(CheckResult.Skipped("v1", SkipReason.ROLLOUT), updates(embedded()).check("shop"))

@@ -77,6 +77,16 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 
 核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `publish` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
 
+### 1.4 发 App 时取内置包：`tinyui pull`
+
+```
+tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--root <dir>]
+```
+
+内置包取服务端上 `production` 当前指向的那一版，而不是本地重新构建一份（M6 拍板第 7 点）：线上与 App 自带的是同一个版本，回滚到"App 自带的那版"就是回滚到一个服务端认得的版本（§4.3）。`pull` 走公开投递端点，不要 token；像设备一样用 `tinyui.config.json` 的公钥验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；忽略 `rollout`。输出与 `tinyui build` 的产物同布局（`manifest.json`、`runtime/`、`pages/`），整个替换 `--out`，manifest 是下载来的原始字节（带 `hostVersion`，内置包不读它）。包里没有 `.js.map`：内置包的栈同热下发的包一样，按 `buildId` 离线对映射（build-chain.md §7）。
+
+宿主仓不跑 Node 时（F-Droid 从源码构建），由 JS 工程在发 App 前跑它并把结果提交进宿主仓。
+
 ## 2. 投递协议
 
 客户端只会发两种 GET，路径相对宿主配置的 base URL：
@@ -173,7 +183,7 @@ class Updates(
 | `suspend fun check(pkg: String): CheckResult` | 只查一个包 |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
-`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
+`CheckResult`：`UpToDate` / `Installed(version)` / `Reverted(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
 
 | 事件 | 何时 | 字段（均含 `pkg`） |
 |---|---|---|
@@ -181,6 +191,7 @@ class Updates(
 | `UpToDate` | `check()` | `version` |
 | `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `HOST_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
+| `Reverted` | `check()` | `version`：指针指向的、不新于内置的版本；已装的包被删，下次启动跑内置（§4.3） |
 | `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
@@ -215,6 +226,7 @@ class Updates(
 fetch <pkg>/<hostVersion>/current.json ─解析失败──────────────────────────────▶ Failed(pointer)
   │
   ├─ version == installed.version 或 version ∈ failed ────────────────▶ UpToDate / Skipped(failed)
+  ├─ version == embedded.version ─有 installed─删 installed─────────────▶ Reverted   // 否则 UpToDate；不取 manifest、不看 rollout
   ├─ hash(installId + ":" + pkg + ":" + version) % 100 ≥ rollout ─────▶ Skipped(rollout)
   │
   ▼ fetch <pkg>/<hostVersion>/<version>/manifest.json，拿到原始字节
@@ -222,7 +234,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   ├─ 解析失败 ────────────────────────────────────────────────────────▶ Failed(manifest)
   ├─ name ≠ pkg / version ≠ 指针 version / hostVersion ≠ 宿主值
   │  / engine ≠ QuickJs.upstreamCommit / protocol ≠ PROTOCOL ─────────▶ Skipped(incompatible)   // 发错目录，上报
-  ├─ createdAt ≤ embedded.createdAt ───────────────────────────────────▶ Skipped(older-than-embedded)
+  ├─ createdAt ≤ embedded.createdAt ─有 installed─删 installed─────────▶ Reverted   // 否则 Skipped(older-than-embedded)
   │
   ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
@@ -231,6 +243,8 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
 ```
 
 manifest 一到手先验签再解析：签名不对的 manifest 里任何字段都不可信。验签用的公钥永远是内置 manifest 的，下载 manifest 的 `publicKey` 不参与验签。指针不在签名内，篡改它最多让客户端跳过更新或去取一个本就合法的包，与切断网络等价。掷骰哈希是 sha256 前 4 字节按大端读作无符号整数再取模 100，以 `pkg` 与 `version` 为盐：每个包每次发布独立抽样（monorepo 里同一次 CI 产出的多个包 `version` 可能相同，不加 `pkg` 会让它们的灰度人群重合）；已装上的用户不因 `rollout` 下调而回退。
+
+指针指向不新于内置的版本（2026-09-23 定，M6）时，期望状态就是跑内置：发 App 时内置包取自服务端的 production（§1.4），回滚到 App 自带的那一版因此是最常见的回滚，已装了更新版本的设备必须收得到。比内置还旧的目标同样回到内置——设备不会跑比 App 自带更旧的包，内置是离目标最近的那一版。指针正好指向内置版本时连 manifest 都不取，每次启动只多一个指针请求。
 
 ### 4.4 启动选择
 

@@ -11,6 +11,8 @@ export type { TinyUIConfig } from "./config.ts";
 export { generateKeyPair, publicKeyOf, isPublicKey, sign, verify } from "./keys.ts";
 export type { KeyPair } from "./keys.ts";
 export { publish } from "./publish.ts";
+export { pull } from "./pull.ts";
+export type { PullOptions, PullResult } from "./pull.ts";
 export { parseHostSnapshot } from "./snapshot.ts";
 export type { HostSnapshot } from "./snapshot.ts";
 export type { PublishOptions, PublishResult } from "./publish.ts";
