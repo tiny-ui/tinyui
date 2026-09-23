@@ -153,7 +153,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     apps: {
-        options: { ...URL_OPTION, name: { type: "string" }, org: { type: "string" }, id: { type: "string" } },
+        options: { ...URL_OPTION, app: { type: "string" }, name: { type: "string" }, org: { type: "string" }, id: { type: "string" } },
         run: async (v, positionals) => {
             if (positionals[1] === "tokens") return appTokens(v, positionals);
             if (positionals[1] !== "create") throw new Error("apps: expected `apps create <id>` or `apps tokens create|revoke <app>`");
