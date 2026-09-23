@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `hostVersion` 改名 `hostVersion` 并限定为正整数）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -130,7 +130,7 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
-**`hostVersion` 的口径**（即 Expo 的 `runtimeVersion`；不叫这个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。宿主给页面的东西变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；升级 tinyui。只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导——JS 侧取错只会让包送不到（`releases list` 与客户端事件可见），是安全的方向。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。宿主给页面的东西变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；升级 tinyui。只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导——JS 侧取错只会让包送不到（`releases list` 与客户端事件可见），是安全的方向。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 版本）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已随发版带出去的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
@@ -153,7 +153,7 @@ class Updates(
 |---|---|---|
 | `Running` | 构造时每包一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
 | `UpToDate` | `check()` | `version` |
-| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `RUNTIME_VERSION` 的集合 |
+| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `HOST_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
 | `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
