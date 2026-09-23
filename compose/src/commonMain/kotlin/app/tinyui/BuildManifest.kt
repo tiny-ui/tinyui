@@ -21,7 +21,7 @@ class BuildManifest(
     val protocol: Int,
     val hashes: Map<String, String>,
     /** Present only in a manifest `tinyui bundle` wrote: the embedded package has none. */
-    val runtimeVersion: String? = null,
+    val hostVersion: String? = null,
 ) {
     fun buildId(module: String): String = buildIds[module] ?: ""
 
@@ -51,7 +51,7 @@ class BuildManifest(
                 engine = string("engine"),
                 protocol = root["protocol"]?.jsonPrimitive?.intOrNull ?: 0,
                 hashes = strings("hashes"),
-                runtimeVersion = root["runtimeVersion"]?.jsonPrimitive?.contentOrNull,
+                hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
             )
         }
     }

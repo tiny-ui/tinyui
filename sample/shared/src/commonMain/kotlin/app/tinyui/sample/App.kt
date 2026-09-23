@@ -86,7 +86,7 @@ fun App(updatesDir: Path) {
             val bundles = packages.map { embedded(it) }
             // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
             TinyUI.debug = !bundles.first().page("sample/todos").sourceMaps.isEmpty
-            Updates(bundles, runtimeVersion = "1", dir = updatesDir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
+            Updates(bundles, hostVersion = "1", dir = updatesDir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
                 println("TinyUI updates $it")
             }
         }

@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "./admin.ts";
 import { build } from "./build.ts";
-import { bundle, isPathSegment } from "./bundle.ts";
+import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
 import { generateKeyPair } from "./keys.ts";
@@ -13,7 +13,7 @@ import { generateKt, generateTs } from "./schema/generate.ts";
 import { loadSchema } from "./schema/load.ts";
 
 const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] [--js-only] [--version <v>]
-       tinyui bundle --runtime-version <rv> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
+       tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -22,10 +22,10 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui packages rotate-key <pkg> --public-key <k> [--app <a>]
        tinyui tokens create <pkg> --channels <a,b> [--app <a>]
        tinyui tokens revoke <pkg> --id <token-id> [--app <a>]
-       tinyui releases list --runtime-version <rv> [--pkg <p>] [--app <a>] [--json]
-       tinyui releases rollback <version> --runtime-version <rv> --channel <c> [--pkg <p>] [--app <a>]
-       tinyui releases rollout <0-100> --runtime-version <rv> --channel <c> [--pkg <p>] [--app <a>]
-       tinyui releases promote <version> --runtime-version <rv> --to <c> [--pkg <p>] [--app <a>]
+       tinyui releases list --host-version <hostVersion> [--pkg <p>] [--app <a>] [--json]
+       tinyui releases rollback <version> --host-version <hostVersion> --channel <c> [--pkg <p>] [--app <a>]
+       tinyui releases rollout <0-100> --host-version <hostVersion> --channel <c> [--pkg <p>] [--app <a>]
+       tinyui releases promote <version> --host-version <hostVersion> --to <c> [--pkg <p>] [--app <a>]
 
 build      compile the pages of the package described by <root>/tinyui.config.json
   --root     project root (default: cwd)
@@ -34,8 +34,8 @@ build      compile the pages of the package described by <root>/tinyui.config.js
   --js-only  emit ESM sources and source maps only, skip bytecode
   --version  package version to record (default: <createdAt>-<git sha>)
 
-bundle     turn a build into the signed upload directory <out>/<pkg>/<rv>/ (docs/updates.md)
-  --runtime-version  the host's declared runtimeVersion
+bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersion>/ (docs/updates.md)
+  --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1)
   --signing-key      PKCS#8 PEM whose public key is the one in tinyui.config.json
   --dist             tinyui build output (default: ./dist)
   --rollout          percentage written to current.json (default: 100)
@@ -53,7 +53,7 @@ schema
 
 publish    upload a bundle and move the channel pointer (docs/updates.md §6.1)
   --channel  the channel to publish to; never defaulted, never read from the environment
-  --dir      a tinyui bundle output root or one <pkg>/<rv> inside it (default: ./dist/ota)
+  --dir      a tinyui bundle output root or one <pkg>/<hostVersion> inside it (default: ./dist/ota)
   --rollout  overrides the percentage current.json was bundled with
 
 the publishing and management commands talk to --url, default ${DEFAULT_URL} (or $TINYUI_UPDATES_URL)
@@ -67,7 +67,7 @@ type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, unknown>;
 
 const URL_OPTION: Options = { url: { type: "string" } };
-const RELEASE_OPTIONS: Options = { ...URL_OPTION, app: { type: "string" }, pkg: { type: "string" }, "runtime-version": { type: "string" }, channel: { type: "string" }, to: { type: "string" }, json: { type: "boolean", default: false } };
+const RELEASE_OPTIONS: Options = { ...URL_OPTION, app: { type: "string" }, pkg: { type: "string" }, "host-version": { type: "string" }, channel: { type: "string" }, to: { type: "string" }, json: { type: "boolean", default: false } };
 
 const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals: string[]) => Promise<number> }> = {
     build: {
@@ -85,15 +85,15 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     bundle: {
-        options: { "runtime-version": { type: "string" }, "signing-key": { type: "string" }, dist: { type: "string" }, rollout: { type: "string" }, out: { type: "string" } },
+        options: { "host-version": { type: "string" }, "signing-key": { type: "string" }, dist: { type: "string" }, rollout: { type: "string" }, out: { type: "string" } },
         run: async (v) => {
-            const runtimeVersion = v["runtime-version"] as string | undefined;
+            const hostVersion = v["host-version"] as string | undefined;
             const signingKey = v["signing-key"] as string | undefined;
-            if (!runtimeVersion) throw new Error("bundle: --runtime-version is required");
+            if (!hostVersion) throw new Error("bundle: --host-version is required");
             if (!signingKey) throw new Error("bundle: --signing-key is required");
             const result = await bundle({
                 dist: (v["dist"] as string | undefined) ?? resolve("dist"),
-                runtimeVersion,
+                hostVersion,
                 signingKey,
                 ...(v["rollout"] !== undefined && { rollout: percentage(v["rollout"] as string, "bundle: --rollout") }),
                 ...(v["out"] !== undefined && { out: v["out"] as string }),
@@ -141,8 +141,8 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 ...(v["rollout"] !== undefined && { rollout: percentage(v["rollout"] as string, "publish: --rollout") }),
                 onUpload: (u) => process.stderr.write(`${u.existing ? "exists  " : "uploaded"} ${u.path}\n`),
             });
-            const { pkg, runtimeVersion, version, pointer } = result;
-            process.stderr.write(`published ${pkg}/${runtimeVersion}/${version} to ${v["channel"] as string} at rollout ${pointer.rollout} (${result.uploaded} uploaded, ${result.existing} already there)\n`);
+            const { pkg, hostVersion, version, pointer } = result;
+            process.stderr.write(`published ${pkg}/${hostVersion}/${version} to ${v["channel"] as string} at rollout ${pointer.rollout} (${result.uploaded} uploaded, ${result.existing} already there)\n`);
             process.stdout.write(`${version}\n`);
             return 0;
         },
@@ -214,9 +214,10 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
     const client = publishClient(v);
     const app = await appId(v);
     const pkg = await packageName(v, undefined);
-    const runtimeVersion = pathSegment(required(v["runtime-version"], `releases ${action ?? ""}: --runtime-version is required`), "--runtime-version");
+    const hostVersion = required(v["host-version"], `releases ${action ?? ""}: --host-version is required`);
+    if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
     if (action === "list") {
-        const found = await listReleases(client, app, pkg, runtimeVersion);
+        const found = await listReleases(client, app, pkg, hostVersion);
         if (v["json"] as boolean) {
             process.stdout.write(`${JSON.stringify(found, null, 2)}\n`);
             return 0;
@@ -232,7 +233,7 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
         for (const r of found.versions) process.stdout.write(`${r.version.padEnd(width)}  ${(r.publishedAt ?? r.createdAt ?? "").padEnd(24)}  ${at(r.version)}\n`);
         return 0;
     }
-    const target = { app, pkg, runtimeVersion, channel: "" };
+    const target = { app, pkg, hostVersion, channel: "" };
     let body: { version?: string; rollout?: number };
     if (action === "rollback" || action === "promote") {
         const version = pathSegment(required(positionals[2], `releases ${action}: a version is required`), "a version");
@@ -245,7 +246,7 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
         throw new Error("releases: expected list, rollback, rollout or promote");
     }
     const pointer = await movePointer(client, target, body);
-    process.stderr.write(`${app}/${pkg}/${runtimeVersion} ${target.channel} -> ${pointer.version} at rollout ${pointer.rollout}\n`);
+    process.stderr.write(`${app}/${pkg}/${hostVersion} ${target.channel} -> ${pointer.version} at rollout ${pointer.rollout}\n`);
     process.stdout.write(`${pointer.version}\n`);
     return 0;
 }

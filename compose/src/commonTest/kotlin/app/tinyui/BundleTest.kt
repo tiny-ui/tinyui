@@ -51,7 +51,7 @@ class BundleTest {
         assertEquals("shop", bundle.name)
         assertEquals("20260922T090000Z-3f2a1c", bundle.manifest.version)
         assertEquals(1, bundle.manifest.protocol)
-        assertNull(bundle.manifest.runtimeVersion, "an embedded manifest has no runtimeVersion")
+        assertNull(bundle.manifest.hostVersion, "an embedded manifest has no hostVersion")
         val page = bundle.page("shop/home")
         assertEquals("shop/home", page.module.name)
         assertEquals("HOME", page.module.bytecode.decodeToString())
@@ -93,12 +93,12 @@ class BundleTest {
     @Test
     fun manifestWithoutPackageIdentityIsRejected() {
         assertFailsWith<IllegalArgumentException> { BuildManifest.parse("""{"runtime":[],"pages":[],"files":{},"buildIds":{}}""") }
-        val bundled = BuildManifest.parse(manifest.removeSuffix("}") + ""","runtimeVersion":"1"}""")
-        assertEquals("1", bundled.runtimeVersion)
+        val bundled = BuildManifest.parse(manifest.removeSuffix("}") + ""","hostVersion":"1"}""")
+        assertEquals("1", bundled.hostVersion)
         assertFailsWith<IllegalArgumentException>("a JSON null is not an identity") {
             BuildManifest.parse("""{"runtime":[],"pages":[],"files":{},"buildIds":{},"name":null,"publicKey":null}""")
         }
-        val nulls = BuildManifest.parse(manifest.removeSuffix("}") + ""","runtimeVersion":null}""")
-        assertNull(nulls.runtimeVersion)
+        val nulls = BuildManifest.parse(manifest.removeSuffix("}") + ""","hostVersion":null}""")
+        assertNull(nulls.hostVersion)
     }
 }

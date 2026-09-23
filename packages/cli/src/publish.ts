@@ -1,12 +1,12 @@
 import { readFile, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
-import { isPathSegment, type Pointer } from "./bundle.ts";
+import { isHostVersion, isPathSegment, type Pointer } from "./bundle.ts";
 import { segments, type UpdatesClient, type UploadResult } from "./client.ts";
 
 export interface PublishOptions {
     client: UpdatesClient;
-    /** `tinyui bundle` output: either `<out>` or the `<out>/<pkg>/<rv>` inside it. */
+    /** `tinyui bundle` output: either `<out>` or the `<out>/<pkg>/<hostVersion>` inside it. */
     dir: string;
     app: string;
     channel: string;
@@ -18,20 +18,20 @@ export interface PublishOptions {
 
 export interface PublishResult {
     pkg: string;
-    runtimeVersion: string;
+    hostVersion: string;
     version: string;
     uploaded: number;
     existing: number;
     pointer: Pointer;
 }
 
-/** The signed bundle of one (pkg, rv), as `tinyui bundle` laid it out (docs/updates.md §1.2). */
+/** The signed bundle of one (pkg, hostVersion), as `tinyui bundle` laid it out (docs/updates.md §1.2). */
 interface LocalBundle {
     dir: string;
     pointer: Pointer;
     /** The bytes that were signed; they are uploaded unchanged (docs/updates.md §7). */
     manifestBytes: Uint8Array;
-    manifest: Manifest & { runtimeVersion: string };
+    manifest: Manifest & { hostVersion: string };
 }
 
 export async function publish(options: PublishOptions): Promise<PublishResult> {
@@ -44,9 +44,9 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     const local = await load(await discover(resolve(options.dir)));
     const { manifest, pointer } = local;
     const pkg = manifest.name;
-    const rv = manifest.runtimeVersion;
+    const hostVersion = manifest.hostVersion;
     const version = manifest.version;
-    const prefix = segments(app, pkg, rv, version);
+    const prefix = segments(app, pkg, hostVersion, version);
 
     const files = [...new Set(Object.values(manifest.files).map((path) => `${path}.bin`)), "manifest.json"];
     const results: UploadResult[] = [];
@@ -59,10 +59,10 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     });
 
     const body = { version, signature: pointer.signature, rollout: options.rollout ?? pointer.rollout };
-    const written = await client.json<Pointer>("PUT", `${segments(app, channel, pkg, rv)}/current.json`, body);
+    const written = await client.json<Pointer>("PUT", `${segments(app, channel, pkg, hostVersion)}/current.json`, body);
     return {
         pkg,
-        runtimeVersion: rv,
+        hostVersion,
         version,
         uploaded: results.filter((r) => !r.existing).length,
         existing: results.filter((r) => r.existing).length,
@@ -70,13 +70,13 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     };
 }
 
-/** `<dir>` is either the `<pkg>/<rv>` directory itself or the root `tinyui bundle --out` wrote it under. */
+/** `<dir>` is either the `<pkg>/<hostVersion>` directory itself or the root `tinyui bundle --out` wrote it under. */
 async function discover(dir: string): Promise<string> {
     if (await exists(join(dir, "current.json"))) return dir;
     const found: string[] = [];
     for (const pkg of await subdirectories(dir)) {
-        for (const rv of await subdirectories(join(dir, pkg))) {
-            if (await exists(join(dir, pkg, rv, "current.json"))) found.push(join(dir, pkg, rv));
+        for (const hostVersion of await subdirectories(join(dir, pkg))) {
+            if (await exists(join(dir, pkg, hostVersion, "current.json"))) found.push(join(dir, pkg, hostVersion));
         }
     }
     if (found.length === 1) return found[0]!;
@@ -98,10 +98,11 @@ async function load(dir: string): Promise<LocalBundle> {
     const manifestBytes = await readInside(join(dir, pointer.version), "manifest.json").catch((e: unknown) => {
         throw new Error(`cannot read ${manifestFile} (${(e as Error).message}); current.json points at a version that was not bundled here`);
     });
-    const manifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")) as Manifest & { runtimeVersion?: string };
-    for (const key of ["name", "version", "runtimeVersion"] as const) {
+    const manifest = JSON.parse(Buffer.from(manifestBytes).toString("utf8")) as Manifest & { hostVersion?: string };
+    for (const key of ["name", "version", "hostVersion"] as const) {
         if (typeof manifest[key] !== "string" || manifest[key] === "") throw new Error(`${manifestFile} has no "${key}"; rebuild with a current tinyui-cli`);
     }
+    if (!isHostVersion(manifest.hostVersion!)) throw new Error(`${manifestFile}: hostVersion must be a positive integer, got "${manifest.hostVersion}"`);
     // the same three checks the server runs (§6.1), so a mismatch costs no upload
     if (manifest.version !== pointer.version) throw new Error(`${manifestFile} is version ${manifest.version}, current.json points at ${pointer.version}`);
     // these paths pick which files are read and uploaded, so they stay inside <version>/ and inside the URL charset
@@ -111,7 +112,7 @@ async function load(dir: string): Promise<LocalBundle> {
             throw new Error(`${manifestFile}: files["${module}"] = ${JSON.stringify(path)}; every segment must match [A-Za-z0-9._-]+`);
         }
     }
-    return { dir, pointer: pointer as Pointer, manifestBytes, manifest: manifest as Manifest & { runtimeVersion: string } };
+    return { dir, pointer: pointer as Pointer, manifestBytes, manifest: manifest as Manifest & { hostVersion: string } };
 }
 
 /** Lexical checks do not stop a symlink: a bundle from elsewhere could point at any file on the machine. */

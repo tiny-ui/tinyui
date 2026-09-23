@@ -23,9 +23,9 @@ final enum class app.tinyui.updates/FailStage : kotlin/Enum<app.tinyui.updates/F
 
 final enum class app.tinyui.updates/Mismatch : kotlin/Enum<app.tinyui.updates/Mismatch> { // app.tinyui.updates/Mismatch|null[0]
     enum entry ENGINE // app.tinyui.updates/Mismatch.ENGINE|null[0]
+    enum entry HOST_VERSION // app.tinyui.updates/Mismatch.HOST_VERSION|null[0]
     enum entry NAME // app.tinyui.updates/Mismatch.NAME|null[0]
     enum entry PROTOCOL // app.tinyui.updates/Mismatch.PROTOCOL|null[0]
-    enum entry RUNTIME_VERSION // app.tinyui.updates/Mismatch.RUNTIME_VERSION|null[0]
     enum entry VERSION // app.tinyui.updates/Mismatch.VERSION|null[0]
 
     final val entries // app.tinyui.updates/Mismatch.entries|#static{}entries[0]
@@ -62,8 +62,8 @@ final enum class app.tinyui.updates/Source : kotlin/Enum<app.tinyui.updates/Sour
 final class app.tinyui.updates/Updates { // app.tinyui.updates/Updates|null[0]
     constructor <init>(kotlin.collections/List<app.tinyui/Bundle>, kotlin/String, okio/Path, kotlin/String, kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray>, kotlin/Function1<app.tinyui.updates/UpdateEvent, kotlin/Unit> = ...) // app.tinyui.updates/Updates.<init>|<init>(kotlin.collections.List<app.tinyui.Bundle>;kotlin.String;okio.Path;kotlin.String;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.ByteArray>;kotlin.Function1<app.tinyui.updates.UpdateEvent,kotlin.Unit>){}[0]
 
-    final val runtimeVersion // app.tinyui.updates/Updates.runtimeVersion|{}runtimeVersion[0]
-        final fun <get-runtimeVersion>(): kotlin/String // app.tinyui.updates/Updates.runtimeVersion.<get-runtimeVersion>|<get-runtimeVersion>(){}[0]
+    final val hostVersion // app.tinyui.updates/Updates.hostVersion|{}hostVersion[0]
+        final fun <get-hostVersion>(): kotlin/String // app.tinyui.updates/Updates.hostVersion.<get-hostVersion>|<get-hostVersion>(){}[0]
 
     final fun current(kotlin/String): app.tinyui/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
     final suspend fun check(): kotlin.collections/Map<kotlin/String, app.tinyui.updates/CheckResult> // app.tinyui.updates/Updates.check|check(){}[0]

@@ -34,7 +34,7 @@ describe("tinyui publish", () => {
     /** One signed bundle under `<tmp>/<label>/dist/ota`, as `tinyui bundle` writes it. */
     async function bundled(label: string, edit?: Parameters<typeof fakeDist>[2], rollout = 100): Promise<string> {
         const dist = await fakeDist(join(tmp, label, "dist"), pair.publicKey, edit);
-        const result = await bundle({ dist, runtimeVersion: "1", signingKey, rollout });
+        const result = await bundle({ dist, hostVersion: "1", signingKey, rollout });
         return join(dist, "ota");
     }
 
@@ -47,7 +47,7 @@ describe("tinyui publish", () => {
         const result = await publish({ client, dir: await bundled("whole"), app: "demo", channel: "staging" });
 
         assert.equal(result.pkg, "fixture");
-        assert.equal(result.runtimeVersion, "1");
+        assert.equal(result.hostVersion, "1");
         assert.equal(result.version, VERSION);
         assert.equal(result.uploaded, FILES.length);
         assert.equal(result.existing, 0);
@@ -115,12 +115,12 @@ describe("tinyui publish", () => {
                 }
             }
         });
-        await bundle({ dist: second, runtimeVersion: "1", signingKey });
+        await bundle({ dist: second, hostVersion: "1", signingKey });
         await cp(join(second, "ota", "extra"), join(root, "extra"), { recursive: true });
         await assert.rejects(publish({ client, dir: root, app: "demo", channel: "staging" }), /holds more than one bundle/);
     });
 
-    it("takes the package and runtime version from the manifest, not from the directory name", async () => {
+    it("takes the package and host version from the manifest, not from the directory name", async () => {
         const renamed = join(tmp, "artifacts", "build-1234", "1");
         await cp(join(await bundled("renamed"), "fixture", "1"), renamed, { recursive: true });
         const mark = server.requests.length;

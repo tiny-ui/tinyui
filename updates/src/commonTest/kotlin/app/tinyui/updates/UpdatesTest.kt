@@ -44,32 +44,32 @@ class UpdatesTest {
         protocol: Int = 1,
         publicKey: String = Fixture.PUBLIC_KEY,
         files: Map<String, String> = mapOf("runtime/core.bin" to "CORE-$version", "runtime/native.bin" to "NATIVE-$version", "pages/home.bin" to "HOME-$version"),
-        runtimeVersion: String? = "1",
+        hostVersion: String? = "1",
     ): String {
         val modules = mapOf("tinyui-core" to "runtime/core", "tinyui-native" to "runtime/native", "$name/home" to "pages/home")
         val hashes = modules.entries.joinToString(",") { (m, p) -> "\"$m\":\"${files.getValue("$p.bin").encodeUtf8().sha256().hex()}\"" }
-        val rv = if (runtimeVersion == null) "" else ",\"runtimeVersion\":\"$runtimeVersion\""
-        return """{"runtime":["tinyui-core","tinyui-native"],"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","protocol":$protocol,"hashes":{$hashes}$rv}"""
+        val hostVersion = if (hostVersion == null) "" else ",\"hostVersion\":\"$hostVersion\""
+        return """{"runtime":["tinyui-core","tinyui-native"],"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","protocol":$protocol,"hashes":{$hashes}$hostVersion}"""
     }
 
     private fun embedded(name: String = "shop", version: String = "v0", createdAt: String = "2026-09-22T09:00:00Z"): Bundle {
         val files = mapOf("runtime/core.bin" to "CORE-$version", "runtime/native.bin" to "NATIVE-$version", "pages/home.bin" to "HOME-$version")
-        val json = manifest(name, version, createdAt, files = files, runtimeVersion = null)
+        val json = manifest(name, version, createdAt, files = files, hostVersion = null)
         return Bundle(BuildManifest.parse(json)) { path -> files[path]?.encodeToByteArray() }
     }
 
-    /** Publishes [manifestJson] as `<pkg>/<rv>/<version>` with its files and a pointer to it. */
-    private fun publish(manifestJson: String, pkg: String = "shop", rv: String = "1", rollout: Int = 100, signature: String = "ok", pointerVersion: String? = null, files: Map<String, String>? = null) {
+    /** Publishes [manifestJson] as `<pkg>/<hostVersion>/<version>` with its files and a pointer to it. */
+    private fun publish(manifestJson: String, pkg: String = "shop", hostVersion: String = "1", rollout: Int = 100, signature: String = "ok", pointerVersion: String? = null, files: Map<String, String>? = null) {
         val m = BuildManifest.parse(manifestJson)
         val version = pointerVersion ?: m.version
-        server["$pkg/$rv/current.json"] = """{"version":"$version","rollout":$rollout,"signature":"$signature"}""".encodeToByteArray()
-        server["$pkg/$rv/$version/manifest.json"] = manifestJson.encodeToByteArray()
+        server["$pkg/$hostVersion/current.json"] = """{"version":"$version","rollout":$rollout,"signature":"$signature"}""".encodeToByteArray()
+        server["$pkg/$hostVersion/$version/manifest.json"] = manifestJson.encodeToByteArray()
         val content = files ?: mapOf("runtime/core.bin" to "CORE-${m.version}", "runtime/native.bin" to "NATIVE-${m.version}", "pages/home.bin" to "HOME-${m.version}")
-        for ((path, bytes) in content) server["$pkg/$rv/$version/$path"] = bytes.encodeToByteArray()
+        for ((path, bytes) in content) server["$pkg/$hostVersion/$version/$path"] = bytes.encodeToByteArray()
     }
 
-    private fun updates(vararg bundles: Bundle, installId: String = "install-1", rv: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE) =
-        Updates(bundles.toList(), rv, dir, installId, fetch, { events += it }, fs, engine, 1, verifier)
+    private fun updates(vararg bundles: Bundle, installId: String = "install-1", hostVersion: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE) =
+        Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, 1, verifier)
 
     private suspend fun pageBytes(bundle: Bundle) = bundle.page("shop/home").module.bytecode.decodeToString()
 
@@ -124,8 +124,8 @@ class UpdatesTest {
         val u = updates(embedded())
         publish(manifest(name = "other"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME)), u.check("shop"))
-        publish(manifest(engine = "f".repeat(40), protocol = 2, runtimeVersion = "2"))
-        assertEquals(setOf(Mismatch.ENGINE, Mismatch.PROTOCOL, Mismatch.RUNTIME_VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
+        publish(manifest(engine = "f".repeat(40), protocol = 2, hostVersion = "2"))
+        assertEquals(setOf(Mismatch.ENGINE, Mismatch.PROTOCOL, Mismatch.HOST_VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
         publish(manifest(version = "v9"), pointerVersion = "v1")
         assertEquals(setOf(Mismatch.VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
         publish(manifest(createdAt = "2026-09-22T09:00:00Z"))
@@ -188,11 +188,11 @@ class UpdatesTest {
         assertFalse(fs.exists(dir / "shop/staging"))
         assertFalse(fs.exists(dir / "gone"), "a package the App no longer embeds")
 
-        // installed for another runtime version
+        // installed for another host version
         publish(manifest())
         updates(embedded()).check("shop")
         assertTrue(fs.exists(dir / "shop/installed/v1"))
-        val other = updates(embedded(), rv = "2")
+        val other = updates(embedded(), hostVersion = "2")
         assertEquals("HOME-v0", pageBytes(other.current("shop")))
         assertFalse(fs.exists(dir / "shop/installed/v1"))
     }
@@ -249,7 +249,7 @@ class UpdatesTest {
     fun refusesPackagesThatCannotRunOnThisHost() {
         assertFailsWith<IllegalArgumentException> { updates(embedded(), embedded()) }
         assertFailsWith<IllegalArgumentException> { updates(embedded(), engine = "0".repeat(40)) }
-        assertFailsWith<IllegalArgumentException> { updates(embedded(), rv = "../x") }
+        for (bad in listOf("../x", "1.2.0", "0", "01", "")) assertFailsWith<IllegalArgumentException>(bad) { updates(embedded(), hostVersion = bad) }
         assertFailsWith<IllegalArgumentException> { updates(embedded()).current("nowhere") }
     }
 

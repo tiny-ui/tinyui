@@ -50,15 +50,15 @@ export function revokeToken(client: UpdatesClient, app: string, pkg: string, tok
     return client.empty("DELETE", segments("apps", app, "packages", pkg, "tokens", tokenId));
 }
 
-export function listReleases(client: UpdatesClient, app: string, pkg: string, runtimeVersion: string): Promise<Releases> {
-    return client.json<Releases>("GET", segments(app, pkg, runtimeVersion, "releases"));
+export function listReleases(client: UpdatesClient, app: string, pkg: string, hostVersion: string): Promise<Releases> {
+    return client.json<Releases>("GET", segments(app, pkg, hostVersion, "releases"));
 }
 
 /** Rollback, promotion between channels and a rollout change are one endpoint (docs/updates.md §6.2). */
 export function movePointer(
     client: UpdatesClient,
-    target: { app: string; channel: string; pkg: string; runtimeVersion: string },
+    target: { app: string; channel: string; pkg: string; hostVersion: string },
     body: { version?: string; rollout?: number },
 ): Promise<Pointer> {
-    return client.json<Pointer>("POST", segments(target.app, target.channel, target.pkg, target.runtimeVersion, "pointer"), body);
+    return client.json<Pointer>("POST", segments(target.app, target.channel, target.pkg, target.hostVersion, "pointer"), body);
 }
