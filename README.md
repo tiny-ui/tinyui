@@ -26,7 +26,7 @@ build-logic/ Gradle convention plugins
 ## 安装
 
 - Kotlin：`implementation("app.tinyui:tinyui:<version>")`（Maven Central；自带 `wang.harlon:quickjs-kmp`）；热下发另加 `app.tinyui:tinyui-updates`，同版本号
-- JS：`pnpm add tinyui-core tinyui-native` 与 `pnpm add -D tinyui-cli`，三包同版本号；`tinyui build` 另需 quickjs-kmp 的宿主工具 `qjsc-kmp`（见下）
+- JS：`pnpm add tinyui-core tinyui-native` 与 `pnpm add -D tinyui-cli`，三包同版本号；`tinyui build` 用的 quickjs-kmp 宿主工具 `qjsc-kmp` 随 `tinyui-cli` 的依赖装好（macOS、Linux 预编译版）
 
 版本号与 git tag 一致，不带 `v` 前缀，Maven 与 npm 三包同号同 tag 发：推 tag 触发 `publish.yml`，Maven 走 Sonatype，npm 走 trusted publishing（OIDC，无 token）。
 
@@ -39,10 +39,10 @@ pnpm build && pnpm test          # 三个 npm 包
 pnpm schema                      # 改了 schema/ 之后重新生成两侧代码
 ```
 
-sample 的 Gradle 构建会调 `tinyui build` 把 `sample/js` 编成字节码，需要 quickjs-kmp 的宿主工具 `qjsc-kmp`，Android host 测试还需要宿主 JNI 库。两种来源：
+sample 的 Gradle 构建会调 `tinyui build` 把 `sample/js` 编成字节码，`qjsc-kmp` 来自 `pnpm install` 装好的 npm 包；Android host 测试还需要宿主 JNI 库。两种来源：
 
-- 本地联调：`local.properties` 加 `quickjs-kmp.dir=<quickjs-kmp 仓路径>`，SDK 从源码构建（composite build），两样宿主产物由该仓的任务自动编出，零配置
-- 否则：`TINYUI_QJSC` 指向 `qjsc-kmp`，`TINYUI_QUICKJS_HOST_JNI` 指向含 `libquickjs_kmp` 的目录（CI 的做法见 `.github/workflows/build.yml`）
+- 本地联调：`local.properties` 加 `quickjs-kmp.dir=<quickjs-kmp 仓路径>`，SDK 从源码构建（composite build），`qjsc-kmp` 与 JNI 库都由该仓的任务自动编出，零配置
+- 否则：`TINYUI_QUICKJS_HOST_JNI` 指向含 `libquickjs_kmp` 的目录（CI 的做法见 `.github/workflows/build.yml`）；没有预编译 `qjsc-kmp` 的平台再用 `TINYUI_QJSC` 指向自己编的那份
 
 ## License
 

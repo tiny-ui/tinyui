@@ -2,7 +2,7 @@
 
 - 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
-- 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、`qjsc-kmp` 二进制分发、页面级配置文件不在本期；字节码行号回映射见 §7
+- 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、页面级配置文件不在本期（`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完，见 §5）；字节码行号回映射见 §7
 
 ## 1. 目标与验收
 
@@ -76,27 +76,27 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 ## 5. 字节码由 CLI 生成，宿主工具从 quickjs-kmp 来
 
-字节码编译放 CLI 而不放 Gradle：业务 App 不会有本仓的 build-logic，`tinyui build` 必须自己出最终产物。`qjsc-kmp` 二进制查找顺序：`--qjsc` 参数 → `TINYUI_QJSC` 环境变量 → PATH。
+字节码编译放 CLI 而不放 Gradle：业务 App 不会有本仓的 build-logic，`tinyui build` 必须自己出最终产物。`qjsc-kmp` 二进制查找顺序：`--qjsc` 参数 → `TINYUI_QJSC` 环境变量 → npm 包 `qjsc-kmp` 的预编译版 → PATH。
 
-字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。
+字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），对齐因此只剩"JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 同版本"。
 
 | 场景 | 来源 |
 |---|---|
-| 本地 | `local.properties` 有 `quickjs-kmp.dir` 时，Gradle 把 `<dir>/library/build/native/host-tools/bin/qjsc-kmp` 传给 CLI，零配置 |
-| CI（本期） | clone quickjs-kmp 的 catalog 对应 tag，`./gradlew :library:buildHostTools` 现编，多花一两分钟 |
-| 长期 | quickjs-kmp 在 tag 发布时把 macOS / Linux 宿主二进制挂到 GitHub Release，CLI 按版本下载（esbuild 的平台包模式）；属 quickjs-kmp 仓改动，记 roadmap |
+| 默认 | npm 包 `qjsc-kmp`：入口包加 `@qjsc-kmp/{darwin-arm64,darwin-x64,linux-x64,linux-arm64}` 平台包（esbuild 模式，Linux 为 musl 全静态），npm 只装与本机匹配的那个；由 quickjs-kmp 随 tag 经 OIDC 发布 |
+| 本地联调 | `local.properties` 有 `quickjs-kmp.dir` 时，Gradle 把 `<dir>/library/build/native/host-tools/bin/qjsc-kmp` 经 `--qjsc` 传给 CLI，用的是本地源码编出的那份 |
+| 其他平台 | Windows 等没有预编译版的平台用 `--qjsc` / `TINYUI_QJSC` 指向自己编的那份 |
 
 ## 6. 各处职责
 
 | 位置 | 改动 |
 |---|---|
-| `packages/cli` | `bin` 入口 `tinyui`，子命令 `build`，读工程根 `tinyui.config.json`（包名、公钥、页面目录），参数 `--root` / `--out` / `--qjsc`；依赖 esbuild。测试：夹具 TSX 打包后断言 `h(` 调用、裸说明符保留、相对 import 已合并、`.map` 存在；qjsc 步骤在 `TINYUI_QJSC` 缺失时跳过 |
+| `packages/cli` | `bin` 入口 `tinyui`，子命令 `build`，读工程根 `tinyui.config.json`（包名、公钥、页面目录），参数 `--root` / `--out` / `--qjsc`；依赖 esbuild。测试：夹具 TSX 打包后断言 `h(` 调用、裸说明符保留、相对 import 已合并、`.map` 存在；qjsc 步骤在找不到 `qjsc-kmp` 时跳过 |
 | `packages/core` / `native` | 不动运行时 API，只保证入口能打成单模块，各导出 `VERSION` 供 sample 显示 |
 | `compose/` | ADR-002 K0 最小版：注册 core → 注册 native → 运行页面模块 → 返回 namespace。命名待 M1 定，本期只保证序列在库里而不在 sample 里。commonTest 用 `JsBytecode.compile` 现场编字节码，不依赖宿主工具 |
 | `sample/js` | 新 pnpm workspace 成员，包名 `sample`，`src/pages/home.tsx`。本期页面用纯 TS 只 import `VERSION`：`h` 的签名是 C 组的事，不在 core 放临时实现；JSX 变换的正确性由 CLI 单元测试覆盖 |
 | `sample/shared` | Gradle：`pnpm run build` → `tinyui build` → `Sync` 只取 `.bin` 与清单 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0。AGP 9 的 KMP 库插件默认不处理 assets，Compose resources 在 Android 走 assets，必须 `androidResources { enable = true }`，否则 APK 里没有资源且构建不报错（2026-09-16 实测） |
 | `settings.gradle.kts` | 有 `quickjs-kmp.dir` 时把 `qjsc-kmp` 路径传给 Exec 任务 |
-| CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildHostTools`（qjsc-kmp）与 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QJSC` / `TINYUI_QUICKJS_HOST_JNI` 传入；ios.yml 同样 |
+| CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QUICKJS_HOST_JNI` 传入；`qjsc-kmp` 来自 npm 包（2026-09-23 起）；ios.yml 同样 |
 
 ## 7. 错误上报与 source map
 

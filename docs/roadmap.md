@@ -47,7 +47,7 @@
 |---|---|---|
 | ~~`createStore`（Solid 式 Proxy 深层响应式）~~ | ADR-005 | 已完成（2026-09-17，定名 `observable`，[runtime-api.md](./runtime-api.md) §2.6）：直接赋值、属性级订阅、只深代理纯对象与数组；`reconcile` / `produce` 不做，触发条件"服务端全量刷新导致整表重绑成为性能问题" |
 | ~~热下发~~ | ADR-005 | 已定（2026-09-18，[ADR-006](./adr-006-hot-updates.md) + [updates.md](./updates.md)；2026-09-19 定服务端与签名、改多包模型），实现待开，顺序见下方第 7 条；ADR-006 §4.3 的推迟项（控制台、遥测、D1、非 CF 适配器、计费）各带触发条件 |
-| `qjsc-kmp` 宿主二进制分发 | build-chain.md §5 | **触发已到**（2026-09-19，第二个 App 接入，其 CI 不能现编 quickjs-kmp）：形态改为 npm 平台包（`qjsc-kmp-darwin-arm64` / `-linux-x64` 等作 `tinyui-cli` 的 `optionalDependencies`，esbuild 模式）而非 GitHub Release——内网 npm 代理天然能拉；属 quickjs-kmp 仓改动，待做 |
+| `qjsc-kmp` 宿主二进制分发 | build-chain.md §5 | **已完成**（2026-09-23，热下发 M5.2）：npm 入口包 `qjsc-kmp` 加 `@qjsc-kmp/<os>-<arch>` 平台包（esbuild 模式）而非 GitHub Release——内网 npm 代理天然能拉；quickjs-kmp 0.1.2 起随 tag 发布，`tinyui-cli` 依赖它 |
 | ~~App 级共享模块（业务共享代码进 external 列表与模块表）~~ | build-chain.md §3 | 砍掉（2026-09-19）：多包模型下包自包含，体积问题的出口是拆包（ADR-006 §2.10） |
 | 向 bellard/mquickjs 上报 S4 段错误 | ADR-005 §3.2 | 用户决定 |
 | `ErrorBoundary` 分支级兜底 | ADR-002 | 整页失败的比例成为问题 |
