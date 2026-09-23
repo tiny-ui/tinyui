@@ -1,20 +1,20 @@
 # 热下发实施计划
 
-- 状态：已定（2026-09-19；同日按多包模型修订；2026-09-22 按签名改签原始字节、指针文件 `current.json`、启动 sha256 校验修订）；进度在此更新，不回改 ADR-006 / updates.md
+- 状态：已定（2026-09-19；同日按多包模型修订；2026-09-22 按签名改签原始字节、指针文件 `current.json`、启动 sha256 校验修订；2026-09-23 按 M6 拍板七点修订：插入 M5.1 改名 `hostVersion` 与 M5.2 `qjsc-kmp` 平台包，M6 改为 CI 发布）；进度在此更新，不回改 ADR-006 / updates.md
 - 来源：[ADR-006](./adr-006-hot-updates.md)、[updates.md](./updates.md)；roadmap 第 7 条的展开
-- 范围：四个仓（tinyui、tinyui-updates-server、quickjs-kmp、各 App 的 JS 工程与宿主）七个里程碑；每个里程碑独立验收、独立合入
+- 范围：四个仓（tinyui、tinyui-updates-server、quickjs-kmp、各 App 的 JS 工程与宿主）九个里程碑；每个里程碑独立验收、独立合入
 
 ## 依赖关系
 
 ```
-quickjs-kmp: qjsc-kmp npm 平台包 ──────────────────────────┐ 只挡 M7 的 CI，不挡其他任何一步
-                                                           │
-tinyui:  M1 CLI 产包与签名 ──▶ M2 core Bundle ──▶ M3 updates 模块 ──▶ M6 TrendingAI 接入 ──▶ M7 第二个 App
-                    │                                                     ▲
-                    └──▶ tinyui-updates-server: M4 服务 MVP ──▶ M5 CLI publish / 管理 ──┘
+tinyui:  M1 CLI 产包与签名 ──▶ M2 core Bundle ──▶ M3 updates 模块 ──┐
+                    │                                              │
+                    └──▶ tinyui-updates-server: M4 服务 MVP ──▶ M5 CLI publish / 管理
+                                                                   │
+         M5.1 改名 hostVersion ──▶ M5.2 qjsc-kmp 平台包 ──▶ 发 tinyui 0.3.0 ──▶ M6 TrendingAI 接入 ──▶ M7 第二个 App
 ```
 
-M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
+M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + Maven `tinyui` / `tinyui-updates`，0.2.0 还不含 M1 起的任何热下发代码）都是 M6 的前置。
 
 ## M1 · CLI：产包与签名
 
@@ -80,17 +80,49 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 
 `tinyui publish` / `apps create` / `packages create` / `tokens create|revoke` / `releases list|rollback|rollout|promote`，全是对 M4 端点的薄封装；`--url` 缺省 `https://updates.tinyui.app`。凭据只从 `$TINYUI_TOKEN` / `$TINYUI_ADMIN_TOKEN` 读，不给 `--token`；`--app` 可用 `$TINYUI_APP`，`--channel` 必须显式。测试对着本仓 `node:http` 起的薄 fake 跑（只回应协议的形状，不复刻验签与 sha256 校验——那些归服务端仓的测试），端到端另跑一次真服务端。
 
+## M5.1 · 改名 `runtimeVersion` → `hostVersion`
+
+仓：tinyui + tinyui-updates-server，小 PR 各一。
+
+- 字段、CLI 参数（`--host-version`）、`Updates` 构造参数、`BuildManifest`、服务端 manifest 校验、文档全部改名；文档补一句"对应 Expo 的 `runtimeVersion`"。改名原因：tinyui 里"runtime"已指运行时模块（`tinyui-core` / `tinyui-native`、manifest 的 `runtime` 字段）与 JS 引擎，而这个值恰恰不是它们的版本
+- 值限定为正整数字符串：`"1.2.0"` 这类 App 版本号在 CLI、`Updates` 构造、服务端三处都被拒
+- 文档里的"契约快照"改称 `tinyui-host/<hostVersion>.txt`
+- 顺序：服务端先部署，再合 CLI；0.2.0 与线上都还没有这个名字，此时改名只是机械替换
+
+## M5.2 · `qjsc-kmp` npm 平台包
+
+仓：quickjs-kmp + tinyui（`packages/cli`）。原是 M7 前置，提前：它不只挡 CI，还挡"`pnpm install` 之后就能 build"，PingPong 与托管实例的外部用户都需要。
+
+- quickjs-kmp CI 矩阵编宿主工具（macOS arm64 / x64、Linux x64；Linux arm64 做时再定），按 esbuild 的模式每个平台发一个 npm 包，版本跟 quickjs-kmp 走
+- `tinyui-cli` 的 `optionalDependencies` 钉住与 tinyui 引擎一致的那一版；CLI 查找顺序：`--qjsc` → `TINYUI_QJSC` → 平台包 → PATH
+- engine 对齐由此退化为"JS 工程的 `tinyui-cli` 版本 = App 的 `tinyui` 版本"
+
 ## M6 · TrendingAI 接入
 
-- `trendingai-tinyui`：加 `tinyui.config.json`（`name: "subscription"`，公钥），页面模块名从 `pages/…` 改为 `subscription/…`；`keys generate`，私钥进 GitHub secret；CI 加 `bundle` + `publish` 到 `trendingai/production`；`pnpm sync` 仍提交内置包（同一次 build）
-- 服务端：`apps create trendingai`、`packages create --app trendingai subscription`（登记公钥）、发限 `production` 的 token
-- TrendingAI App：`TinyUIHost` 改用 `Updates(listOf(embedded), runtimeVersion = "1", dir, installId = 埋点已有的安装 id, fetch = ktor)`；路由表与 `navigation.push` 目标改用新模块名；订阅页改用 `UpdatesPage`；App 启动后调 `check()`；`onEvent` 接埋点
+拍板（2026-09-23）：
 
-验收：真机装线上包 → 发一个改文案的包 `rollout 100` → 重启看到；发坏包 → 看到回退与事件；`releases rollback` → 重启回到上一版。
+| # | 点 | 结论 |
+|---|---|---|
+| 1 | 发布在哪跑 | CI：合进 main 自动构建、签名、发 `staging`；不走本地发布 |
+| 2 | 兼容键口径 | `hostVersion` 由宿主仓持有、递增整数；宿主给页面的东西（组件、能力、tinyui 版本）变了就加 1；宿主构建按版本存快照拦漏加（ADR-006 §2.2、updates.md §4.1） |
+| 3 | F-Droid | 不关热下发 |
+| 4 | channel | `staging` + `production`；正式包里藏 channel 开关，用商店版 App 验 staging；CI token 只能发 `staging`，晋级 / 回滚 / 改灰度走需人工批准的 workflow |
+| 5 | 签名私钥 | GitHub secret + `HarlonWang/secrets` 备份一份，本机生成后即删 |
+| 6 | `installId` | 复用 TrendingAI 的 `getOrCreateInstallId()`，`Updates` 事件接进埋点 |
+| 7 | 命名 | 包名 `trendingai`（页面 `trendingai/subscription`），线上 app id `trendingai`；宿主层面标识页面（深链、埋点页面名、日志）用 `tinyui:trendingai/subscription`，`navigation.push` 仍用不带前缀的 |
+
+交付：
+
+- **tinyui**：宿主契约快照——导出宿主组件 schema、能力名、tinyui 版本为稳定排序的文本，存 `tinyui-host/<hostVersion>.txt`；检查任务（当前宿主与快照不符即失败）与生成任务（已随发版带出的版本拒绝覆盖），任务名做时定。前置：宿主能力能集中枚举（TrendingAI 现在散在各 Screen 里注册）。`tinyui:` 前缀约定写进 app-model.md
+- **trendingai-tinyui**：先恢复可构建——依赖从 `link:` 换成 npm 的 0.3.0，加 `tinyui.config.json`（`name: "trendingai"`，公钥），模块名 `pages/subscription` → `trendingai/subscription`；`keys generate`，私钥写进 GitHub secret 与 `HarlonWang/secrets` 的 `tinyui-updates/signing/trendingai/trendingai.pem`；CI：合 main → build → `bundle --host-version <值>` → `publish --channel staging`，`hostVersion` 取 workflow 里的一个变量（抄宿主仓当前值，抄错只会送不到）；`production` environment 设人工批准，手动 workflow 跑 `releases promote / rollback / rollout`
+- **服务端（线上，不可逆，执行前列命令确认）**：`apps create trendingai --name TrendingAI`（`org` 留空）；`packages create trendingai --app trendingai`（登记公钥）；两枚 token，CI 用的限 `staging`，production environment 用的限 `production`
+- **TrendingAI**：依赖升到 tinyui 0.3.0 并加 `tinyui-updates`；`TinyUIHost` 改用 `Updates(listOf(embedded), hostVersion = "1", dir, installId = getOrCreateInstallId(), fetch = ktor)`，base URL `https://updates.tinyui.app/trendingai/<channel>`；设置页隐藏的 channel 开关（持久化，切回即恢复 `production`）；订阅页改用 `UpdatesPage`，`PAGE = "trendingai/subscription"`；App 启动即 `check()`（先于任何 TinyUI 页挂载）；`onEvent` 接埋点；宿主能力集中注册，`shared/tinyui-host/1.txt` 与检查任务进 CI；内置包改为发 App 时从服务端拉当时 `production` 的那一版进 `composeResources/files/tinyui/trendingai/`（`pnpm sync` 只再生成 `HostSchemas.kt`），脚本还是 CLI 子命令做时定
+
+验收：合 main → CI 发 `staging` → 商店版 App 切到 staging 看到新文案 → 批准 workflow 晋级 `production` → 切回、重启看到；往 staging 发坏包 → 回退到内置并在埋点里看到 `RolledBack`；production workflow `rollback` → 重启回到上一版；宿主加一个能力而不加 `hostVersion` → 宿主 CI 失败。
 
 ## M7 · 第二个 App
 
-流程同 M6，按业务线分包，每包一个 JS 工程、一对密钥、一个 token；宿主一个 `Updates` 装全部内置包。前置：quickjs-kmp 仓发 `qjsc-kmp` npm 平台包（CI 在 macOS / Linux 编宿主二进制，esbuild 模式发 `qjsc-kmp-<os>-<arch>`；`tinyui-cli` 的 `optionalDependencies` 引用；CLI 查找顺序加"平台包"一级，排在 `--qjsc` 与 `TINYUI_QJSC` 之后、PATH 之前）。
+流程同 M6，按业务线分包，每包一个 JS 工程、一对密钥、一个 token；宿主一个 `Updates` 装全部内置包。平台包已在 M5.2 做完。
 
 ## 进度
 
@@ -101,5 +133,7 @@ M1 之后 M2 → M3 与 M4 并行；M6 要等 M3 与 M5。
 | M3 `updates/` 模块 | 已完成（2026-09-22）：`Updates` 状态机与启动选择（含 sha256 重算、原子 state.json）、两端 ECDSA 验签（Android `java.security`、iOS `Security.framework`）、`UpdatesPage` E2 / E6 回退；sample 加第二个包 `sample-extra`，Android 模拟器从本机 `http.server` 装包、重启生效、坏包回退并 `RolledBack` 全部验过 |
 | M4 服务 MVP | 已完成（tiny-ui/tinyui-updates-server PR #1，2026-09-22）：Hono + 单 R2 桶，投递 / 发布 / release / 管理四组端点，Workers 运行时一致性测试 12 条；已部署 `updates.tinyui.app`（R2 桶 `tinyui-updates`，`ADMIN_TOKEN` 存 HarlonWang/secrets 的 `tinyui-updates/admin-token.txt`），Cloudflare Workers Builds 已连 tiny-ui/tinyui-updates-server 的 main，push 即部署（`wrangler deploy --config wrangler.tinyui.toml`） |
 | M5 CLI 发布与管理 | 已完成（2026-09-22）：`publish`（发现 bundle 目录、并发上传、指针最后）、`apps` / `packages`（含 `rotate-key`）/ `tokens` / `releases` 四组命令；凭据只走环境变量，`--app` / `--channel` / `--pkg` 按名字规则校验；CLI 侧契约测试 15 条，另对本地 `wrangler dev` 起的真服务端跑通发布 / 幂等重发 / 晋级 / 改灰度 / 回滚 / 跨 channel 被拒 / 吊销即时生效 |
-| M6 TrendingAI 接入 | 待开 |
-| M7 第二个 App | 待开；前置 `qjsc-kmp` 平台包待开 |
+| M5.1 改名 `hostVersion` | 待开 |
+| M5.2 `qjsc-kmp` 平台包 | 待开；之后发 tinyui 0.3.0 |
+| M6 TrendingAI 接入 | 拍板完成（2026-09-23），待 M5.1、M5.2、0.3.0 |
+| M7 第二个 App | 待开 |
