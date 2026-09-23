@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -74,7 +74,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 
 不通过即拒绝出包，报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或打包用的 `tinyui-cli` 版本不等于快照里的 tinyui 版本（新版 tinyui 的内置组件，旧宿主没有）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
 
-核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `bundle` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照端点与宿主 CI 用的凭据形态实现时定（§6）。
+核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `bundle` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
 
 ## 2. 投递协议
 
@@ -253,7 +253,19 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ## 6. 发布协议
 
-服务端实现的第二组端点，`tinyui-cli` 是它的客户端。所有请求 `Authorization: Bearer <token>`；发布 token 按 (app, pkg) 签发并限定可写的 channel 集合，只对该 app 该包的路径有效；管理端点用实例的 `ADMIN_TOKEN`。
+服务端实现的第二组端点，`tinyui-cli` 是它的客户端。所有请求 `Authorization: Bearer <token>`。
+
+用词：**app** 是一个宿主 App——URL 的 `<app>` 段、`hostVersion` 序列、宿主快照、权限都挂在它上面；**租户**是拥有 app 的计费主体，只是 app 记录上可改的 `org` 字段，会改名、转让，所以不进 URL、不挂权限。一个租户可以有多个 app。
+
+凭据三层，下层由上层签发：
+
+| 凭据 | 范围 | 签发者 |
+|---|---|---|
+| 实例的 `ADMIN_TOKEN` | 所有 app；只有它能建 app、签发与吊销 app token | 部署时设为 Worker secret |
+| app token | 一个 app 的完整管理权：注册包、登记与轮换公钥、签发与吊销本 app 各包的发布 token、查看 release、上传本 app 的宿主快照；碰不到别的 app | `ADMIN_TOKEN` |
+| 发布 token | 一个 (app, pkg)，限定可写的 channel 集合：上传、发布、回滚、晋级、改灰度；可读本 app 的宿主快照 | `ADMIN_TOKEN` 或本 app 的 app token |
+
+app token 与发布 token 一样可以签多个、只返回一次明文、服务端只存哈希、随时吊销。app token 能给自己签本 app 的发布 token，所以实际能左右本 app 所有包的指针；但它和 `ADMIN_TOKEN` 一样碰不到客户端的信任链——设备只认内置包里的公钥（§7）。
 
 服务端把内容按 (app, pkg, hostVersion, version) 存一份，channel 只是指针：同一个 version 发到 staging 验证后，把 production 的指针指过去即是发布，不重传、不重签。内容 GET 路径里的 `<channel>` 段因此不参与寻址。
 
@@ -277,17 +289,37 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 服务端按 version 保存 release 记录（`createdAt`、`signature`），指针切换不需要重新上传；改 `rollout` 只改指针，签名不受影响（§7）。CLI：`tinyui releases list` / `rollback <version>` / `rollout <p>` / `promote <version> --to <channel>`。
 
-### 6.3 管理 app 与包（`ADMIN_TOKEN`）
+### 6.3 管理 app 与包
+
+| 请求 | 凭据 | 语义 |
+|---|---|---|
+| `POST /apps`，body `{ "id", "name", "org"? }` | `ADMIN_TOKEN` | 建 app；`org` 即租户，可改，不进任何路径 |
+| `POST /apps/<app>/tokens` | `ADMIN_TOKEN` | 签发 app token，只返回一次；服务端只存哈希 |
+| `DELETE /apps/<app>/tokens/<tokenId>` | `ADMIN_TOKEN` | 吊销 app token |
+
+以下各条 `ADMIN_TOKEN` 或该 app 的 app token 均可：
 
 | 请求 | 语义 |
 |---|---|
-| `POST /apps`，body `{ "id", "name", "org"? }` | 建 app；`org` 是计费 / 归属用的可改字段，不进任何路径 |
 | `POST /apps/<app>/packages`，body `{ "name", "publicKey" }` | 建包，登记验签公钥 |
 | `PUT /apps/<app>/packages/<pkg>/publicKey` | 换公钥（轮换后旧包不再能发布，已发布的不受影响） |
 | `POST /apps/<app>/packages/<pkg>/tokens`，body `{ "channels": [...] }` | 签发发布 token，只返回一次；服务端只存哈希 |
 | `DELETE /apps/<app>/packages/<pkg>/tokens/<tokenId>` | 吊销 |
 
-CLI：`tinyui apps create` / `tinyui packages create` / `tinyui tokens create` / `tinyui tokens revoke`。没有控制台，这就是全部管理面。
+app token 不能签发或吊销 app token：一枚泄露的 app token 没法给自己续命。
+
+CLI：`tinyui apps create` / `tinyui apps tokens create|revoke` / `tinyui packages create` / `tinyui tokens create` / `tinyui tokens revoke`；管理命令从 `$TINYUI_ADMIN_TOKEN` 读凭据，放实例的 `ADMIN_TOKEN` 或某个 app 的 app token 都行，服务端按 token 判定范围。没有控制台，这就是全部管理面。
+
+### 6.4 宿主快照
+
+宿主快照（§1.3、§4.1）是 `tinyui-host/<hostVersion>.txt` 的原始字节：该宿主版本提供的宿主组件、能力名与 tinyui 版本。宿主发 App 版本时由其 CI 上传，`bundle` 发布前读取核对。
+
+| 请求 | 凭据 | 语义 |
+|---|---|---|
+| `PUT /apps/<app>/hosts/<hostVersion>`，body 为快照字节 | `ADMIN_TOKEN` 或本 app 的 app token | 每个 (app, hostVersion) 只写一次：同字节重传返回已存在，不同字节 → 409——已随发版带出的宿主版本，其快照冻结 |
+| `GET /apps/<app>/hosts/<hostVersion>` | 以上两种，或本 app 任一包的发布 token | 原字节；没上传过 → 404，`bundle` 据此拒绝出包 |
+
+CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 CI 用）。
 
 ## 7. 签名
 
