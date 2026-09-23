@@ -55,7 +55,7 @@ describe("management commands", () => {
         assert.equal(releases.versions.length, 2);
         assert.equal(releases.channels["staging"]?.rollout, 20);
 
-        const target = { app: "demo", pkg: "fixture", runtimeVersion: "1" };
+        const target = { app: "demo", pkg: "fixture", hostVersion: "1" };
         const rolledBack = await movePointer(client, { ...target, channel: "production" }, { version: "20260921T080000Z-aaaaaa" });
         assert.equal(last().path, "/demo/production/fixture/1/pointer");
         assert.equal(rolledBack.version, "20260921T080000Z-aaaaaa");

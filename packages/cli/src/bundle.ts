@@ -8,8 +8,8 @@ import { isPublicKey, publicKeyOf, sign } from "./keys.ts";
 export interface BundleOptions {
     /** `tinyui build` output directory. */
     dist: string;
-    /** The host's declared runtimeVersion; becomes a path segment and a signed manifest field. */
-    runtimeVersion: string;
+    /** What the host declares it provides to pages (docs/updates.md §4.1); becomes a path segment and a signed manifest field. */
+    hostVersion: string;
     /** PKCS#8 PEM whose public key must equal the manifest's `publicKey`. */
     signingKey: string;
     /** 0–100, defaults to 100. */
@@ -19,7 +19,7 @@ export interface BundleOptions {
 }
 
 export interface BundleResult {
-    /** `<out>/<pkg>/<rv>`: upload it with `tinyui publish` or serve it as is (docs/updates.md §1.2). */
+    /** `<out>/<pkg>/<hostVersion>`: upload it with `tinyui publish` or serve it as is (docs/updates.md §1.2). */
     dir: string;
     version: string;
     pointer: string;
@@ -34,9 +34,14 @@ export interface Pointer {
     signature: string;
 }
 
-/** `version` and `runtimeVersion` become directory names; one segment, never `.` or `..`. */
+/** `version` becomes a directory name; one segment, never `.` or `..`. */
 export function isPathSegment(value: string): boolean {
     return /^[A-Za-z0-9._-]+$/.test(value) && value !== "." && value !== "..";
+}
+
+/** A positive integer, so an App version such as `1.2.0` cannot be mistaken for a host version. */
+export function isHostVersion(value: string): boolean {
+    return /^[1-9][0-9]*$/.test(value);
 }
 
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
@@ -44,7 +49,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     const out = resolve(options.out ?? join(dist, "ota"));
     const rollout = options.rollout ?? 100;
     if (!Number.isInteger(rollout) || rollout < 0 || rollout > 100) throw new Error(`rollout must be an integer from 0 to 100, got ${options.rollout}`);
-    if (!isPathSegment(options.runtimeVersion)) throw new Error(`runtime version must be a single path segment, got "${options.runtimeVersion}"`);
+    if (!isHostVersion(options.hostVersion)) throw new Error(`host version must be a positive integer, got "${options.hostVersion}"; it counts what the host provides to pages, it is not the App version`);
 
     const manifest = await readManifest(dist);
     if (!isPathSegment(manifest.version)) throw new Error(`manifest version must be a single path segment, got "${manifest.version}"`);
@@ -70,8 +75,8 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     }
 
     // written once, signed as written: every side verifies these exact bytes (docs/updates.md §7)
-    const signed = Buffer.from(JSON.stringify({ ...manifest, runtimeVersion: options.runtimeVersion }, null, 2) + "\n");
-    const dir = join(out, manifest.name, options.runtimeVersion);
+    const signed = Buffer.from(JSON.stringify({ ...manifest, hostVersion: options.hostVersion }, null, 2) + "\n");
+    const dir = join(out, manifest.name, options.hostVersion);
     const versionDir = join(dir, manifest.version);
     const manifestFile = join(versionDir, "manifest.json");
     const existing = await readFile(manifestFile).catch(() => null);

@@ -27,11 +27,11 @@ import wang.harlon.quickjs.QuickJs
 /**
  * Hot updates for a set of packages (docs/updates.md §4): verifies, stores, selects and rolls back, never
  * fetches on its own. The host provides its embedded packages, a `fetch` for the relative paths of §2, a
- * directory, a stable install id and the `runtimeVersion` it declares.
+ * directory, a stable install id and the `hostVersion` it declares.
  */
 class Updates internal constructor(
     packages: List<Bundle>,
-    val runtimeVersion: String,
+    val hostVersion: String,
     private val dir: Path,
     private val installId: String,
     private val fetch: suspend (path: String) -> ByteArray,
@@ -43,12 +43,12 @@ class Updates internal constructor(
 ) {
     constructor(
         packages: List<Bundle>,
-        runtimeVersion: String,
+        hostVersion: String,
         dir: Path,
         installId: String,
         fetch: suspend (path: String) -> ByteArray,
         onEvent: (UpdateEvent) -> Unit = {},
-    ) : this(packages, runtimeVersion, dir, installId, fetch, onEvent, platformFileSystem, QuickJs.upstreamCommit, PageHost.PROTOCOL, PlatformSignatureVerifier)
+    ) : this(packages, hostVersion, dir, installId, fetch, onEvent, platformFileSystem, QuickJs.upstreamCommit, PageHost.PROTOCOL, PlatformSignatureVerifier)
 
     private val packages: Map<String, Package>
     private val checkLock = Mutex()
@@ -56,7 +56,7 @@ class Updates internal constructor(
 
     init {
         require(packages.isNotEmpty()) { "Updates needs at least one embedded package" }
-        require(isPathSegment(runtimeVersion)) { "runtimeVersion must be a single path segment, got \"$runtimeVersion\"" }
+        require(isHostVersion(hostVersion)) { "hostVersion must be a positive integer, got \"$hostVersion\"; it counts what the host provides to pages, it is not the App version" }
         val byName = LinkedHashMap<String, Package>()
         for (bundle in packages) {
             require(bundle.name !in byName) { "two embedded packages are named ${bundle.name}" }
@@ -158,10 +158,10 @@ class Updates internal constructor(
             fs.deleteRecursively(installedDir / keep)
         }
 
-        /** The installed package when it is still the one to run: newer than embedded, this runtime version, intact. */
+        /** The installed package when it is still the one to run: newer than embedded, this host version, intact. */
         private fun loadInstalled(dir: Path): Bundle? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
-            if (manifest.name != name || manifest.runtimeVersion != runtimeVersion || manifest.version in failed) return null
+            if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
             if (manifest.createdAt <= embedded.manifest.createdAt) return null
             val files = HashMap<String, ByteArray>()
             for (module in manifest.runtime + manifest.pages) {
@@ -179,7 +179,7 @@ class Updates internal constructor(
 
         suspend fun check(): CheckResult {
             val pointer = try {
-                parsePointer(fetch("$name/$runtimeVersion/$POINTER").decodeToString())
+                parsePointer(fetch("$name/$hostVersion/$POINTER").decodeToString())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -193,7 +193,7 @@ class Updates internal constructor(
             if (!inRollout(name, version, pointer.rollout)) return CheckResult.Skipped(version, SkipReason.ROLLOUT)
 
             val manifestBytes = try {
-                fetch("$name/$runtimeVersion/$version/$MANIFEST")
+                fetch("$name/$hostVersion/$version/$MANIFEST")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -214,7 +214,7 @@ class Updates internal constructor(
             val mismatch = buildSet {
                 if (manifest.name != name) add(Mismatch.NAME)
                 if (manifest.version != version) add(Mismatch.VERSION)
-                if (manifest.runtimeVersion != runtimeVersion) add(Mismatch.RUNTIME_VERSION)
+                if (manifest.hostVersion != hostVersion) add(Mismatch.HOST_VERSION)
                 if (manifest.engine != engine) add(Mismatch.ENGINE)
                 if (manifest.protocol != protocol) add(Mismatch.PROTOCOL)
             }
@@ -256,7 +256,7 @@ class Updates internal constructor(
             for (module in manifest.runtime + manifest.pages) {
                 val path = manifest.file(module) + ".bin"
                 val bytes = try {
-                    fetch("$name/$runtimeVersion/$version/$path")
+                    fetch("$name/$hostVersion/$version/$path")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -305,6 +305,8 @@ class Updates internal constructor(
         const val INSTALLED = "installed"
         const val MAX_FAILED = 10
         val json = Json { ignoreUnknownKeys = true }
+
+        fun isHostVersion(value: String): Boolean = value.isNotEmpty() && value[0] in '1'..'9' && value.all { it in '0'..'9' }
 
         fun isPathSegment(value: String): Boolean = value.isNotEmpty() && value != "." && value != ".." && value.all { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' }
     }

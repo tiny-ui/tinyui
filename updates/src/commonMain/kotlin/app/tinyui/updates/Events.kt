@@ -6,7 +6,7 @@ enum class Source { EMBEDDED, INSTALLED }
 enum class SkipReason { INCOMPATIBLE, FAILED_BEFORE, OLDER_THAN_EMBEDDED, ROLLOUT }
 
 /** Which signed manifest field disagreed with this host (docs/updates.md §4.3). */
-enum class Mismatch { NAME, VERSION, ENGINE, PROTOCOL, RUNTIME_VERSION }
+enum class Mismatch { NAME, VERSION, ENGINE, PROTOCOL, HOST_VERSION }
 
 enum class FailStage { POINTER, MANIFEST, SIGNATURE, DOWNLOAD, INTEGRITY, STORAGE }
 

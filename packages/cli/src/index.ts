@@ -2,7 +2,7 @@ export { build, RUNTIME_MODULES } from "./build.ts";
 export type { BuildOptions, BuildResult, BuiltModule, Manifest } from "./build.ts";
 export { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "./admin.ts";
 export type { AppRecord, IssuedToken, PackageRecord, Releases } from "./admin.ts";
-export { bundle, isPathSegment } from "./bundle.ts";
+export { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 export type { BundleOptions, BundleResult, Pointer } from "./bundle.ts";
 export { ADMIN_TOKEN_ENV, DEFAULT_URL, requireSecureUrl, requireToken, resolveUrl, segments, TOKEN_ENV, UpdatesClient, UpdatesError, URL_ENV } from "./client.ts";
 export type { ClientOptions, UploadResult } from "./client.ts";

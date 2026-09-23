@@ -2,9 +2,9 @@ package app.tinyui.updates
 
 /** A `<version>/manifest.json` as `tinyui bundle` wrote it, with the `current.json` signature Node's crypto produced for these exact bytes. */
 object Fixture {
-    const val PUBLIC_KEY = "BC5lpOHvNqDvlsPmE+3KI2Lbr8fEh1U06S+2op5TSG5jjHvRdzk0DeXhMwsidC+i3V7YyVpwu9+qK/wUqs3hMnE="
+    const val PUBLIC_KEY = "BCsQWJxiruNm+rZEwQBeGs/1nTV3QGB2TObvtD61sZlSbBGee/gnfxIWuOMCRUcrCRWGONKylaGqkcRiEq4Qy3g="
     const val OTHER_PUBLIC_KEY = "BMxPERlI+YlzaKiP61LhtPrGll7Qv3U0jzrb9OlKgXO3GxfxPdV7G+QQxJ0Lr5GWpxfPewUwyWn3URiJ/+/Eh3k="
-    const val SIGNATURE = "MEQCIHyi+3Gh1Ocj6vFfGCXLIqB+uHBW9MUGpl9j3ME58IigAiA/G/y10Jb6ytsjG4aDb1clS4mdJBBeyv/f0fzrZ4FVbw=="
+    const val SIGNATURE = "MEUCIHX9BKQtT7O1VUQCLj7czqmjDjWpSXQa8vcf1dZXBMC6AiEAqtfPgEn72H8PnwD9w3+wKFLe8wd3FnnyckEdtsico5A="
     const val ENGINE = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
     const val VERSION = "20260922T100000Z-abcdef1"
     val MANIFEST = """
@@ -27,7 +27,7 @@ object Fixture {
             "shop/home": "cccccccc"
           },
           "name": "shop",
-          "publicKey": "BC5lpOHvNqDvlsPmE+3KI2Lbr8fEh1U06S+2op5TSG5jjHvRdzk0DeXhMwsidC+i3V7YyVpwu9+qK/wUqs3hMnE=",
+          "publicKey": "BCsQWJxiruNm+rZEwQBeGs/1nTV3QGB2TObvtD61sZlSbBGee/gnfxIWuOMCRUcrCRWGONKylaGqkcRiEq4Qy3g=",
           "version": "20260922T100000Z-abcdef1",
           "createdAt": "2026-09-22T10:00:00Z",
           "engine": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
@@ -37,7 +37,7 @@ object Fixture {
             "tinyui-native": "8a65da82b504e482deb6e49382cd8b2abca80b6c6ad67ff82aa642f76c8fcc4d",
             "shop/home": "6ca9202ab8e55afbd5f0e68113ef733655c190b1531cc7e1fc17ea3bb8d32230"
           },
-          "runtimeVersion": "1"
+          "hostVersion": "1"
         }
     """.trimIndent() + "\n"
 

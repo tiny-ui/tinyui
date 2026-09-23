@@ -108,10 +108,10 @@ function defaultReply(method: string, path: string, body: Buffer, uploads: Map<s
     const parsed = asJson(body);
 
     if (method === "PUT" && last === "current.json" && segments.length === 5) {
-        const [app, , pkg, rv] = segments;
+        const [app, , pkg, hostVersion] = segments;
         const version = parsed["version"] as string;
         // content first, pointer last: the one ordering rule a client can get wrong (§6.1)
-        if (!uploads.has(`/${app}/${pkg}/${rv}/${version}/manifest.json`)) return [409, { error: `${version}/manifest.json is not uploaded yet: content first, pointer last` }];
+        if (!uploads.has(`/${app}/${pkg}/${hostVersion}/${version}/manifest.json`)) return [409, { error: `${version}/manifest.json is not uploaded yet: content first, pointer last` }];
         return [200, { version, rollout: parsed["rollout"] ?? 100, signature: parsed["signature"] }];
     }
     // management routes first, exactly as the server registers them: `/apps/<a>/packages/<p>/publicKey`
