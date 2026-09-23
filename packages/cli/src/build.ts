@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
+import { analyzePage, RequiresError, type PageRequires } from "./requires.ts";
 import { TransformError, transformJsx } from "./transform.ts";
 
 const execFileAsync = promisify(execFile);
@@ -61,6 +62,8 @@ export interface Manifest {
     protocol: number;
     /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
+    /** Page module name → the host capabilities and host components it uses (docs/updates.md §1.3). */
+    requires: Record<string, PageRequires>;
 }
 
 export async function build(options: BuildOptions): Promise<BuildResult> {
@@ -83,6 +86,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     const runtime = await bundleRuntime(root, out);
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
     const modules = [...runtime, ...pages];
+    const requires = await pageRequires(pages);
     for (const m of modules) {
         m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
         await rootRelativeSources(root, m.map);
@@ -110,9 +114,26 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         engine: runtime[0]?.bin ? await engineCommit(runtime[0].bin) : "",
         protocol: await runtimeProtocol(root),
         hashes,
+        requires,
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
     return { runtime, pages, manifest };
+}
+
+/** Every page's host usage; all pages are checked before failing, so one build reports every violation. */
+async function pageRequires(pages: BuiltModule[]): Promise<Record<string, PageRequires>> {
+    const requires: Record<string, PageRequires> = {};
+    const failures: string[] = [];
+    for (const page of pages) {
+        try {
+            requires[page.name] = analyzePage(page.name, await readFile(page.js, "utf8"));
+        } catch (e) {
+            if (!(e instanceof RequiresError)) throw e;
+            failures.push(e.message);
+        }
+    }
+    if (failures.length) throw new RequiresError(failures.join("\n"));
+    return requires;
 }
 
 async function discoverPages(pkg: string, pagesDir: string): Promise<Map<string, string>> {
