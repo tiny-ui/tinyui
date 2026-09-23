@@ -102,13 +102,14 @@ function constantObjects(program: AnyNode, bindings: Map<string, Binding[]>): Se
 }
 
 function readOnly(member: AnyNode, use: AnyNode | null): boolean {
+    // parentheses decide nothing: `delete (ta.Icon)` writes as much as `delete ta.Icon`
+    if (use?.type === "ParenthesizedExpression") return readOnly(use, (use as AnyNode & { parentNode?: AnyNode })["parentNode"] ?? null);
     switch (use?.type) {
         case "CallExpression":
         case "NewExpression": return use["callee"] !== member;
         case "ConditionalExpression":
         case "LogicalExpression":
         case "BinaryExpression":
-        case "ParenthesizedExpression":
         case "ReturnStatement":
         case "TemplateLiteral":
         case "ArrayExpression":
