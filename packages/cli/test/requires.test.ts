@@ -109,6 +109,13 @@ describe("host requirements of a page", () => {
         rejects(`${CORE}${TA}delete ta.Icon;\n${render}`, /cannot tell which component this is/);
         rejects(`${CORE}${TA}Object.assign(ta, { Icon: "ta.New" });\n${render}`, /cannot tell which component this is/);
         rejects(`${CORE}var ta = { Icon: "ta.Icon", set() { this.Icon = "ta.New"; } };\nta.set();\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}({ Icon: ta.Icon } = { Icon: "ta.New" });\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}[ta.Icon] = ["ta.New"];\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}for (ta.Icon of ["ta.New"]) {}\n${render}`, /cannot tell which component this is/);
+        rejects(`${CORE}${TA}for (ta.Icon in { x: 1 }) {}\n${render}`, /cannot tell which component this is/);
+        // reads in every position a page plausibly uses keep the object trusted
+        const reads = `const pick = (on) => on ? ta.Icon : ta.Loading;\nconst label = \`\${ta.Icon}\`;\nconst all = [ta.Icon, { k: ta.Loading }];\n`;
+        assert.deepEqual(analyzePage("shop/home", `${CORE}${TA}${reads}${render}`).components, ["ta.Icon"]);
     });
 
     it("reports every problem of a page at once, each under the module it comes from", () => {

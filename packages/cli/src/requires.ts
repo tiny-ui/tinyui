@@ -86,8 +86,9 @@ function isRuntimeImport(binding: Binding): boolean {
 }
 
 /**
- * The object constants whose members can be read at their initial value: every use is a plain `obj.key` read.
- * One written to, deleted from, called through or passed anywhere could hold something else by render time.
+ * The object constants whose members can be read at their initial value: every use is `obj.key` in a position that
+ * only reads it. Positions are allowed, not forbidden: JS has too many ways to write through a member (assignment,
+ * destructuring, for-in/of heads, a call through it) for a list of writes to stay complete.
  */
 function constantObjects(program: AnyNode, bindings: Map<string, Binding[]>): Set<string> {
     const candidates = new Set([...bindings].filter(([, list]) => list.length === 1 && list[0]!.kind === "object").map(([name]) => name));
@@ -95,12 +96,30 @@ function constantObjects(program: AnyNode, bindings: Map<string, Binding[]>): Se
     walk(program, null, (node, parent) => {
         if (node.type !== "Identifier" || !candidates.has(node["name"] as string) || !isReference(node, parent)) return;
         const member = parent?.type === "MemberExpression" && parent["object"] === node && !parent["computed"] ? parent : undefined;
-        const use = (member as AnyNode & { parentNode?: AnyNode } | undefined)?.["parentNode"];
-        const written = use && ((use.type === "AssignmentExpression" && use["left"] === member) || use.type === "UpdateExpression"
-            || (use.type === "UnaryExpression" && use["operator"] === "delete") || (use.type === "CallExpression" && use["callee"] === member));
-        if (!member || written) spoiled.add(node["name"] as string);
+        if (!member || !readOnly(member, (member as AnyNode & { parentNode?: AnyNode })["parentNode"] ?? null)) spoiled.add(node["name"] as string);
     });
     return new Set([...candidates].filter((name) => !spoiled.has(name)));
+}
+
+function readOnly(member: AnyNode, use: AnyNode | null): boolean {
+    switch (use?.type) {
+        case "CallExpression":
+        case "NewExpression": return use["callee"] !== member;
+        case "ConditionalExpression":
+        case "LogicalExpression":
+        case "BinaryExpression":
+        case "ParenthesizedExpression":
+        case "ReturnStatement":
+        case "TemplateLiteral":
+        case "ArrayExpression":
+        case "SpreadElement":
+        case "ExpressionStatement":
+        case "AwaitExpression": return true;
+        case "VariableDeclarator": return use["init"] === member;
+        case "Property": return use["value"] === member && (use as AnyNode & { parentNode?: AnyNode })["parentNode"]?.type === "ObjectExpression";
+        case "UnaryExpression": return use["operator"] !== "delete";
+        default: return false;
+    }
 }
 
 /** The type names [node] can evaluate to; `null` for one that cannot be known statically. */
