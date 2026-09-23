@@ -14,6 +14,8 @@ enum class FailStage { POINTER, MANIFEST, SIGNATURE, DOWNLOAD, INTEGRITY, STORAG
 sealed class CheckResult {
     data class UpToDate(val version: String) : CheckResult()
     data class Installed(val version: String) : CheckResult()
+    /** The pointer targets [version], no newer than embedded: the installed package was dropped, embedded runs from the next start. */
+    data class Reverted(val version: String) : CheckResult()
     data class Skipped(val version: String, val reason: SkipReason, val mismatch: Set<Mismatch> = emptySet()) : CheckResult()
     data class Failed(val version: String?, val stage: FailStage, val message: String) : CheckResult()
 }
@@ -26,6 +28,7 @@ sealed class UpdateEvent {
     data class UpToDate(override val pkg: String, val version: String) : UpdateEvent()
     data class Skipped(override val pkg: String, val version: String, val reason: SkipReason, val mismatch: Set<Mismatch> = emptySet()) : UpdateEvent()
     data class Installed(override val pkg: String, val version: String) : UpdateEvent()
+    data class Reverted(override val pkg: String, val version: String) : UpdateEvent()
     data class Failed(override val pkg: String, val version: String?, val stage: FailStage, val message: String) : UpdateEvent()
     data class RolledBack(override val pkg: String, val version: String, val page: String, val kind: String, val buildId: String, val message: String) : UpdateEvent()
 }
@@ -33,6 +36,7 @@ sealed class UpdateEvent {
 internal fun CheckResult.toEvent(pkg: String): UpdateEvent = when (this) {
     is CheckResult.UpToDate -> UpdateEvent.UpToDate(pkg, version)
     is CheckResult.Installed -> UpdateEvent.Installed(pkg, version)
+    is CheckResult.Reverted -> UpdateEvent.Reverted(pkg, version)
     is CheckResult.Skipped -> UpdateEvent.Skipped(pkg, version, reason, mismatch)
     is CheckResult.Failed -> UpdateEvent.Failed(pkg, version, stage, message)
 }

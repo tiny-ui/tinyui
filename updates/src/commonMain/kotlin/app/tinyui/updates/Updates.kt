@@ -189,6 +189,7 @@ class Updates internal constructor(
             val version = pointer.version
             if (!isPathSegment(version)) return CheckResult.Failed(version, FailStage.POINTER, "version \"$version\" is not a path segment")
             if (version == installed) return CheckResult.UpToDate(version)
+            if (version == embedded.manifest.version) return revertToEmbedded(version)
             if (version in failed) return CheckResult.Skipped(version, SkipReason.FAILED_BEFORE)
             if (!inRollout(name, version, pointer.rollout)) return CheckResult.Skipped(version, SkipReason.ROLLOUT)
 
@@ -219,7 +220,9 @@ class Updates internal constructor(
                 if (manifest.protocol != protocol) add(Mismatch.PROTOCOL)
             }
             if (mismatch.isNotEmpty()) return CheckResult.Skipped(version, SkipReason.INCOMPATIBLE, mismatch)
-            if (manifest.createdAt <= embedded.manifest.createdAt) return CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)
+            if (manifest.createdAt <= embedded.manifest.createdAt) {
+                return if (installed != null) revertToEmbedded(version) else CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)
+            }
 
             val stagingRoot = root / STAGING
             val staging = stagingRoot / version
@@ -248,6 +251,21 @@ class Updates internal constructor(
                 return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
             }
             return CheckResult.Installed(version)
+        }
+
+        /** The pointer targets no newer than embedded: embedded is what should run, from the next start (docs/updates.md §4.3). */
+        private fun revertToEmbedded(version: String): CheckResult {
+            val drop = installed ?: return CheckResult.UpToDate(version)
+            installed = null
+            try {
+                saveState()
+            } catch (e: IOException) {
+                installed = drop
+                return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
+            }
+            // state.json no longer names it: a leftover directory is swept at the next start
+            runCatching { fs.deleteRecursively(root / INSTALLED / drop) }
+            return CheckResult.Reverted(version)
         }
 
         /** Every file of [manifest] into [staging], each checked against `hashes`; null once all are there. */

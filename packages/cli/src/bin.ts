@@ -9,6 +9,7 @@ import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, Upda
 import { loadConfig, requireName } from "./config.ts";
 import { generateKeyPair } from "./keys.ts";
 import { publish } from "./publish.ts";
+import { pull } from "./pull.ts";
 import { parseHostSnapshot } from "./snapshot.ts";
 import { generateKt, generateTs } from "./schema/generate.ts";
 import { loadSchema } from "./schema/load.ts";
@@ -18,6 +19,7 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
+       tinyui pull --channel <c> --host-version <n> --out <dir> [--app <a>] [--root <dir>]
        tinyui apps create <id> --name <n> [--org <o>]
        tinyui apps tokens create <app>
        tinyui apps tokens revoke <app> --id <token-id>
@@ -59,6 +61,12 @@ publish    upload a bundle and move the channel pointer (docs/updates.md §6.1)
   --channel  the channel to publish to; never defaulted, never read from the environment
   --dir      a tinyui bundle output root or one <pkg>/<hostVersion> inside it (default: ./dist/ota)
   --rollout  overrides the percentage current.json was bundled with
+
+pull       the version a channel points at, verified, as the host's embedded package (docs/updates.md §1.4)
+  --channel  the channel to take it from, usually production; never defaulted
+  --out      replaced as a whole with manifest.json, runtime/ and pages/
+  --root     project whose tinyui.config.json gives the package name and the key to verify with (default: cwd)
+  no token: it reads the public delivery endpoints
 
 the publishing and management commands talk to --url, default ${DEFAULT_URL} (or $TINYUI_UPDATES_URL)
   $${TOKEN_ENV}        publish token, for publish and releases
@@ -206,6 +214,20 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const issued = await createToken(client, app, pkg, channels);
             process.stderr.write(`token ${issued.id} for ${app}/${pkg} on ${issued.channels.join(", ")}; it is shown once\n`);
             process.stdout.write(`${issued.token}\n`);
+            return 0;
+        },
+    },
+    pull: {
+        options: { ...URL_OPTION, app: { type: "string" }, channel: { type: "string" }, "host-version": { type: "string" }, out: { type: "string" }, root: { type: "string" } },
+        run: async (v) => {
+            const config = await loadConfig(resolve((v["root"] as string | undefined) ?? "."));
+            const channel = requireName("--channel", required(v["channel"], "pull: --channel is required"));
+            const hostVersion = required(v["host-version"], "pull: --host-version is required");
+            if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
+            const out = required(v["out"], "pull: --out is required; it is replaced as a whole");
+            const result = await pull({ url: resolveUrl(v["url"] as string | undefined), app: await appId(v), channel, pkg: config.name, hostVersion, publicKey: config.publicKey, out });
+            process.stderr.write(`${config.name} ${channel} -> ${result.version}, ${result.files.length} files in ${out}\n`);
+            process.stdout.write(`${result.version}\n`);
             return 0;
         },
     },
