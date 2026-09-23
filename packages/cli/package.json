@@ -33,7 +33,8 @@
   "dependencies": {
     "esbuild": "0.28.2",
     "magic-string": "1.4.1",
-    "oxc-parser": "0.150.0"
+    "oxc-parser": "0.150.0",
+    "qjsc-kmp": "0.1.2"
   },
   "devDependencies": {
     "tinyui-core": "workspace:*",

@@ -21,7 +21,7 @@ export interface BuildOptions {
     root: string;
     /** Output directory; defaults to `<root>/dist`. */
     out?: string;
-    /** Path to `qjsc-kmp`; falls back to `TINYUI_QJSC` and then `PATH`. */
+    /** Path to `qjsc-kmp`; falls back to `TINYUI_QJSC`, the `qjsc-kmp` npm package, then `PATH`. */
     qjsc?: string;
     /** Emit only the ESM sources and skip bytecode; for debugging the transform without an engine build. */
     jsOnly?: boolean;
@@ -74,7 +74,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
 
     const qjsc = options.jsOnly ? undefined : await findQjsc(options.qjsc);
     if (!options.jsOnly && !qjsc) {
-        throw new Error("qjsc-kmp not found: pass --qjsc, set TINYUI_QJSC, or put it on PATH (or use --js-only)");
+        throw new Error("qjsc-kmp not found: the qjsc-kmp npm package has no binary for this machine or was installed without optional dependencies; pass --qjsc, set TINYUI_QJSC, or put it on PATH (or use --js-only)");
     }
 
     // stale outputs would otherwise be packaged along with the current pages

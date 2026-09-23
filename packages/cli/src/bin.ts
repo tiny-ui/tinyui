@@ -30,7 +30,7 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
 build      compile the pages of the package described by <root>/tinyui.config.json
   --root     project root (default: cwd)
   --out      output directory (default: <root>/dist)
-  --qjsc     path to qjsc-kmp (default: $TINYUI_QJSC, then PATH)
+  --qjsc     path to qjsc-kmp (default: $TINYUI_QJSC, then the qjsc-kmp npm package, then PATH)
   --js-only  emit ESM sources and source maps only, skip bytecode
   --version  package version to record (default: <createdAt>-<git sha>)
 
