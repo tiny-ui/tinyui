@@ -7,9 +7,11 @@ plugins {
     alias(libs.plugins.binaryCompatibilityValidator)
 }
 
-// TinyUI.version: the published version, so a host snapshot names the tinyui it was built against
+// TinyUI.version: the tinyui-core version, which publish.yml requires to equal the tag; a composite
+// build in a host thus reports the same version as the Maven artifact, so host snapshots agree
 val generateVersion by tasks.registering {
-    val version = providers.gradleProperty("VERSION_NAME")
+    val coreManifest = rootProject.layout.projectDirectory.file("packages/core/package.json")
+    val version = providers.fileContents(coreManifest).asText.map { Regex("\"version\":\\s*\"([^\"]+)\"").find(it)!!.groupValues[1] }
     val out = layout.buildDirectory.dir("generated/tinyui-version")
     inputs.property("version", version)
     outputs.dir(out)
