@@ -201,6 +201,10 @@ describe("tinyui publish", () => {
             /fixture\/orders uses host component ta\.Badge/);
         await refuse("newer-tinyui", (m) => { m.tinyui = "0.4.0"; }, /built with tinyui 0\.4\.0, the host runs tinyui 0\.3\.0/);
         await refuse("old-manifest", (m) => { delete (m as Partial<typeof m>).requires; }, /rebuild it with a current tinyui-cli/);
+        // a page left out of requires would skip the check: every page needs a well-formed entry
+        await refuse("page-missing", (m) => { delete m.requires["fixture/orders"]; }, /no well-formed entry for page fixture\/orders/);
+        await refuse("array", (m) => { (m as { requires: unknown }).requires = []; }, /rebuild it with a current tinyui-cli/);
+        await refuse("malformed", (m) => { (m.requires["fixture/home"] as { capabilities: unknown }).capabilities = "billing.prices"; }, /no well-formed entry for page fixture\/home/);
         // nothing but the snapshot reads went out
         assert.ok(server.requests.slice(mark).every((r) => r.method === "GET" && r.path === "/apps/demo/hosts/1"));
     });

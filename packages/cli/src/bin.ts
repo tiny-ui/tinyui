@@ -9,6 +9,7 @@ import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, Upda
 import { loadConfig, requireName } from "./config.ts";
 import { generateKeyPair } from "./keys.ts";
 import { publish } from "./publish.ts";
+import { parseHostSnapshot } from "./snapshot.ts";
 import { generateKt, generateTs } from "./schema/generate.ts";
 import { loadSchema } from "./schema/load.ts";
 
@@ -216,7 +217,11 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const hostVersion = required(v["host-version"], "hosts upload: --host-version is required");
             if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
             const app = await appId(v);
-            const result = await uploadHostSnapshot(adminClient(v), app, hostVersion, await readFile(file));
+            const bytes = await readFile(file);
+            // the server keeps the first bytes for good, so a wrong file must fail here rather than freeze
+            const snapshot = parseHostSnapshot(new TextDecoder().decode(bytes));
+            if (snapshot.hostVersion !== hostVersion) throw new Error(`${file} says hostVersion ${snapshot.hostVersion}, not ${hostVersion}; a host version's snapshot can be uploaded only once`);
+            const result = await uploadHostSnapshot(adminClient(v), app, hostVersion, bytes);
             process.stderr.write(`${app} host version ${hostVersion}: ${result.existing ? "already uploaded with these bytes" : "snapshot uploaded"}\n`);
             process.stdout.write(`${result.sha256}\n`);
             return 0;

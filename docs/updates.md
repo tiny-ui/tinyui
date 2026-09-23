@@ -328,7 +328,7 @@ capabilities
   coupon.apply
 ```
 
-前两行固定；`components` 与 `capabilities` 两段，每项缩进两格、一行一项、按名排序。**每行第一个词是名字**，其后供人阅读、供宿主侧检查判断 schema 是否变了，CLI 核对只看名字。宿主组件只列带点的，内置组件随 `tinyui` 版本。
+前两行固定；`components` 与 `capabilities` 两段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）；每项缩进两格、一行一项、按名排序。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，其后供人阅读、供宿主侧检查判断 schema 是否变了，CLI 核对只看名字。宿主组件只列带点的，内置组件随 `tinyui` 版本。
 
 | 请求 | 凭据 | 语义 |
 |---|---|---|

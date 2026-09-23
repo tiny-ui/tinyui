@@ -80,8 +80,16 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
  */
 async function checkHost(client: UpdatesClient, app: string, manifest: LocalBundle["manifest"]): Promise<void> {
     const target = `host version ${manifest.hostVersion} of ${app}`;
-    if (typeof manifest.tinyui !== "string" || typeof manifest.requires !== "object" || manifest.requires === null) {
+    if (typeof manifest.tinyui !== "string" || typeof manifest.requires !== "object" || manifest.requires === null || Array.isArray(manifest.requires)) {
         throw new Error(`${manifest.name} ${manifest.version} was built without "tinyui" / "requires" in its manifest; rebuild it with a current tinyui-cli`);
+    }
+    // a page with no entry would skip the check entirely, so the map has to cover every page, well formed
+    const names = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === "string");
+    for (const page of manifest.pages) {
+        const needs = (manifest.requires as Record<string, unknown>)[page] as Partial<PageRequires> | undefined;
+        if (!needs || !names(needs.components) || !names(needs.capabilities)) {
+            throw new Error(`${manifest.name} ${manifest.version}: "requires" has no well-formed entry for page ${page}; rebuild it with a current tinyui-cli`);
+        }
     }
     const bytes = await readHostSnapshot(client, app, manifest.hostVersion).catch((e: unknown) => {
         if (e instanceof UpdatesError && e.status === 404) throw new Error(`${target} has no snapshot, so nothing says what it provides; the host's CI uploads it with tinyui hosts upload`);
