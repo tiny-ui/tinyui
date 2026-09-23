@@ -37,6 +37,7 @@ pages/**/*.bin
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个） |
 | `protocol` | `tinyui build` | 所含 `tinyui-core` 的 `PROTOCOL`，读自子路径导出 `tinyui-core/protocol`（只含常量，不在 Node 里执行运行时模块） |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.bin` 的 sha256 hex，键与 `files` 一致 |
+| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`bundle` 据此核对目标宿主版本（§1.3），客户端不读 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
 签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包的 manifest 没有 `hostVersion`，也没有指针文件——宿主知道自己的 hostVersion，内置包不参与灰度、不验签。

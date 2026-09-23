@@ -13,6 +13,8 @@ export type { KeyPair } from "./keys.ts";
 export { publish } from "./publish.ts";
 export type { PublishOptions, PublishResult } from "./publish.ts";
 export { compileModule, findQjsc } from "./qjsc.ts";
+export { analyzePage, RequiresError } from "./requires.ts";
+export type { PageRequires } from "./requires.ts";
 export type { CompileOptions } from "./qjsc.ts";
 export { transformJsx, TransformError } from "./transform.ts";
 export type { TransformResult } from "./transform.ts";
