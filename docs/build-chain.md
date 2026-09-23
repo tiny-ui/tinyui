@@ -86,6 +86,15 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | 本地联调 | `local.properties` 有 `quickjs-kmp.dir` 时，Gradle 把 `<dir>/library/build/native/host-tools/bin/qjsc-kmp` 经 `--qjsc` 传给 CLI，用的是本地源码编出的那份 |
 | 其他平台 | Windows 等没有预编译版的平台用 `--qjsc` / `TINYUI_QJSC` 指向自己编的那份 |
 
+### 5.1 页面对宿主的使用必须能静态识别
+
+热下发发布前要核对"这个包用到的宿主能力与宿主组件，目标宿主版本都提供"（updates.md §1.3），所以 `tinyui build` 必须能从页面代码里找全这些名字，两条硬规则，违反即构建失败：
+
+- **`host.call` 的第一个参数是字符串字面量**：`host.call("billing.prices")` 可以，`host.call(`analytics.${kind}`)` 或把名字放进变量都不行，要改写成若干个明确的字面量调用。`host` 也只能以 `host.call(…)` 的形式使用，不能赋给别的变量或传出去
+- **宿主组件的类型能静态解析**：以 `<ta.Icon>` 这类标签使用（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以，来自函数参数、运行时计算的类型不行
+
+内置组件不受限（随 tinyui 版本走，发布前核对版本相等即可）。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
+
 ## 6. 各处职责
 
 | 位置 | 改动 |
