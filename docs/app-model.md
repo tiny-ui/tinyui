@@ -1,6 +1,6 @@
 # 应用模型：页面是 JS 的世界，应用是 Kotlin 的世界
 
-- 状态：已对齐（2026-09-16；2026-09-19 加多包：路由键含包名、§7 跨包约定）；API 面（`tinyui-native` 的 `navigation` / `store` / `events`）归 roadmap C 组与 J2 白名单一起定
+- 状态：已对齐（2026-09-16；2026-09-19 加多包：路由键含包名、§7 跨包约定；2026-09-23 宿主层面的页面标识加 `tinyui:` 前缀，M6 拍板第 7 点）；API 面（`tinyui-native` 的 `navigation` / `store` / `events`）归 roadmap C 组与 J2 白名单一起定
 - 来源：ADR-002 "跨页共享状态走 Kotlin（K5 推送）"、"多页共享引擎被否：JS 全局正是隔离问题的来源"、`navigation.push` 为 J4；ADR-003 "组件注册表 App 级、不可变"
 
 ## 1. 前提
@@ -11,7 +11,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 
 | 事务 | 归属 | 机制 |
 |---|---|---|
-| 路由 | Kotlin 导航栈 | 页面名 = 模块名 = 路由键，含包名（`subscription/detail`，[build-chain.md](./build-chain.md) §2），跨包跳转与包内跳转写法相同。JS `navigation.push(name, params)` 经 J4 → Kotlin 建页面作用域 → K0 加载 → K1 `__mount(props)`，params 即 props。返回 = pop = `__unmount` = 关引擎。深链由宿主解析成页面名 + 参数走同一条 push |
+| 路由 | Kotlin 导航栈 | 页面名 = 模块名 = 路由键，含包名（`subscription/detail`，[build-chain.md](./build-chain.md) §2），跨包跳转与包内跳转写法相同。JS `navigation.push(name, params)` 经 J4 → Kotlin 建页面作用域 → K0 加载 → K1 `__mount(props)`，params 即 props。返回 = pop = `__unmount` = 关引擎。深链由宿主解析成页面名 + 参数走同一条 push。宿主自己的命名空间里（深链、埋点页面名、日志）标识一个 TinyUI 页写 `tinyui:<路由键>`（`tinyui:trendingai/subscription`，与页面里 `import.meta.url` 同形），和原生页区分开；`navigation.push`、路由表与 manifest 里的键仍不带前缀 |
 | 应用生命周期 | 宿主事件 | 前后台、内存警告、主题、语言、登录态经 K5 `__emit(topic)` 投给每个订阅了的活页面；栈顶页额外收 K1 `__visible`。页面只有挂载、卸载、可见性三个钩子 |
 | 跨页状态 | Kotlin 内存 store | 见第 3 节 |
 | 应用级 JS 逻辑 | Kotlin，或无状态工具代码打进各页模块 | 常驻 JS 的出口是"应用级服务 Runtime"：一个不挂 UI、随 App 生命周期的引擎，页面经 Kotlin 以 JSON 与它通信，形态同 J3 / K3。v1 不做，触发条件见 roadmap D 组 |

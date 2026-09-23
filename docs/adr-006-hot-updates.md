@@ -1,6 +1,6 @@
 # ADR-006 · 热下发：整包原子、宿主 hostVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1）；实现待开
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点）；实现进度见 updates-plan.md
 - 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的完整产物，整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `hostVersion`，引擎 commit 与 patch 协议号只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 指针换回上一个好包；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
 - 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
 - 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则
@@ -175,7 +175,7 @@ App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的
 
 ### 4.2 首批租户
 
-TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各自一个 `app` id、自己 bump 的 `hostVersion`；TrendingAI 一个包（`subscription`），第二个 App 按业务线分包，每个包自己的密钥对与 token。宿主后端不需要任何改动，只配 base URL。发布由各包 JS 工程的 CI 完成：`tinyui bundle --signing-key` → `tinyui publish`。内置包与下发包来自同一次 build，`version` 一致（TrendingAI：`pnpm sync` 提交进 App 的那份）。TrendingAI 现有页面模块名从 `pages/…` 改为 `subscription/…`，随 M6 一起改。
+TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各自一个 `app` id、自己 bump 的 `hostVersion`；TrendingAI 一个包（`trendingai`，页面 `trendingai/subscription`），第二个 App 按业务线分包，每个包自己的密钥对与 token。宿主后端不需要任何改动，只配 base URL。发布由各包 JS 工程的 CI 完成：`tinyui bundle --signing-key` → `tinyui publish`。内置包是发 App 时用 `tinyui pull` 取的 `production` 当前那一版（updates.md §1.4），与线上是同一个 `version`：回滚到 App 自带的那版即回到内置（updates.md §4.3）。TrendingAI 的页面模块名已从 `pages/…` 改为 `trendingai/…`（M6）。
 
 ### 4.3 推迟项（记 roadmap D 组）
 
