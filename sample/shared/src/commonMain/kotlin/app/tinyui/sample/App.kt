@@ -34,22 +34,10 @@ import app.tinyui.HostServices
 import app.tinyui.HttpClient
 import app.tinyui.HttpRequest
 import app.tinyui.HttpResponse
-import app.tinyui.PageError
-import app.tinyui.PageSink
 import app.tinyui.TinyUI
-import app.tinyui.components.registerBuiltins
 import app.tinyui.sample.res.Res
-import app.tinyui.schema.ComponentRegistry
 import app.tinyui.updates.Updates
 import app.tinyui.updates.UpdatesPage
-
-/** App-level, built once (docs/adr-003 §3.3). */
-private val registry = ComponentRegistry().registerBuiltins()
-
-private val sink = object : PageSink {
-    override fun error(error: PageError) = println("TinyUI $error")
-    override fun log(line: String) = println("TinyUI $line")
-}
 
 /** Stands in for a backend: three pages of todos, 300 ms each. */
 private object FakeTodos : HttpClient {
@@ -86,7 +74,7 @@ fun App(updatesDir: Path) {
             val bundles = packages.map { embedded(it) }
             // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
             TinyUI.debug = !bundles.first().page("sample/todos").sourceMaps.isEmpty
-            Updates(bundles, hostVersion = "1", dir = updatesDir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
+            Updates(bundles, hostVersion = HOST_VERSION, dir = updatesDir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
                 println("TinyUI updates $it")
             }
         }
@@ -102,7 +90,7 @@ fun App(updatesDir: Path) {
                     for (p in pages) TextButton(onClick = { page = p }) { Text(p.substringBefore('/')) }
                 }
                 val u = updates
-                if (u == null) Text("loading…", Modifier.padding(16.dp)) else UpdatesPage(u, page, registry, sink, services, modifier = Modifier.fillMaxSize())
+                if (u == null) Text("loading…", Modifier.padding(16.dp)) else UpdatesPage(u, page, tinyUIHost, services, modifier = Modifier.fillMaxSize())
             }
         }
     }

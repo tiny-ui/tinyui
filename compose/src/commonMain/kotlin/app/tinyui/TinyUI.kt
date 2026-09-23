@@ -3,6 +3,9 @@ package app.tinyui
 import wang.harlon.quickjs.QuickJs
 
 object TinyUI {
+    /** This library's version, as published (`0.0.0-local` in a source build). */
+    val version: String get() = VERSION
+
     /** Version of the quickjs-kmp SDK this build links against. */
     val engineVersion: String get() = QuickJs.sdkVersion
 

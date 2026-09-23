@@ -24,47 +24,57 @@ sealed interface SizeValue {
 sealed class PropSpec(val kind: String, val required: Boolean, val initial: Boolean) {
     /** Typed default; `null` when the schema has none. */
     abstract val default: Any?
+    /** The default as schema/ declared it, for the host snapshot. */
+    internal abstract val declared: Any?
     abstract fun convert(value: JsonPrimitive): Any?
 
     class Str(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("string", required, initial) {
         override val default: String? = default
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content
     }
 
     class Num(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("number", required, initial) {
         override val default: Double? = default
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull
     }
 
     class Bool(default: Boolean?, required: Boolean = false, initial: Boolean = false) : PropSpec("boolean", required, initial) {
         override val default: Boolean? = default
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.booleanOrNull
     }
 
     class Dp(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("dp", required, initial) {
         override val default: androidx.compose.ui.unit.Dp? = default?.dp
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull?.dp
     }
 
     class Sp(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("sp", required, initial) {
         override val default: TextUnit? = default?.sp
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull?.sp
     }
 
     /** `#RRGGBB` / `#AARRGGBB`, or a theme token name (Theme.kt). */
     class ColorSpec(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("color", required, initial) {
         override val default: ColorValue? = default?.let(::parseColorValue)
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let(::parseColorValue)
     }
 
     /** Stored as the enum name; the composable maps it. */
     class Enum(val values: Set<String>, default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("enum", required, initial) {
         override val default: String? = default
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.takeIf { it in values }
     }
 
     class Size(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("size", required, initial) {
         override val default: SizeValue? = default?.let(::parseSize)
+        override val declared: Any? = default
         override fun convert(value: JsonPrimitive): Any? =
             if (value.isString) parseSize(value.content) else value.doubleOrNull?.let { SizeValue.Fixed(it.dp) }
 

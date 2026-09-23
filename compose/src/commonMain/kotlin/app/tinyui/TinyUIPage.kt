@@ -14,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import app.tinyui.schema.ComponentRegistry
 
 /**
  * Renders one TinyUI page; the host owns navigation and passes the page's bytecode (docs/app-model.md).
@@ -24,8 +23,7 @@ import app.tinyui.schema.ComponentRegistry
 fun TinyUIPage(
     runtime: RuntimeBundle,
     page: PageModule,
-    registry: ComponentRegistry,
-    sink: PageSink,
+    host: TinyUIHost,
     services: HostServices = HostServices.Default,
     propsJson: String = "{}",
     modifier: Modifier = Modifier,
@@ -33,20 +31,20 @@ fun TinyUIPage(
     error: @Composable (PageFailure) -> Unit = { PageFailureScreen(it) },
     onHost: (PageHost) -> Unit = {},
 ) {
-    val host = remember(runtime, page, registry, sink, services, propsJson, sourceMaps) {
-        PageHost(runtime, page, registry, sink, services, propsJson, sourceMaps = sourceMaps)
+    val pageHost = remember(runtime, page, host, services, propsJson, sourceMaps) {
+        PageHost(runtime, page, host, services, propsJson, sourceMaps = sourceMaps)
     }
-    DisposableEffect(host) {
-        onHost(host)
-        host.start()
-        onDispose { host.close() }
+    DisposableEffect(pageHost) {
+        onHost(pageHost)
+        pageHost.start()
+        onDispose { pageHost.close() }
     }
     Box(modifier) {
-        val failure = host.failure
+        val failure = pageHost.failure
         if (failure != null) {
             error(failure)
         } else {
-            for (child in host.tree.root.children) key(child.id) { host.Render(child) }
+            for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
         }
     }
 }

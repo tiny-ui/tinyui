@@ -7,12 +7,27 @@ plugins {
     alias(libs.plugins.binaryCompatibilityValidator)
 }
 
+// TinyUI.version: the published version, so a host snapshot names the tinyui it was built against
+val generateVersion by tasks.registering {
+    val version = providers.gradleProperty("VERSION_NAME")
+    val out = layout.buildDirectory.dir("generated/tinyui-version")
+    inputs.property("version", version)
+    outputs.dir(out)
+    doLast {
+        out.get().file("app/tinyui/Version.kt").asFile.apply { parentFile.mkdirs() }
+            .writeText("package app.tinyui\n\ninternal const val VERSION = \"${version.get()}\"\n")
+    }
+}
+
 kotlin {
     android {
         namespace = "app.tinyui"
     }
 
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generateVersion)
+        }
         commonMain.dependencies {
             api(libs.quickjs.kmp)
             implementation(compose.runtime)

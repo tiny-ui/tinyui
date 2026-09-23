@@ -82,14 +82,16 @@ class PageFailure(val error: PageError) {
 class PageHost(
     private val runtimeBundle: RuntimeBundle,
     private val page: PageModule,
-    val registry: ComponentRegistry,
-    private val sink: PageSink,
+    val host: TinyUIHost,
     private val services: HostServices = HostServices.Default,
     private val propsJson: String = "{}",
     /** K entries longer than this are interrupted and fail the page (docs/native-api.md §6). */
     private val entryTimeoutMs: Long = 5_000,
     private val sourceMaps: SourceMaps = SourceMaps.EMPTY,
 ) {
+    private val registry: ComponentRegistry get() = host.components
+    private val sink: PageSink get() = host.sink
+    private val context by lazy { PageContext(page.name, services.locals.associate { it.local to it.value }) }
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set
@@ -129,7 +131,7 @@ class PageHost(
                     check(protocol == PROTOCOL) { "protocol $protocol from the runtime module, host implements $PROTOCOL" }
                     namespace.use { ns ->
                         (ns.get("default", ObjectTransport.REF) as JsRef).use { default ->
-                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(FrameworkCapabilities + services.capabilities.keys)))
+                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(FrameworkCapabilities + host.capabilities.names)))
                         }
                     }
                     e.call("flush")
@@ -264,9 +266,9 @@ class PageHost(
                 val response = services.http.request(request)
                 buildJsonObject { put("status", response.status); put("body", Json.parseToJsonElement(response.bodyJson)) }.toString()
             }
-            else -> when (val capability = services.capabilities[name]) {
+            else -> when (val capability = host.capabilities[name]) {
                 null -> scope.launch { reject(cbId, "E_UNSUPPORTED", "$name is not available") }
-                else -> settle(cbId) { capability.call(argsJson) ?: "" }
+                else -> settle(cbId) { capability.call(argsJson, context) ?: "" }
             }
         }
     }

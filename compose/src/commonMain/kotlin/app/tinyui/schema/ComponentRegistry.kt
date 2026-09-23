@@ -16,17 +16,23 @@ class ComponentRegistry {
     private class Entry(val schema: ComponentSchema, val component: Component)
 
     private val entries = LinkedHashMap<String, Entry>()
+    private var frozen = false
 
     init {
         register(ComponentSchema(PLACEHOLDER, emptyMap(), emptyMap(), emptyMap(), children = false, layout = true)) { Placeholder(it) }
     }
 
     fun register(schema: ComponentSchema, component: Component) {
+        check(!frozen) { "component ${schema.type} registered after the registry went into a TinyUIHost" }
         require(schema.type !in entries) { "component ${schema.type} already registered" }
         entries[schema.type] = Entry(schema, component)
     }
 
     fun schema(type: String): ComponentSchema? = entries[type]?.schema
+
+    internal fun freeze() { frozen = true }
+
+    internal val schemas: List<ComponentSchema> get() = entries.values.map { it.schema }.filter { it.type != PLACEHOLDER }
 
     @Composable
     fun Render(type: String, scope: NodeScope) {

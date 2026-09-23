@@ -64,15 +64,16 @@ class PageHostTest {
             override suspend fun request(request: HttpRequest): HttpResponse =
                 if (request.url == "/todos") HttpResponse(200, """[{"id":1}]""") else throw HostException("E_HTTP", "404")
         },
-        capabilities = mapOf(
-            "checkout.start" to HostCapability { args ->
-                if (args.contains("annual")) """{"url":"https://pay"}""" else throw HostException("E_INVALID", "no such plan")
-            },
-        ),
+        locals = listOf(Merchant provides "acme"),
     )
+    private val tinyui = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, CapabilityRegistry().apply {
+        register("checkout.start") { args, page ->
+            if (args.contains("annual")) """{"url":"https://pay/${page[Merchant]}/${page.name}"}""" else throw HostException("E_INVALID", "no such plan")
+        }
+    })
 
     private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY) =
-        PageHost(RuntimeBundle(core, native), page, ComponentRegistry().registerBuiltins(), sink, services, props, sourceMaps = maps)
+        PageHost(RuntimeBundle(core, native), page, tinyui, services, props, sourceMaps = maps)
 
     // runTest's virtual time never advances the real engine thread: wait on a real dispatcher
     private suspend fun PageHost.await(check: () -> Boolean) =
@@ -178,7 +179,7 @@ class PageHostTest {
         host.dispatch(2, "onCapability", "{}")
         host.await { text()?.count { it == ';' } == 2 }
         assertEquals(
-            """ok 11 {"url":"https://pay"};rejected 12 {"code":"E_INVALID","message":"no such plan"};rejected 13 {"code":"E_UNSUPPORTED","message":"nobody.home is not available"}""",
+            """ok 11 {"url":"https://pay/acme/pages/counter"};rejected 12 {"code":"E_INVALID","message":"no such plan"};rejected 13 {"code":"E_UNSUPPORTED","message":"nobody.home is not available"}""",
             text(),
         )
         host.dispatch(2, "onSubscribe", "{}")
@@ -211,7 +212,7 @@ class PageHostTest {
     @Test
     fun protocolMismatchIsE6() = runTest {
         val badCore = module("tinyui-core", "globalThis.__tinyui = { protocol: 99 }; export const VERSION = 'x';")
-        val host = PageHost(RuntimeBundle(badCore, native), page, ComponentRegistry().registerBuiltins(), sink)
+        val host = PageHost(RuntimeBundle(badCore, native), page, tinyui)
         host.start()
         host.await { host.failure != null }
         assertEquals("E6", host.failure!!.kind)
@@ -222,3 +223,5 @@ class PageHostTest {
     private fun module(name: String, source: String): ByteArray =
         JsBytecode.compile(source.trimIndent(), name, module = true, strip = JsBytecode.Strip.SOURCE)
 }
+
+private val Merchant = PageLocal<String>()

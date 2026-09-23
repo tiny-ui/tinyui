@@ -49,7 +49,7 @@ class BundleSmokeTest {
                 if (request.url.endsWith("page=1")) HttpResponse(200, """{"items":[{"id":1,"title":"a","done":false}],"next":2}""")
                 else throw HostException("E_HTTP", "500")
         }
-        val host = PageHost(loaded.runtime, loaded.module, ComponentRegistry().registerBuiltins(), sink, HostServices(http = http), sourceMaps = loaded.sourceMaps)
+        val host = PageHost(loaded.runtime, loaded.module, TinyUIHost(ComponentRegistry().registerBuiltins(), sink), HostServices(http = http), sourceMaps = loaded.sourceMaps)
         host.start()
         try {
             // the list only exists once the first page has loaded; node ids are dense, so scan them

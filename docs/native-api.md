@@ -2,7 +2,7 @@
 
 - 状态：已定（2026-09-16）；M2 的实现依据
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、事件）、ADR-004 §3.1（连续事件阈值）
-- 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 的 `HostServices` 是宿主 App 实现的接口组，交给 `TinyUIPage`
+- 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 侧宿主给页面的东西分两层：App 级的 `TinyUIHost`（组件注册表、能力注册表、`PageSink`，启动时建一次）与每次挂载的 `HostServices`（本节以下各接口），都交给 `TinyUIPage`
 
 ## 1. J2 白名单
 
@@ -87,7 +87,26 @@ J3 `http.request`，参数 `{ method, url, headers?, body?, timeout? }`；宿主
 const { url } = await host.call<{ url: string }>("checkout.start", { plan: "annual" });
 ```
 
-J3，一个名字一个能力，Kotlin 侧 `HostServices(capabilities = mapOf("checkout.start" to HostCapability { argsJson -> … }))`：suspend，收 JS 传的对象（JSON 文本），返回 JSON 文本（`null` 即 `undefined`）；抛 `HostException` 走 E3 码，其他异常按 `E_NET`。没注册的名字拒绝 `E_UNSUPPORTED`。名字不强制前缀，但不能与框架自己的十个名字（§1–§5）重合，重合在构造 `HostServices` 时就报错。挂载清单的 `capabilities` 列出框架名 + 宿主名，页面可据此判断宿主是否提供某能力。
+J3，一个名字一个能力。能力在 App 级注册一次，与组件同属宿主契约（2026-09-23 定，M6：契约要能在不跑 App 的情况下枚举出来生成宿主快照，updates.md §4.1）：
+
+```kotlin
+val Snackbar = PageLocal<SnackbarHostState>()
+
+val host = TinyUIHost(components, sink, CapabilityRegistry().apply {
+    register("checkout.start") { argsJson, page -> … }
+    register("ui.snackbar") { argsJson, page ->
+        val snackbar = page[Snackbar] ?: throw HostException("E_UNSUPPORTED", "no snackbar on ${page.name}")
+        …
+    }
+})
+
+TinyUIPage(runtime, module, host, HostServices(locals = listOf(Snackbar provides snackbarHostState)))
+```
+
+- `HostCapability.call(argsJson, page)`：suspend，收 JS 传的对象（JSON 文本），返回 JSON 文本（`null` 即 `undefined`）；抛 `HostException` 走 E3 码，其他异常按 `E_NET`。没注册的名字拒绝 `E_UNSUPPORTED`
+- 能力只依赖 App 级对象；依赖某一屏的东西（snackbar、当前屏的 ViewModel）由挂载方经 `HostServices.locals` 以 `PageLocal` 为键传入，能力从 `page[local]` 取，没有就自己决定报什么码。同一名字按屏给不同行为，也在实现里看 `page` 分派
+- 注册表启动时建好即不可变，放进 `TinyUIHost` 后再 `register`（组件同样）直接报错：不能在运行中增删能力（登录后才开放之类，在实现里判断后拒绝）。名字不强制前缀，但不能与框架自己的十个名字（§1–§5）重合，不能含空白，也不能重复注册，都在 `register` 时报错
+- 挂载清单的 `capabilities` 列出框架名 + 注册表里的全部名字，页面可据此判断宿主是否提供某能力
 
 不做 J4（火后不理）变体：不等 Promise 就是火后不理，省不下什么。能力的类型声明由宿主 JS 工程自己写一层封装（`ta.checkout.start(plan)`），框架不生成。
 
