@@ -135,5 +135,6 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | M5 CLI 发布与管理 | 已完成（2026-09-22）：`publish`（发现 bundle 目录、并发上传、指针最后）、`apps` / `packages`（含 `rotate-key`）/ `tokens` / `releases` 四组命令；凭据只走环境变量，`--app` / `--channel` / `--pkg` 按名字规则校验；CLI 侧契约测试 15 条，另对本地 `wrangler dev` 起的真服务端跑通发布 / 幂等重发 / 晋级 / 改灰度 / 回滚 / 跨 channel 被拒 / 吊销即时生效 |
 | M5.1 改名 `hostVersion` | 已完成（2026-09-23，tinyui PR #17、tinyui-updates-server PR #2，服务端已部署）：manifest 字段、Kotlin API、CLI `--host-version`、服务端路由与校验、文档全部改名；CLI、`Updates` 构造、服务端路径与 manifest 五处限定正整数；共用签名夹具换钥重签，Android host 与 iOS 模拟器两端验签通过 |
 | M5.2 `qjsc-kmp` 平台包 | 已完成（2026-09-23，quickjs-kmp PR #13 与 0.1.2、tinyui PR #18）：入口包 `qjsc-kmp` + `@qjsc-kmp/{darwin-arm64,darwin-x64,linux-x64,linux-arm64}`，Linux 为 musl 全静态；首版本地发布，之后随 quickjs-kmp 的 tag 经 OIDC 发布；`tinyui-cli` 依赖它并由测试钉住与 `quickjsKmp` 同版本，CI 不再现编 `qjsc-kmp` |
-| M6 TrendingAI 接入 | 拍板完成（2026-09-23），待发 tinyui 0.3.0 |
+| tinyui 0.3.0 | 已发（2026-09-23）：npm `tinyui-core` / `tinyui-native` / `tinyui-cli`，Maven `app.tinyui:tinyui` 与首发的 `app.tinyui:tinyui-updates`；`tinyui-cli` 带 `qjsc-kmp@0.1.2` |
+| M6 TrendingAI 接入 | 拍板完成（2026-09-23），前置已齐；开工前先补"JS 侧如何绑定目标 `hostVersion`"的拍板点 |
 | M7 第二个 App | 待开 |
