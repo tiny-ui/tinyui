@@ -115,6 +115,8 @@ describe("host requirements of a page", () => {
         rejects(`${CORE}${TA}for (ta.Icon in { x: 1 }) {}\n${render}`, /cannot tell which component this is/);
         rejects(`${CORE}${TA}delete (ta.Icon);\n${render}`, /cannot tell which component this is/);
         rejects(`${CORE}${TA}(ta.Icon) = "ta.New";\n${render}`, /cannot tell which component this is/);
+        const setter = `${CORE}var ta = { Icon: "ta.Icon", set() { this.Icon = "ta.New"; } };\n`;
+        for (const call of ["(ta.set)();", "((ta.set))();", "new (ta.set)();"]) rejects(`${setter}${call}\n${render}`, /cannot tell which component this is/);
         assert.deepEqual(analyzePage("shop/home", `${CORE}${TA}function P() { return h((ta.Icon), null); }\n`).components, ["ta.Icon"]);
         // reads in every position a page plausibly uses keep the object trusted
         const reads = `const pick = (on) => on ? ta.Icon : ta.Loading;\nconst label = \`\${ta.Icon}\`;\nconst all = [ta.Icon, { k: ta.Loading }];\n`;
