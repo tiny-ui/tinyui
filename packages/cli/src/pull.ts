@@ -91,6 +91,7 @@ export async function pull(options: PullOptions): Promise<PullResult> {
         await rm(staging, { recursive: true, force: true });
         throw e;
     }
-    await rm(backup, { recursive: true, force: true });
+    // the new package is in place; a backup that will not go away is litter, not a failure
+    await rm(backup, { recursive: true, force: true }).catch(() => {});
     return { version, files: [...files.keys()].sort() };
 }
