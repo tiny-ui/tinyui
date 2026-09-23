@@ -138,5 +138,5 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | M5.1 改名 `hostVersion` | 已完成（2026-09-23，tinyui PR #17、tinyui-updates-server PR #2，服务端已部署）：manifest 字段、Kotlin API、CLI `--host-version`、服务端路由与校验、文档全部改名；CLI、`Updates` 构造、服务端路径与 manifest 五处限定正整数；共用签名夹具换钥重签，Android host 与 iOS 模拟器两端验签通过 |
 | M5.2 `qjsc-kmp` 平台包 | 已完成（2026-09-23，quickjs-kmp PR #13 与 0.1.2、tinyui PR #18）：入口包 `qjsc-kmp` + `@qjsc-kmp/{darwin-arm64,darwin-x64,linux-x64,linux-arm64}`，Linux 为 musl 全静态；首版本地发布，之后随 quickjs-kmp 的 tag 经 OIDC 发布；`tinyui-cli` 依赖它并由测试钉住与 `quickjsKmp` 同版本，CI 不再现编 `qjsc-kmp` |
 | tinyui 0.3.0 | 已发（2026-09-23）：npm `tinyui-core` / `tinyui-native` / `tinyui-cli`，Maven `app.tinyui:tinyui` 与首发的 `app.tinyui:tinyui-updates`；`tinyui-cli` 带 `qjsc-kmp@0.1.2` |
-| M6 TrendingAI 接入 | 拍板完成（2026-09-23，八点），前置已齐，待开 |
+| M6 TrendingAI 接入 | 进行中：拍板八点（2026-09-23）；`tinyui build` 写 `requires` 已完成（PR #19，TrendingAI 订阅页实测 5 个能力、2 个宿主组件）；下一步服务端快照端点与宿主 CI 凭据，再做 `bundle` 核对 |
 | M7 第二个 App | 待开 |
