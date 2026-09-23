@@ -155,6 +155,7 @@ class Updates(
 
 - 当前 `hostVersion` 的快照文件不存在，或与 `render` 结果不同 → 失败，提示加 `hostVersion`
 - 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果。这等于人声明"这个版本还没随发版带出去"；本地不判断版本是否已发，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4），发版 CI 在那里失败
+- 快照文件在 `.gitattributes` 里固定 `eol=lf`：上传的是原始字节，CRLF 的副本会被当成另一份快照而得 409
 - `hostVersion` 在宿主里只写一处常量，`Updates(hostVersion = …)` 与这个测试都读它
 
 测试只构造 `TinyUIHost`、不执行任何能力与组件，所以能在 JVM 上跑；能力实现需要的仓库类对象在测试里传假的即可。
@@ -339,7 +340,7 @@ capabilities
 前两行固定；`components` 与 `capabilities` 两段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）；每项缩进两格、一行一项、按名排序，名字补空格对齐。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，CLI 核对只看名字；其后是给人看、也给宿主侧检查判断 schema 变没变的完整 schema，改哪一处都会让快照不同：
 
 - 各段以 `; ` 分隔，依次为 props、`events …`、`commands …`、`children`、`layout`，没有的段省略
-- prop 按名排序，`名字: 类型`；可选的名字后加 `?`，有默认值加 ` = 默认值`，只在创建时读的加 ` (initial)`；枚举写 `enum(a|b)`，取值排序
+- prop 按名排序，`名字: 类型`；可选的名字后加 `?`，有默认值加 ` = 默认值`（`string` 的默认值写成 JSON 字符串，带引号与转义，免得换行或 `;` 弄乱一行一项），只在创建时读的加 ` (initial)`；枚举写 `enum(a|b)`，取值排序
 - 事件与命令按名排序，参数写在括号里，参数按名排序，类型为 `string` / `number` / `boolean`
 
 宿主组件只列带点的，内置组件随 `tinyui` 版本。

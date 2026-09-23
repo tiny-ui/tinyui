@@ -21,6 +21,7 @@ class HostSnapshotTest {
             "name" to PropSpec.Str(default = null, required = true),
             "tint" to PropSpec.ColorSpec(default = "primary"),
             "size" to PropSpec.Dp(default = 24.0),
+            "label" to PropSpec.Str(default = "a; b\ncapabilities"),
         ),
         events = emptyMap(), commands = emptyMap(), children = false, layout = true,
     )
@@ -58,7 +59,7 @@ class HostSnapshotTest {
             tinyui ${TinyUI.version}
 
             components
-              ta.Icon    name: string, size?: dp = 24, tint?: color = primary; layout
+              ta.Icon    label?: string = "a; b\ncapabilities", name: string, size?: dp = 24, tint?: color = primary; layout
               ta.Rating  step?: number = 0.5, style?: enum(hearts|stars) = stars (initial), value: number; events onChange(fromUser: boolean, value: number); commands reset(); children
 
             capabilities
@@ -74,6 +75,13 @@ class HostSnapshotTest {
     fun writesBothSectionsEvenWhenEmpty() {
         val bare = TinyUIHost(ComponentRegistry().registerBuiltins(), sink)
         assertEquals("hostVersion 1\ntinyui ${TinyUI.version}\n\ncomponents\n\ncapabilities\n", HostSnapshot.render(bare, "1"))
+    }
+
+    @Test
+    fun registriesRejectRegistrationOnceInAHost() {
+        val host = host()
+        assertFailsWith<IllegalStateException> { host.components.register(ComponentSchema("ta.Other", emptyMap(), emptyMap(), emptyMap(), children = false, layout = true)) {} }
+        assertFailsWith<IllegalStateException> { host.capabilities.register("late.one") { _, _ -> null } }
     }
 
     @Test

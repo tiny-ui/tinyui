@@ -3,6 +3,7 @@ package app.tinyui
 import app.tinyui.schema.ComponentSchema
 import app.tinyui.schema.FieldSpec
 import app.tinyui.schema.PropSpec
+import kotlinx.serialization.json.JsonPrimitive
 
 /** The host snapshot `tinyui-host/<hostVersion>.txt` (docs/updates.md §4.1, format §6.4). */
 object HostSnapshot {
@@ -38,7 +39,7 @@ object HostSnapshot {
         append(name)
         if (!spec.required) append('?')
         append(": ").append(if (spec is PropSpec.Enum) spec.values.sorted().joinToString("|", "enum(", ")") else spec.kind)
-        spec.declared?.let { append(" = ").append(literal(it)) }
+        spec.declared?.let { append(" = ").append(if (spec is PropSpec.Str) JsonPrimitive(it as String).toString() else literal(it)) }
         if (spec.initial) append(" (initial)")
     }
 
