@@ -7,17 +7,33 @@ const execFileAsync = promisify(execFile);
 
 const EXECUTABLE = process.platform === "win32" ? "qjsc-kmp.exe" : "qjsc-kmp";
 
-/** Locates the quickjs-kmp host compiler: explicit path, then `TINYUI_QJSC`, then `PATH`. */
+/**
+ * Locates the quickjs-kmp host compiler: explicit path, then `TINYUI_QJSC`, then the prebuilt binary of the
+ * `qjsc-kmp` npm package, then `PATH`.
+ */
 export async function findQjsc(explicit?: string): Promise<string | undefined> {
     const candidates = [explicit, process.env["TINYUI_QJSC"]].filter((p): p is string => !!p);
     for (const p of candidates) {
         if (await isExecutable(p)) return p;
         throw new Error(`qjsc-kmp not found at ${p}`);
     }
+    const prebuilt = await prebuiltQjsc();
+    if (prebuilt) return prebuilt;
     for (const dir of (process.env["PATH"] ?? "").split(delimiter)) {
         if (dir && (await isExecutable(join(dir, EXECUTABLE)))) return join(dir, EXECUTABLE);
     }
     return undefined;
+}
+
+/** The binary `qjsc-kmp` installed for this machine; none on a platform it has no build for, or with optional dependencies omitted. */
+async function prebuiltQjsc(): Promise<string | undefined> {
+    try {
+        const { binaryPath } = await import("qjsc-kmp");
+        const path = binaryPath();
+        return (await isExecutable(path)) ? path : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 export interface CompileOptions {

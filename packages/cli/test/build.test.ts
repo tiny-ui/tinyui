@@ -7,6 +7,8 @@ import { build, type BuildResult } from "../src/build.ts";
 import { findQjsc } from "../src/qjsc.ts";
 
 const root = join(import.meta.dirname, "fixtures", "app");
+// CI always has the npm prebuilt, so a missing compiler there is a failure, not a skip
+const qjscFound = await findQjsc();
 
 describe("tinyui build", () => {
     let out: string;
@@ -158,7 +160,7 @@ describe("tinyui build", () => {
         }
     });
 
-    it("compiles every module to bytecode when qjsc-kmp is available", { skip: !process.env["TINYUI_QJSC"] && "TINYUI_QJSC not set" }, async () => {
+    it("compiles every module to bytecode when qjsc-kmp is available", { skip: !qjscFound && !process.env["CI"] && "qjsc-kmp not found" }, async () => {
         for (const m of [...result.runtime, ...result.pages]) {
             assert.ok(m.bin, `${m.name} has bytecode`);
             const bytes = await readFile(m.bin!);

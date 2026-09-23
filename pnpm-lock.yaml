@@ -23,6 +23,9 @@ importers:
       oxc-parser:
         specifier: 0.150.0
         version: 0.150.0
+      qjsc-kmp:
+        specifier: 0.1.2
+        version: 0.1.2
     devDependencies:
       '@types/node':
         specifier: latest
@@ -356,6 +359,26 @@ packages:
   '@oxc-project/types@0.150.0':
     resolution: {integrity: sha512-rDS5/31E9HfPl/CIzGrn0DOlvBbXFseQ5URJ9sYMfstbKLD/c6Gm9vmRzRGDdAXyOIL4zmO37lc9RIwYqVruZw==}
 
+  '@qjsc-kmp/darwin-arm64@0.1.2':
+    resolution: {integrity: sha512-WWl+kN3GGl3mvHZl7vWfyfskEwrsZoQ3FOgKTb1KHDx4aGuv6/Qd0y38JYNgG9nQuTPT/wBXROY2HOYaLlD5HQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@qjsc-kmp/darwin-x64@0.1.2':
+    resolution: {integrity: sha512-Dw2WBaYPgbD5N7yCz8iSEpLoMlfPddnmwH6EzQItHsmBXnmf4pAO6MYfvfOwQ5wYbypjyvPT9vXOUh61mVE5Rg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@qjsc-kmp/linux-arm64@0.1.2':
+    resolution: {integrity: sha512-2qHMVnAR0psnok/5/QnAXVqgpvk8g3H71uIxIx7IGtKd9DIUB7b4UuF92nAPpoW6l5bOtiOeN6oHcuKAafopFg==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@qjsc-kmp/linux-x64@0.1.2':
+    resolution: {integrity: sha512-vs9ITUQccN4R39O3KaPKszElXpxYg4Ts+WFqvBWbI127lh5gLGvy3QdG3tSvnIA4aYbJTl7Tv52WE4Pt/Ivi7A==}
+    cpu: [x64]
+    os: [linux]
+
   '@types/node@22.20.3':
     resolution: {integrity: sha512-DZmzkmwHzXrLPAXPyKNDzlIwMMUZCVacoD25ywdy5YTKGbOx/2ld+Q38Im2zJ0vBuZP5Prd3VZutKZyXwkOS8A==}
 
@@ -490,6 +513,11 @@ packages:
   oxc-parser@0.150.0:
     resolution: {integrity: sha512-zwajKw1GUa57IOdafIS7/yOObGF2NihwIfZfs5yJTRprMSkiwhWOc/k+n8bwnUPbHr2/XsjfBO8KyTPaW3VpWg==}
     engines: {node: ^20.19.0 || >=22.12.0}
+
+  qjsc-kmp@0.1.2:
+    resolution: {integrity: sha512-JDx7fslSos8pHww+/GAst8yqhwhxu3ThUYsn+3xq9P9Nf8JobeSJJsiBoHMBoKSLFmVxwcI/6r+NA84LLn5kQg==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   typescript@7.0.2:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
@@ -640,6 +668,18 @@ snapshots:
 
   '@oxc-project/types@0.150.0': {}
 
+  '@qjsc-kmp/darwin-arm64@0.1.2':
+    optional: true
+
+  '@qjsc-kmp/darwin-x64@0.1.2':
+    optional: true
+
+  '@qjsc-kmp/linux-arm64@0.1.2':
+    optional: true
+
+  '@qjsc-kmp/linux-x64@0.1.2':
+    optional: true
+
   '@types/node@22.20.3':
     dependencies:
       undici-types: 6.21.0
@@ -760,6 +800,13 @@ snapshots:
       '@oxc-parser/binding-win32-arm64-msvc': 0.150.0
       '@oxc-parser/binding-win32-ia32-msvc': 0.150.0
       '@oxc-parser/binding-win32-x64-msvc': 0.150.0
+
+  qjsc-kmp@0.1.2:
+    optionalDependencies:
+      '@qjsc-kmp/darwin-arm64': 0.1.2
+      '@qjsc-kmp/darwin-x64': 0.1.2
+      '@qjsc-kmp/linux-arm64': 0.1.2
+      '@qjsc-kmp/linux-x64': 0.1.2
 
   typescript@7.0.2:
     optionalDependencies:
