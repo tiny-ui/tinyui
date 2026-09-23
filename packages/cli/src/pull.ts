@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { isPathSegment } from "./bundle.ts";
 import { requireSecureUrl, segments } from "./client.ts";
@@ -70,16 +70,27 @@ export async function pull(options: PullOptions): Promise<PullResult> {
     }
     files.set("manifest.json", manifestBytes);
 
-    // assembled beside the target and swapped in, so a failed write never leaves half a package
+    // assembled beside the target and swapped in: a failure at any step leaves the previous package in place
     const out = resolve(options.out);
-    const staging = `${out}.pulling`;
-    await rm(staging, { recursive: true, force: true });
-    for (const [path, bytes] of files) {
-        await mkdir(dirname(join(staging, path)), { recursive: true });
-        await writeFile(join(staging, path), bytes);
-    }
-    await rm(out, { recursive: true, force: true });
     await mkdir(dirname(out), { recursive: true });
-    await rename(staging, out);
+    const staging = await mkdtemp(`${out}.pulling-`);
+    const backup = `${staging}.previous`;
+    let moved = false;
+    try {
+        for (const [path, bytes] of files) {
+            await mkdir(dirname(join(staging, path)), { recursive: true });
+            await writeFile(join(staging, path), bytes);
+        }
+        moved = await rename(out, backup).then(() => true, (e: NodeJS.ErrnoException) => {
+            if (e.code === "ENOENT") return false;
+            throw e;
+        });
+        await rename(staging, out);
+    } catch (e) {
+        if (moved) await rename(backup, out).catch(() => {});
+        await rm(staging, { recursive: true, force: true });
+        throw e;
+    }
+    await rm(backup, { recursive: true, force: true });
     return { version, files: [...files.keys()].sort() };
 }

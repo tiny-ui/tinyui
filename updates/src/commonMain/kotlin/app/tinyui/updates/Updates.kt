@@ -256,13 +256,15 @@ class Updates internal constructor(
         /** The pointer targets no newer than embedded: embedded is what should run, from the next start (docs/updates.md §4.3). */
         private fun revertToEmbedded(version: String): CheckResult {
             val drop = installed ?: return CheckResult.UpToDate(version)
+            installed = null
             try {
-                installed = null
                 saveState()
-                fs.deleteRecursively(root / INSTALLED / drop)
             } catch (e: IOException) {
+                installed = drop
                 return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
             }
+            // state.json no longer names it: a leftover directory is swept at the next start
+            runCatching { fs.deleteRecursively(root / INSTALLED / drop) }
             return CheckResult.Reverted(version)
         }
 
