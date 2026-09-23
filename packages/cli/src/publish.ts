@@ -2,7 +2,10 @@ import { readFile, readdir, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
 import { isHostVersion, isPathSegment, type Pointer } from "./bundle.ts";
-import { segments, type UpdatesClient, type UploadResult } from "./client.ts";
+import { readHostSnapshot } from "./admin.ts";
+import { segments, UpdatesError, type UpdatesClient, type UploadResult } from "./client.ts";
+import type { PageRequires } from "./requires.ts";
+import { parseHostSnapshot } from "./snapshot.ts";
 
 export interface PublishOptions {
     client: UpdatesClient;
@@ -46,6 +49,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     const pkg = manifest.name;
     const hostVersion = manifest.hostVersion;
     const version = manifest.version;
+    await checkHost(client, app, local.manifest);
     const prefix = segments(app, pkg, hostVersion, version);
 
     const files = [...new Set(Object.values(manifest.files).map((path) => `${path}.bin`)), "manifest.json"];
@@ -68,6 +72,40 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
         existing: results.filter((r) => r.existing).length,
         pointer: written,
     };
+}
+
+/**
+ * Refuses a package the target host version cannot run: a page using a capability or host component the host does
+ * not provide, or built-ins of another tinyui. Such a page does not crash, so no rollback would catch it (docs/updates.md §1.3).
+ */
+async function checkHost(client: UpdatesClient, app: string, manifest: LocalBundle["manifest"]): Promise<void> {
+    const target = `host version ${manifest.hostVersion} of ${app}`;
+    if (typeof manifest.tinyui !== "string" || typeof manifest.requires !== "object" || manifest.requires === null || Array.isArray(manifest.requires)) {
+        throw new Error(`${manifest.name} ${manifest.version} was built without "tinyui" / "requires" in its manifest; rebuild it with a current tinyui-cli`);
+    }
+    // a page with no entry would skip the check entirely, so the map has to cover every page, well formed
+    const names = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === "string");
+    for (const page of manifest.pages) {
+        const needs = (manifest.requires as Record<string, unknown>)[page] as Partial<PageRequires> | undefined;
+        if (!needs || !names(needs.components) || !names(needs.capabilities)) {
+            throw new Error(`${manifest.name} ${manifest.version}: "requires" has no well-formed entry for page ${page}; rebuild it with a current tinyui-cli`);
+        }
+    }
+    const bytes = await readHostSnapshot(client, app, manifest.hostVersion).catch((e: unknown) => {
+        if (e instanceof UpdatesError && e.status === 404) throw new Error(`${target} has no snapshot, so nothing says what it provides; the host's CI uploads it with tinyui hosts upload`);
+        throw e;
+    });
+    const host = parseHostSnapshot(new TextDecoder().decode(bytes));
+    if (host.hostVersion !== manifest.hostVersion) throw new Error(`the snapshot stored for ${target} says hostVersion ${host.hostVersion}`);
+    const problems: string[] = [];
+    if (host.tinyui !== manifest.tinyui) problems.push(`  built with tinyui ${manifest.tinyui}, the host runs tinyui ${host.tinyui}`);
+    for (const [page, needs] of Object.entries(manifest.requires as Record<string, PageRequires>).sort(([a], [b]) => (a < b ? -1 : 1))) {
+        const components = needs.components.filter((c) => !host.components.has(c));
+        const capabilities = needs.capabilities.filter((c) => !host.capabilities.has(c));
+        if (components.length) problems.push(`  ${page} uses host component${components.length > 1 ? "s" : ""} ${components.join(", ")}`);
+        if (capabilities.length) problems.push(`  ${page} calls ${capabilities.join(", ")}`);
+    }
+    if (problems.length) throw new Error(`${manifest.name} ${manifest.version} cannot go to ${target}, which does not provide what it uses:\n${problems.join("\n")}`);
 }
 
 /** `<dir>` is either the `<pkg>/<hostVersion>` directory itself or the root `tinyui bundle --out` wrote it under. */

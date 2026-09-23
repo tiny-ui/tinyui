@@ -58,9 +58,19 @@ export class UpdatesClient {
     }
 
     /** One file of a version. A Uint8Array body sets content-length, which the server's size check reads. */
+    /** Raw bytes back, for documents such as host snapshots that are compared byte for byte. */
+    async bytes(path: string): Promise<Uint8Array> {
+        const response = await this.#send("GET", path, undefined, undefined);
+        return new Uint8Array(await response.arrayBuffer());
+    }
+
     async upload(path: string, bytes: Uint8Array): Promise<UploadResult> {
+        return this.putBytes<UploadResult>(path, bytes);
+    }
+
+    async putBytes<T>(path: string, bytes: Uint8Array): Promise<T> {
         const response = await this.#send("PUT", path, bytes, "application/octet-stream");
-        return (await response.json()) as UploadResult;
+        return (await response.json()) as T;
     }
 
     async #send(method: string, path: string, body: string | Uint8Array | undefined, contentType: string | undefined): Promise<Response> {

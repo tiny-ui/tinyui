@@ -27,6 +27,8 @@ describe("host requirements of a page", () => {
     it("finds them in a real build and writes them into the manifest per page", async () => {
         const result = await build({ root: fixture, out: join(out, "dist"), jsOnly: true });
         const manifest = JSON.parse(await readFile(result.manifest, "utf8")) as Manifest;
+        const core = JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")) as { version: string };
+        assert.equal(manifest.tinyui, core.version, "the tinyui-core the runtime modules came from");
         assert.deepEqual(manifest.requires, {
             "shop/plain": { components: [], capabilities: [] },
             // ta.Badge through the local PlanCard, ta.Loading through a hand-written h() choosing between two;

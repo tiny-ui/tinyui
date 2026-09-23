@@ -25,6 +25,20 @@ export interface IssuedToken {
     createdAt: string;
 }
 
+/** An app token: the whole management of one app (docs/updates.md §6); readable only once, like publish tokens. */
+export interface IssuedAppToken {
+    id: string;
+    token: string;
+    createdAt: string;
+}
+
+/** A host snapshot upload: written once per (app, hostVersion) (docs/updates.md §6.4). */
+export interface HostSnapshotResult {
+    hostVersion: string;
+    sha256: string;
+    existing: boolean;
+}
+
 export interface Releases {
     versions: { version: string; createdAt: string; publishedAt?: string }[];
     channels: Record<string, { version: string; rollout: number }>;
@@ -48,6 +62,22 @@ export function createToken(client: UpdatesClient, app: string, pkg: string, cha
 
 export function revokeToken(client: UpdatesClient, app: string, pkg: string, tokenId: string): Promise<void> {
     return client.empty("DELETE", segments("apps", app, "packages", pkg, "tokens", tokenId));
+}
+
+export function createAppToken(client: UpdatesClient, app: string): Promise<IssuedAppToken> {
+    return client.json<IssuedAppToken>("POST", segments("apps", app, "tokens"));
+}
+
+export function revokeAppToken(client: UpdatesClient, app: string, tokenId: string): Promise<void> {
+    return client.empty("DELETE", segments("apps", app, "tokens", tokenId));
+}
+
+export function uploadHostSnapshot(client: UpdatesClient, app: string, hostVersion: string, snapshot: Uint8Array): Promise<HostSnapshotResult> {
+    return client.putBytes<HostSnapshotResult>(segments("apps", app, "hosts", hostVersion), snapshot);
+}
+
+export function readHostSnapshot(client: UpdatesClient, app: string, hostVersion: string): Promise<Uint8Array> {
+    return client.bytes(segments("apps", app, "hosts", hostVersion));
 }
 
 export function listReleases(client: UpdatesClient, app: string, pkg: string, hostVersion: string): Promise<Releases> {

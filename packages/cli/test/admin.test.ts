@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { createApp, createPackage, createToken, listReleases, movePointer, revokeToken, rotatePublicKey } from "../src/admin.ts";
+import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "../src/admin.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, requireToken, resolveUrl, segments, TOKEN_ENV, UpdatesClient, URL_ENV } from "../src/client.ts";
 import { requireName } from "../src/config.ts";
 import { startFakeServer, type FakeServer } from "./helpers.ts";
@@ -62,6 +62,24 @@ describe("management commands", () => {
 
         await movePointer(client, { ...target, channel: "staging" }, { rollout: 50 });
         assert.deepEqual(last().body, { rollout: 50 });
+    });
+
+    it("issues and revokes app tokens, and uploads a host snapshot once", async () => {
+        const issued = await createAppToken(client, "demo");
+        assert.equal(issued.token, "app-token-shown-once");
+        assert.deepEqual(last(), { method: "POST", path: "/apps/demo/tokens", auth: "Bearer admin-token", body: null });
+        await revokeAppToken(client, "demo", "app_1");
+        assert.equal(last().method, "DELETE");
+        assert.equal(last().path, "/apps/demo/tokens/app_1");
+
+        const snapshot = new TextEncoder().encode("hostVersion 2\ncapabilities\n  checkout.start\n");
+        const first = await uploadHostSnapshot(client, "demo", "2", snapshot);
+        assert.equal(first.existing, false);
+        const request = server.requests.at(-1)!;
+        assert.equal(request.path, "/apps/demo/hosts/2");
+        assert.deepEqual(new Uint8Array(request.body), snapshot);
+        assert.equal((await uploadHostSnapshot(client, "demo", "2", snapshot)).existing, true);
+        await assert.rejects(uploadHostSnapshot(client, "demo", "2", new TextEncoder().encode("other")), /409 a shipped host version is frozen/);
     });
 
     it("encodes each segment and holds names to the rule the server enforces", () => {

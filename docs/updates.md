@@ -37,7 +37,8 @@ pages/**/*.bin
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个） |
 | `protocol` | `tinyui build` | 所含 `tinyui-core` 的 `PROTOCOL`，读自子路径导出 `tinyui-core/protocol`（只含常量，不在 Node 里执行运行时模块） |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.bin` 的 sha256 hex，键与 `files` 一致 |
-| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`bundle` 据此核对目标宿主版本（§1.3），客户端不读 |
+| `tinyui` | `tinyui build` | 运行时模块取自的 `tinyui-core` 版本，决定页面能用哪些内置组件；`publish` 核对它等于目标宿主的 tinyui 版本（§1.3），客户端不读 |
+| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
 签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包的 manifest 没有 `hostVersion`，也没有指针文件——宿主知道自己的 hostVersion，内置包不参与灰度、不验签。
@@ -65,16 +66,16 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 
 `--host-version` 是发布方手填的。填成一个仍有设备在用的旧值（例：main 已为宿主版本 3 用上新能力 `coupon.apply`，却以 `--host-version 2` 发出一个修文案的包），旧宿主会照常装上，页面调用它没有的能力只得到 `E_UNSUPPORTED`、用到它没有的组件只渲染占位——都不崩溃，§4.5 的回退接不住。宿主侧的构建检查（§4.1）只管宿主漏 bump，管不到发布方填错。
 
-所以 `bundle` 在签名前核对：**这个包用到的宿主东西，目标宿主版本都提供**。
+所以 `tinyui publish` 在上传前核对：**这个包用到的宿主东西，目标宿主版本都提供**。放在 `publish` 而不是 `bundle`：`bundle` 是纯离线命令（签名、写目录，静态托管就用它的产物），`publish` 本来就带着 app、实例地址与 token 在和服务端说话，快照也在服务端上；静态托管没有快照，也就没有这层核对。
 
 | 输入 | 来源 |
 |---|---|
 | 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities }`）：`host.call` 的能力名、带点的宿主组件名（`ta.Icon`）；内置组件不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
-| 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、tinyui 版本）。宿主发 App 版本时由其 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次，与已随发版冻结的快照一致；`bundle` 从服务端读 |
+| 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、tinyui 版本）。宿主发 App 版本时由其 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次，与已随发版冻结的快照一致；`publish` 从服务端读 |
 
-不通过即拒绝出包，报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或打包用的 `tinyui-cli` 版本不等于快照里的 tinyui 版本（新版 tinyui 的内置组件，旧宿主没有）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
+不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或 manifest 的 `tinyui` 不等于快照里的 tinyui 版本（新版 tinyui 的内置组件，旧宿主没有）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
 
-核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `bundle` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
+核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `publish` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
 
 ## 2. 投递协议
 
@@ -146,7 +147,7 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
-**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。宿主给页面的东西变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；升级 tinyui。只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `bundle` 发布前核对（§1.3）。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。宿主给页面的东西变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；升级 tinyui。只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 版本）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已随发版带出去的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
@@ -312,12 +313,27 @@ CLI：`tinyui apps create` / `tinyui apps tokens create|revoke` / `tinyui packag
 
 ### 6.4 宿主快照
 
-宿主快照（§1.3、§4.1）是 `tinyui-host/<hostVersion>.txt` 的原始字节：该宿主版本提供的宿主组件、能力名与 tinyui 版本。宿主发 App 版本时由其 CI 上传，`bundle` 发布前读取核对。
+宿主快照（§1.3、§4.1）是 `tinyui-host/<hostVersion>.txt` 的原始字节：该宿主版本提供的宿主组件、能力名与 tinyui 版本。宿主发 App 版本时由其 CI 上传，`publish` 发布前读取核对。格式是宿主侧生成工具与 CLI 之间的契约：
+
+```
+hostVersion 2
+tinyui 0.3.0
+
+components
+  ta.Icon     name: string, tint?: color, size?: dp
+  ta.Loading  color?: color, size?: dp
+
+capabilities
+  checkout.start
+  coupon.apply
+```
+
+前两行固定；`components` 与 `capabilities` 两段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）；每项缩进两格、一行一项、按名排序。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，其后供人阅读、供宿主侧检查判断 schema 是否变了，CLI 核对只看名字。宿主组件只列带点的，内置组件随 `tinyui` 版本。
 
 | 请求 | 凭据 | 语义 |
 |---|---|---|
 | `PUT /apps/<app>/hosts/<hostVersion>`，body 为快照字节 | `ADMIN_TOKEN` 或本 app 的 app token | 每个 (app, hostVersion) 只写一次：同字节重传返回已存在，不同字节 → 409——已随发版带出的宿主版本，其快照冻结 |
-| `GET /apps/<app>/hosts/<hostVersion>` | 以上两种，或本 app 任一包的发布 token | 原字节；没上传过 → 404，`bundle` 据此拒绝出包 |
+| `GET /apps/<app>/hosts/<hostVersion>` | 以上两种，或本 app 任一包的发布 token | 原字节；没上传过 → 404，`publish` 据此拒绝发布 |
 
 CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 CI 用）。
 
