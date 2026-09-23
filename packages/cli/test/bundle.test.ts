@@ -150,7 +150,7 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: chinese, hostVersion: "1", signingKey }), /every segment must match \[A-Za-z0-9\._-\]\+ to survive the delivery URL/);
     });
 
-    it("bundles a real build end to end", { skip: !qjsc && "qjsc-kmp not found" }, async () => {
+    it("bundles a real build end to end", { skip: !qjsc && !process.env["CI"] && "qjsc-kmp not found" }, async () => {
         const root = join(tmp, "app");
         await cp(join(fixtures, "app"), root, { recursive: true });
         await writeFile(join(root, "tinyui.config.json"), JSON.stringify(config));
