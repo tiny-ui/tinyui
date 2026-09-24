@@ -154,7 +154,7 @@ class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceM
 
 ```kotlin
 class Updates(
-    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名、engine 与宿主引擎不符 → 构造抛错
+    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine / protocol 与宿主不符 → 发 EmbeddedIncompatible 后照常构造（§4.4）
     val hostVersion: String,
     dir: Path,                                   // 宿主给的目录，如 Android filesDir/tinyui、iOS Application Support/tinyui；库内按 <dir>/<pkg>/ 分
     installId: String,                           // 稳定的安装标识；库不生成、不持久化、不上传

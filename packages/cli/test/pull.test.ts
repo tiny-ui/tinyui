@@ -72,6 +72,7 @@ describe("tinyui pull", () => {
 
         await publish("20260924T090000Z-5c4d3e", "2026-09-24T09:00:00Z", pair, 50);
         assert.deepEqual(await pull(into(out)), { version: NEW, changed: false, reason: "production is at 20260924T090000Z-5c4d3e rolling out to 50%" });
+        await assert.rejects(pull(into(join(tmp, "empty"), { pkg: "fixture", acceptKey: pair.publicKey })), /a first pull needs a fully rolled out version/);
 
         await publish("20260921T090000Z-000000", "2026-09-21T09:00:00Z");
         assert.equal((await pull(into(out))).changed, false, "an older version never replaces the floor");
