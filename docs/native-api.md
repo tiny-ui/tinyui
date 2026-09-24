@@ -100,7 +100,7 @@ val host = TinyUIHost(components, sink, CapabilityRegistry().apply {
     }
 })
 
-TinyUIPage(runtime, module, host, HostServices(locals = listOf(Snackbar provides snackbarHostState)))
+TinyUIPage(module, host, HostServices(locals = listOf(Snackbar provides snackbarHostState)))
 ```
 
 - `HostCapability.call(argsJson, page)`：suspend，收 JS 传的对象（JSON 文本），返回 JSON 文本（`null` 即 `undefined`）；抛 `HostException` 走 E3 码，其他异常按 `E_NET`。没注册的名字拒绝 `E_UNSUPPORTED`

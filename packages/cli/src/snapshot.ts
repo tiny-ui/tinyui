@@ -1,6 +1,7 @@
 /** A host snapshot as `tinyui-host/<hostVersion>.txt` holds it (docs/updates.md §6.4). */
 export interface HostSnapshot {
     hostVersion: string;
+    /** The oldest tinyui a host of this version runs; later hosts of the same version may run newer ones (docs/updates.md §6.4). */
     tinyui: string;
     components: Set<string>;
     capabilities: Set<string>;

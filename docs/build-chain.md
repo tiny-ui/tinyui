@@ -14,7 +14,7 @@
 
 ```
 src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-kmp -m -n <pkg>/home──▶ dist/pages/home.bin
-tinyui-core 包入口 ──esbuild──▶ runtime/core.js ──qjsc-kmp -m -n tinyui-core──▶ runtime/core.bin   （库构建时，随库发布）
+tinyui-core 包入口 ──esbuild──▶ runtime/core.js ──qjsc-kmp -m -n tinyui-core──▶ runtime/core.bin   （`pnpm runtime` 生成 compose 的 RuntimeBytecode.kt，随库发布）
 tinyui-native 同上（对它而言 tinyui-core 是 external）
 ```
 
@@ -116,7 +116,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 **回映射在哪做**：dev 构建把 `.js.map` 一起打进 App，Kotlin 侧 `SourceMaps` 按模块名惰性解析（source map v3 的 VLQ，约百行，无依赖），只解析栈里出现的行；release 不进包，sink 拿到原始栈 + `buildId`，离线对 map（Sentry / Crashlytics 的做法）。否掉 JS 侧运行时映射：字节码与内存都涨，出错时还要跑 JS。
 
-**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`（运行时模块的 buildId 与 map 随库，ADR-006 §2.11），`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
+**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`（运行时模块不进包，栈帧按 tinyui 版本对回，ADR-006 §2.11），`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
 
 **map 的路径**：thunk pass 的内联 map 以绝对路径作 `source`（相对路径会被 esbuild 再按文件目录解析一次，出现 `src/pages/src/pages/` 的重复，2026-09-17 修），esbuild 输出后 CLI 把 `sources` 改写为相对项目根（`src/pages/todos.tsx`、`../../packages/core/src/host.ts`），运行时与离线符号化都以此显示。
 

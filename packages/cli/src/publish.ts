@@ -6,6 +6,7 @@ import { readHostSnapshot } from "./admin.ts";
 import { segments, UpdatesError, type UpdatesClient, type UploadResult } from "./client.ts";
 import type { PageRequires } from "./requires.ts";
 import { parseHostSnapshot } from "./snapshot.ts";
+import { isCompatible } from "./version.ts";
 
 export interface PublishOptions {
     client: UpdatesClient;
@@ -76,7 +77,8 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
 
 /**
  * Refuses a package the target host version cannot run: a page using a capability or host component the host does
- * not provide, or built-ins of another tinyui. Such a page does not crash, so no rollback would catch it (docs/updates.md §1.3).
+ * not provide, or a runtime newer than the oldest host of that version has. Such a page does not crash, so no rollback
+ * would catch it (docs/updates.md §1.3).
  */
 async function checkHost(client: UpdatesClient, app: string, manifest: LocalBundle["manifest"]): Promise<void> {
     const target = `host version ${manifest.hostVersion} of ${app}`;
@@ -98,7 +100,9 @@ async function checkHost(client: UpdatesClient, app: string, manifest: LocalBund
     const host = parseHostSnapshot(new TextDecoder().decode(bytes));
     if (host.hostVersion !== manifest.hostVersion) throw new Error(`the snapshot stored for ${target} says hostVersion ${host.hostVersion}`);
     const problems: string[] = [];
-    if (host.tinyui !== manifest.tinyui) problems.push(`  built with tinyui ${manifest.tinyui}, the host runs tinyui ${host.tinyui}`);
+    if (!isCompatible(host.tinyui, manifest.tinyui)) {
+        problems.push(`  built with tinyui ${manifest.tinyui}, which does not run on tinyui ${host.tinyui}, the oldest this host version has (same major, not newer)`);
+    }
     for (const [page, needs] of Object.entries(manifest.requires as Record<string, PageRequires>).sort(([a], [b]) => (a < b ? -1 : 1))) {
         const components = needs.components.filter((c) => !host.components.has(c));
         const capabilities = needs.capabilities.filter((c) => !host.capabilities.has(c));

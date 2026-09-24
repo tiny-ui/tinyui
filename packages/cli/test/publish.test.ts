@@ -13,7 +13,7 @@ import { fakeDist, startFakeServer, type FakeServer } from "./helpers.ts";
 const pair = generateKeyPair();
 const VERSION = "20260922T090000Z-3f2a1c";
 const HOST_1 = "hostVersion 1\ntinyui 0.3.0\n\ncomponents\n  ta.Icon  name: string\n\ncapabilities\n  billing.prices\n";
-const FILES = ["runtime/core.bin", "runtime/native.bin", "pages/home.bin", "pages/orders.bin", "manifest.json"];
+const FILES = ["pages/home.bin", "pages/orders.bin", "manifest.json"];
 
 describe("tinyui publish", () => {
     let tmp: string;
@@ -199,7 +199,7 @@ describe("tinyui publish", () => {
             /cannot go to host version 1 of demo[\s\S]*fixture\/home calls coupon\.apply/);
         await refuse("badge", (m) => { m.requires["fixture/orders"]!.components.push("ta.Badge"); },
             /fixture\/orders uses host component ta\.Badge/);
-        await refuse("newer-tinyui", (m) => { m.tinyui = "0.4.0"; }, /built with tinyui 0\.4\.0, the host runs tinyui 0\.3\.0/);
+        await refuse("newer-tinyui", (m) => { m.tinyui = "0.4.0"; }, /built with tinyui 0\.4\.0, which does not run on tinyui 0\.3\.0, the oldest this host version has/);
         await refuse("old-manifest", (m) => { delete (m as Partial<typeof m>).requires; }, /rebuild it with a current tinyui-cli/);
         // a page left out of requires would skip the check: every page needs a well-formed entry
         await refuse("page-missing", (m) => { delete m.requires["fixture/orders"]; }, /no well-formed entry for page fixture\/orders/);

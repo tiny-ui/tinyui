@@ -43,17 +43,17 @@ class UpdatesTest {
         engine: String = Fixture.ENGINE,
         tinyui: String = Fixture.TINYUI,
         publicKey: String = Fixture.PUBLIC_KEY,
-        files: Map<String, String> = mapOf("runtime/core.bin" to "CORE-$version", "runtime/native.bin" to "NATIVE-$version", "pages/home.bin" to "HOME-$version"),
+        files: Map<String, String> = mapOf("pages/home.bin" to "HOME-$version"),
         hostVersion: String? = "1",
     ): String {
-        val modules = mapOf("tinyui-core" to "runtime/core", "tinyui-native" to "runtime/native", "$name/home" to "pages/home")
+        val modules = mapOf("$name/home" to "pages/home")
         val hashes = modules.entries.joinToString(",") { (m, p) -> "\"$m\":\"${files.getValue("$p.bin").encodeUtf8().sha256().hex()}\"" }
         val hostVersion = if (hostVersion == null) "" else ",\"hostVersion\":\"$hostVersion\""
-        return """{"runtime":["tinyui-core","tinyui-native"],"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","tinyui":"$tinyui","hashes":{$hashes}$hostVersion}"""
+        return """{"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","tinyui":"$tinyui","hashes":{$hashes}$hostVersion}"""
     }
 
     private fun embedded(name: String = "shop", version: String = "v0", createdAt: String = "2026-09-22T09:00:00Z"): Bundle {
-        val files = mapOf("runtime/core.bin" to "CORE-$version", "runtime/native.bin" to "NATIVE-$version", "pages/home.bin" to "HOME-$version")
+        val files = mapOf("pages/home.bin" to "HOME-$version")
         val json = manifest(name, version, createdAt, files = files, hostVersion = null)
         return Bundle(BuildManifest.parse(json)) { path -> files[path]?.encodeToByteArray() }
     }
@@ -64,7 +64,7 @@ class UpdatesTest {
         val version = pointerVersion ?: m.version
         server["$pkg/$hostVersion/current.json"] = """{"version":"$version","rollout":$rollout,"signature":"$signature"}""".encodeToByteArray()
         server["$pkg/$hostVersion/$version/manifest.json"] = manifestJson.encodeToByteArray()
-        val content = files ?: mapOf("runtime/core.bin" to "CORE-${m.version}", "runtime/native.bin" to "NATIVE-${m.version}", "pages/home.bin" to "HOME-${m.version}")
+        val content = files ?: mapOf("pages/home.bin" to "HOME-${m.version}")
         for ((path, bytes) in content) server["$pkg/$hostVersion/$version/$path"] = bytes.encodeToByteArray()
     }
 
@@ -137,7 +137,7 @@ class UpdatesTest {
         val u = updates(embedded())
         publish(manifest(name = "other"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME)), u.check("shop"))
-        publish(manifest(engine = "f".repeat(40), tinyui = "0.0.2", hostVersion = "2"))
+        publish(manifest(engine = "f".repeat(40), tinyui = "0.9.0", hostVersion = "2"))
         assertEquals(setOf(Mismatch.ENGINE, Mismatch.TINYUI, Mismatch.HOST_VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
         publish(manifest(version = "v9"), pointerVersion = "v1")
         assertEquals(setOf(Mismatch.VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
@@ -176,13 +176,23 @@ class UpdatesTest {
     }
 
     @Test
+    fun aPackageBuiltAgainstAnOlderTinyuiOfTheSameMajorInstallsANewerOrOtherMajorDoesNot() = runTest {
+        publish(manifest(tinyui = "0.4.0"))
+        assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
+        publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z", tinyui = "0.5.1"))
+        assertEquals(setOf(Mismatch.TINYUI), (updates(embedded()).check("shop") as CheckResult.Skipped).mismatch)
+        publish(manifest(version = "v3", createdAt = "2026-09-22T12:00:00Z", tinyui = "0.5.0"))
+        assertEquals(setOf(Mismatch.TINYUI), (updates(embedded(), tinyui = "1.0.0").check("shop") as CheckResult.Skipped).mismatch)
+    }
+
+    @Test
     fun aFileThatDoesNotMatchItsHashOrCannotBeFetchedLeavesNothingBehind() = runTest {
-        publish(manifest(), files = mapOf("runtime/core.bin" to "CORE-v1", "runtime/native.bin" to "NATIVE-v1", "pages/home.bin" to "tampered"))
+        publish(manifest(), files = mapOf("pages/home.bin" to "tampered"))
         val integrity = assertIs<CheckResult.Failed>(updates(embedded()).check("shop"))
         assertEquals(FailStage.INTEGRITY, integrity.stage)
         assertContains(integrity.message, "pages/home.bin")
-        server.remove("shop/1/v1/runtime/native.bin")
-        publish(manifest(), files = mapOf("runtime/core.bin" to "CORE-v1", "pages/home.bin" to "HOME-v1"))
+        server.remove("shop/1/v1/pages/home.bin")
+        publish(manifest(), files = emptyMap())
         val download = assertIs<CheckResult.Failed>(updates(embedded()).check("shop"))
         assertEquals(FailStage.DOWNLOAD, download.stage)
         assertFalse(fs.exists(dir / "shop/staging"))

@@ -8,7 +8,6 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /** `manifest.json` as `tinyui build` writes it (docs/updates.md §1.1): module names, output paths, package identity. */
 class BuildManifest(
-    val runtime: List<String>,
     val pages: List<String>,
     val files: Map<String, String>,
     val buildIds: Map<String, String>,
@@ -18,7 +17,7 @@ class BuildManifest(
     val createdAt: String,
     val engine: String,
     val hashes: Map<String, String>,
-    /** The tinyui-core version the runtime modules came from. */
+    /** The tinyui-core version the pages were built against: the oldest runtime they run on (docs/updates.md §1.1). */
     val tinyui: String = "",
     /** Page module name → the host things it uses (docs/updates.md §1.1). */
     val requires: Map<String, PageRequires> = emptyMap(),
@@ -27,7 +26,7 @@ class BuildManifest(
 ) {
     fun buildId(module: String): String = buildIds[module] ?: ""
 
-    /** Output path of [module] without extension (`runtime/core`, `pages/home`): append `.bin` or `.js.map`. */
+    /** Output path of [module] without extension (`pages/home`): append `.bin` or `.js.map`. */
     fun file(module: String): String = files[module] ?: module
 
     companion object {
@@ -42,7 +41,6 @@ class BuildManifest(
             val publicKey = string("publicKey")
             require(name.isNotEmpty() && publicKey.isNotEmpty()) { "manifest.json has no package identity (name / publicKey); rebuild with a current tinyui-cli" }
             return BuildManifest(
-                runtime = names("runtime"),
                 pages = names("pages"),
                 files = strings("files"),
                 buildIds = strings("buildIds"),

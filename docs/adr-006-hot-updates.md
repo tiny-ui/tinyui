@@ -165,7 +165,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 决定：
 
-- 包 = 页面字节码 + `manifest.json`。`tinyui-core` / `tinyui-native` 由库在构建时用与所链接引擎同一 commit 的 qjsc 编成字节码，以生成的 Kotlin 常量随库发布（core 库仍零 I/O、零文件依赖）；运行时的 source map 与 `buildId` 随库
+- 包 = 页面字节码 + `manifest.json`。`tinyui-core` / `tinyui-native` 由库在构建时用与所链接引擎同一 commit 的 qjsc 编成字节码，以生成的 Kotlin 常量随库发布（`pnpm runtime` 生成并入库，CI 用 `pnpm runtime:check` 核对未过期；core 库仍零 I/O、零文件依赖，构建不依赖 Node）。库不带运行时的 source map：运行时栈帧按 tinyui 版本对回，同一版本的运行时字节码是确定的
 - manifest 的 `tinyui` 仍记构建时的 `tinyui-core` 版本，含义改为"页面需要的最低运行时"。客户端（启动选包、下载前）与 `PackageCheck` 判两者**兼容：major 相同，且 `TinyUI.version >= manifest.tinyui`**（semver `^` 的语义）；K0 的版本核对删去。1.0 之前 0.x 之间按版本号全序比较，不允许破坏公开面，真要破坏即发 1.0
 - 升 major（公开面有破坏）：宿主升到新 major 时加 `hostVersion`、下限抬到新 major；旧 major 构建的包客户端判不兼容而拒收，回落到内置包（发版时已按新 major 构建）；JS 工程迁到新 major 后发布到新 `hostVersion`
 - 宿主快照的 `tinyui` 行改为该 `hostVersion` 的下限，即加 1 时的 tinyui 版本。宿主快照测试判"当前与下限兼容"（跨 major 即失败，逼加 `hostVersion`），单纯升 tinyui 快照不变；`publish` 判"下限与包的 `tinyui` 兼容"，拒绝"老宿主会静默跳过"的发布
@@ -196,7 +196,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 代价：运行时的 bug 只能随 App 修（0.4 → 0.6 运行时无功能改动，20 KB 且稳定）；库作者承担公开面的兼容；JS 工程的 `tinyui-cli` 不得高于目标 `hostVersion` 的下限，由 `publish` 报错指出。
 
-迁移：包格式不兼容（包内无 `runtime/`，manifest 去掉 `runtime` 字段），随 tinyui 0.7.0 一起落地，各宿主加 1 次 `hostVersion`，此前各 `hostVersion` 下已发布的包作废。TrendingAI 线上尚无带热下发的版本（1.9.0-beta.1 只含首次接入），无兼容负担。
+迁移：包格式不兼容（包内无 `runtime/`，manifest 去掉 `runtime` 字段，`tinyui-updates-server` 的 manifest 校验同步删去该字段，不留兼容），随 tinyui 0.7.0 一起落地，各宿主加 1 次 `hostVersion`，此前各 `hostVersion` 下已发布的包作废。TrendingAI 线上尚无带热下发的版本（1.9.0-beta.1 只含首次接入），无兼容负担。
 
 ## 3. 决策
 

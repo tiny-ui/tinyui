@@ -37,6 +37,7 @@ pnpm install                     # Node 22+，pnpm 10
 ./gradlew build                  # compose 库 + 测试（Android host / iOS simulator）+ sample APK + iOS framework；需要 JDK 25、Android SDK、Xcode
 pnpm build && pnpm test          # 三个 npm 包
 pnpm schema                      # 改了 schema/ 之后重新生成两侧代码
+pnpm runtime                     # 改了 packages/core、packages/native 或升了 quickjs-kmp 之后，重新生成库内置的运行时字节码
 ```
 
 sample 的 Gradle 构建会调 `tinyui build` 把 `sample/js` 编成字节码，`qjsc-kmp` 来自 `pnpm install` 装好的 npm 包；Android host 测试还需要宿主 JNI 库。两种来源：

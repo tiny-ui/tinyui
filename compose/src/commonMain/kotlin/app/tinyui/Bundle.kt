@@ -9,40 +9,30 @@ fun interface BundleFiles {
 }
 
 /** One page of a [Bundle], ready for [TinyUIPage]. */
-class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceMaps: SourceMaps, val bundle: Bundle)
+class LoadedPage(val module: PageModule, val sourceMaps: SourceMaps, val bundle: Bundle)
 
 /**
- * A package as `tinyui build` produced it (docs/updates.md §3): the runtime bytecode is read once and shared by
- * every page, a page's `.js.map` rides along when the files have it. The bundle never knows where the bytes live.
+ * A package as `tinyui build` produced it (docs/updates.md §3): page bytecode, and a page's `.js.map` when the files
+ * have it; the runtime comes with this library. The bundle never knows where the bytes live.
  */
 class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
     val name: String get() = manifest.name
 
     private val lock = Mutex()
-    private var runtime: RuntimeBundle? = null
     private val maps = HashMap<String, String?>()
 
     suspend fun page(name: String): LoadedPage {
         require(name in manifest.pages) { "page $name is not in package ${manifest.name}: ${manifest.pages}" }
-        val runtime = runtime()
         val bytecode = read(manifest.file(name) + ".bin")
         val module = PageModule(name, bytecode, manifest.buildId(name))
-        return LoadedPage(runtime, module, sourceMaps(manifest.runtime + name), this)
+        return LoadedPage(module, sourceMaps(name), this)
     }
 
-    private suspend fun runtime(): RuntimeBundle = lock.withLock {
-        runtime ?: RuntimeBundle(core = read(manifest.file("tinyui-core") + ".bin"), native = read(manifest.file("tinyui-native") + ".bin")).also { runtime = it }
-    }
-
-    private suspend fun sourceMaps(modules: List<String>): SourceMaps {
-        val found = HashMap<String, String>()
-        for (module in modules) {
-            val map = lock.withLock {
-                if (module in maps) maps[module] else files.read(manifest.file(module) + ".js.map")?.decodeToString().also { maps[module] = it }
-            }
-            if (map != null) found[module] = map
+    private suspend fun sourceMaps(module: String): SourceMaps {
+        val map = lock.withLock {
+            if (module in maps) maps[module] else files.read(manifest.file(module) + ".js.map")?.decodeToString().also { maps[module] = it }
         }
-        return if (found.isEmpty()) SourceMaps.EMPTY else SourceMaps(found)
+        return if (map == null) SourceMaps.EMPTY else SourceMaps(mapOf(module to map))
     }
 
     private suspend fun read(path: String): ByteArray =

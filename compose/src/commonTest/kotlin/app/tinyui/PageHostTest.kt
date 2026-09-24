@@ -26,7 +26,6 @@ class PageHostTest {
     private val core = module("tinyui-core", """
         let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
-            version: "$VERSION",
             mount(p, props, host) {
                 page = p; const name = JSON.parse(props).name ?? "world";
                 patches.push(["c",1,"Text"],["p",1,"text","hello " + name + " / " + Object.keys(JSON.parse(host).components).length],
@@ -130,15 +129,15 @@ class PageHostTest {
         val frame = e.frames.first()
         assertEquals("dispatch", frame.function)
         assertEquals("tinyui-core", frame.file, "engine frames name the module; stack=${e.jsStack}")
-        assertEquals(16, frame.line)
+        assertEquals(15, frame.line)
         assertNotNull(frame.column, "bytecode compiled with --strip-source keeps columns; stack=${e.jsStack}")
         host.close()
     }
 
     @Test
     fun framesAreMappedThroughTheModuleSourceMap() = runTest {
-        // generated line 16 → src/core.ts line 3 column 7: fifteen empty groups, then one segment [0, 0, 2, 6]
-        val map = SourceMaps(mapOf("tinyui-core" to """{"version":3,"sources":["src/core.ts"],"mappings":";;;;;;;;;;;;;;;AAEM"}"""))
+        // generated line 15 → src/core.ts line 3 column 7: fourteen empty groups, then one segment [0, 0, 2, 6]
+        val map = SourceMaps(mapOf("tinyui-core" to """{"version":3,"sources":["src/core.ts"],"mappings":";;;;;;;;;;;;;;AAEM"}"""))
         val host = host(maps = map)
         host.start()
         host.await { host.tree.root.children.isNotEmpty() }
@@ -206,18 +205,6 @@ class PageHostTest {
         assertEquals(true, "render exploded" in failure.message)
         assertEquals(true, failure.error.frames.any { it.function == "flush" && it.file == "tinyui-core" }, "stack=${failure.error.jsStack}")
         assertEquals(1, errors.count { it.kind == "E2" }, "E2 goes through the sink once")
-        host.close()
-    }
-
-    @Test
-    fun runtimeFromAnotherTinyuiIsE6() = runTest {
-        val badCore = module("tinyui-core", "globalThis.__tinyui = { version: '0.0.1' }; export const VERSION = '0.0.1';")
-        val host = PageHost(RuntimeBundle(badCore, native), page, tinyui)
-        host.start()
-        host.await { host.failure != null }
-        assertEquals("E6", host.failure!!.kind)
-        assertEquals("runtime module is tinyui 0.0.1, the host has ${TinyUI.version}", host.failure!!.message)
-        assertEquals("E6", errors.single().kind)
         host.close()
     }
 

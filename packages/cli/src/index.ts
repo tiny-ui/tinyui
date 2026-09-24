@@ -1,4 +1,4 @@
-export { build, RUNTIME_MODULES } from "./build.ts";
+export { build, buildRuntime, RUNTIME_MODULES } from "./build.ts";
 export type { BuildOptions, BuildResult, BuiltModule, Manifest } from "./build.ts";
 export { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, readHostSnapshot, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
 export type { AppRecord, HostSnapshotResult, IssuedAppToken, IssuedToken, PackageRecord, Releases } from "./admin.ts";
@@ -22,3 +22,4 @@ export type { PageRequires } from "./requires.ts";
 export type { CompileOptions } from "./qjsc.ts";
 export { transformJsx, TransformError } from "./transform.ts";
 export type { TransformResult } from "./transform.ts";
+export { isCompatible } from "./version.ts";

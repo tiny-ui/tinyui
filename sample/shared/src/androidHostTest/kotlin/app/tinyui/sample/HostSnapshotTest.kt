@@ -19,6 +19,6 @@ class HostSnapshotTest {
         }
         val hint = "if HOST_VERSION $HOST_VERSION is not on main yet, rerun with -Ptinyui.updateHostSnapshot; otherwise raise HOST_VERSION and do that"
         assertTrue(file.exists(), "no ${file.path} for HOST_VERSION $HOST_VERSION; $hint")
-        assertEquals(file.readText(), current, "the host no longer matches ${file.path}; $hint")
+        assertEquals(emptyList(), HostSnapshot.problems(file.readText(), tinyUIHost, HOST_VERSION), "the host is no longer one of ${file.path}; $hint")
     }
 }
