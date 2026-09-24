@@ -36,12 +36,7 @@ kotlin {
     }
 }
 
-// HostSnapshotTest compares against tinyui-host/ here; -Ptinyui.updateHostSnapshot makes it write instead
 val updateHostSnapshot = providers.gradleProperty("tinyui.updateHostSnapshot")
-tasks.withType<Test>().configureEach {
-    inputs.files(layout.projectDirectory.dir("tinyui-host")).withPropertyName("hostSnapshots")
-    updateHostSnapshot.orNull?.let { systemProperty("tinyui.updateHostSnapshot", "true") }
-}
 
 // JS 侧：pnpm 编三个包 → tinyui build 把每个示例包的页面与运行时模块编成字节码 → 只把 .bin 与清单打成 Compose 资源
 // 两个包演示多包模型（docs/updates.md §0）：各自的 JS 工程、密钥、资源子目录
@@ -109,4 +104,15 @@ tasks.matching { it.name.startsWith("copy") && it.name.endsWith("ComposeResource
 compose.resources {
     packageOfResClass = "app.tinyui.sample.res"
     customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir }))
+}
+
+// HostSnapshotTest compares against tinyui-host/ here, -Ptinyui.updateHostSnapshot makes it write instead;
+// EmbeddedPackageTest reads the packages this build embeds
+tasks.withType<Test>().configureEach {
+    inputs.files(layout.projectDirectory.dir("tinyui-host")).withPropertyName("hostSnapshots")
+    updateHostSnapshot.orNull?.let { systemProperty("tinyui.updateHostSnapshot", "true") }
+    dependsOn(collectTinyUIResources)
+    inputs.dir(tinyUIResourcesRoot).withPropertyName("embeddedPackages")
+    val embedded = tinyUIResourcesRoot.map { it.dir("files/tinyui").asFile.path }
+    doFirst { systemProperty("tinyui.embedded", embedded.get()) }
 }

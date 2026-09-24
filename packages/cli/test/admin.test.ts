@@ -49,16 +49,16 @@ describe("management commands", () => {
         assert.deepEqual(last(), { method: "DELETE", path: "/apps/demo/packages/fixture/tokens/tok_1", auth: "Bearer admin-token", body: null });
     });
 
-    it("lists releases and moves the pointer for a rollback, a promotion and a rollout change", async () => {
+    it("lists releases and moves the pointer for a promotion and a rollout change", async () => {
         const releases = await listReleases(client, "demo", "fixture", "1");
         assert.equal(last().path, "/demo/fixture/1/releases");
         assert.equal(releases.versions.length, 2);
         assert.equal(releases.channels["staging"]?.rollout, 20);
 
         const target = { app: "demo", pkg: "fixture", hostVersion: "1" };
-        const rolledBack = await movePointer(client, { ...target, channel: "production" }, { version: "20260921T080000Z-aaaaaa" });
+        const promoted = await movePointer(client, { ...target, channel: "production" }, { version: "20260921T080000Z-aaaaaa" });
         assert.equal(last().path, "/demo/production/fixture/1/pointer");
-        assert.equal(rolledBack.version, "20260921T080000Z-aaaaaa");
+        assert.equal(promoted.version, "20260921T080000Z-aaaaaa");
 
         await movePointer(client, { ...target, channel: "staging" }, { rollout: 50 });
         assert.deepEqual(last().body, { rollout: 50 });

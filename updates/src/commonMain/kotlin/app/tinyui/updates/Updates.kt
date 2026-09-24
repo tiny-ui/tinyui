@@ -60,10 +60,10 @@ class Updates internal constructor(
         val byName = LinkedHashMap<String, Package>()
         for (bundle in packages) {
             require(bundle.name !in byName) { "two embedded packages are named ${bundle.name}" }
-            require(bundle.manifest.engine == engine) { "package ${bundle.name} was built for engine ${bundle.manifest.engine}, this host embeds $engine" }
             byName[bundle.name] = Package(bundle)
         }
         this.packages = byName
+        for (p in byName.values) p.unusable.takeIf { it.isNotEmpty() }?.let { onEvent(UpdateEvent.EmbeddedIncompatible(p.name, p.embedded.manifest.version, it)) }
         for (p in byName.values) p.selectAtStartup()
         // App upgrades drop packages: their directories go too
         fs.listOrNull(dir)?.filter { it.name !in byName }?.forEach { fs.deleteRecursively(it) }
@@ -140,6 +140,12 @@ class Updates internal constructor(
         var installed: String? = null
         val failed = ArrayList<String>()
         var current: Bundle = embedded
+        /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
+        val unusable: Set<Mismatch> = buildSet {
+            if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
+            if (embedded.manifest.protocol != protocol) add(Mismatch.PROTOCOL)
+        }
+        private val embeddedCreatedAt: String? get() = embedded.manifest.createdAt.takeIf { unusable.isEmpty() }
 
         fun selectAtStartup() {
             readState()
@@ -162,7 +168,7 @@ class Updates internal constructor(
         private fun loadInstalled(dir: Path): Bundle? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
-            if (manifest.createdAt <= embedded.manifest.createdAt) return null
+            if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
             val files = HashMap<String, ByteArray>()
             for (module in manifest.runtime + manifest.pages) {
                 val path = manifest.file(module) + ".bin"
@@ -189,7 +195,7 @@ class Updates internal constructor(
             val version = pointer.version
             if (!isPathSegment(version)) return CheckResult.Failed(version, FailStage.POINTER, "version \"$version\" is not a path segment")
             if (version == installed) return CheckResult.UpToDate(version)
-            if (version == embedded.manifest.version) return revertToEmbedded(version)
+            if (version == embedded.manifest.version && unusable.isEmpty()) return CheckResult.UpToDate(version)
             if (version in failed) return CheckResult.Skipped(version, SkipReason.FAILED_BEFORE)
             if (!inRollout(name, version, pointer.rollout)) return CheckResult.Skipped(version, SkipReason.ROLLOUT)
 
@@ -220,9 +226,7 @@ class Updates internal constructor(
                 if (manifest.protocol != protocol) add(Mismatch.PROTOCOL)
             }
             if (mismatch.isNotEmpty()) return CheckResult.Skipped(version, SkipReason.INCOMPATIBLE, mismatch)
-            if (manifest.createdAt <= embedded.manifest.createdAt) {
-                return if (installed != null) revertToEmbedded(version) else CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)
-            }
+            if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)
 
             val stagingRoot = root / STAGING
             val staging = stagingRoot / version
@@ -251,21 +255,6 @@ class Updates internal constructor(
                 return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
             }
             return CheckResult.Installed(version)
-        }
-
-        /** The pointer targets no newer than embedded: embedded is what should run, from the next start (docs/updates.md §4.3). */
-        private fun revertToEmbedded(version: String): CheckResult {
-            val drop = installed ?: return CheckResult.UpToDate(version)
-            installed = null
-            try {
-                saveState()
-            } catch (e: IOException) {
-                installed = drop
-                return CheckResult.Failed(version, FailStage.STORAGE, e.message ?: e.toString())
-            }
-            // state.json no longer names it: a leftover directory is swept at the next start
-            runCatching { fs.deleteRecursively(root / INSTALLED / drop) }
-            return CheckResult.Reverted(version)
         }
 
         /** Every file of [manifest] into [staging], each checked against `hashes`; null once all are there. */

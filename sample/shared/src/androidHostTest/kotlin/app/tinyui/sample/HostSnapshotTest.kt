@@ -17,7 +17,7 @@ class HostSnapshotTest {
             file.writeText(current)
             return
         }
-        val hint = "if $HOST_VERSION has not shipped yet, rerun with -Ptinyui.updateHostSnapshot; otherwise raise HOST_VERSION and do that"
+        val hint = "if HOST_VERSION $HOST_VERSION is not on main yet, rerun with -Ptinyui.updateHostSnapshot; otherwise raise HOST_VERSION and do that"
         assertTrue(file.exists(), "no ${file.path} for HOST_VERSION $HOST_VERSION; $hint")
         assertEquals(file.readText(), current, "the host no longer matches ${file.path}; $hint")
     }
