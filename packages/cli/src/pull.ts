@@ -71,7 +71,9 @@ export async function pull(options: PullOptions): Promise<PullResult> {
     // a version still rolling out is not yet what every user runs: it must not become the floor of every new install
     const rollout = typeof pointer.rollout === "number" ? pointer.rollout : 100;
     if (rollout < 100) {
-        if (!current) throw new Error(`${options.channel} is at ${version} rolling out to ${rollout}%: a first pull needs a fully rolled out version`);
+        if (current?.hostVersion !== options.hostVersion) {
+            throw new Error(`${options.channel} is at ${version} rolling out to ${rollout}%, and ${out} holds nothing for host version ${options.hostVersion} to keep: wait for 100%`);
+        }
         return keep(`${options.channel} is at ${version} rolling out to ${rollout}%`);
     }
     if (current?.version === version && current.hostVersion === options.hostVersion) return keep(`already ${version}`);
