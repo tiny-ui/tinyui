@@ -268,7 +268,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置或 `hostVersion` 不等于宿主值的 installed 当场删除（App 升级带来了更新的内置包或 bump 了 hostVersion）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` / `tinyui` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置或 `hostVersion` / `engine` / `tinyui` 不等于宿主值的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎 / tinyui）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
 
 内置包的引擎或 tinyui 版本与宿主不符时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 

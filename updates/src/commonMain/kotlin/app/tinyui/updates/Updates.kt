@@ -164,10 +164,11 @@ class Updates internal constructor(
             fs.deleteRecursively(installedDir / keep)
         }
 
-        /** The installed package when it is still the one to run: newer than embedded, this host version, intact. */
+        /** The installed package when it is still the one to run: newer than embedded, this host version, engine and tinyui, intact. */
         private fun loadInstalled(dir: Path): Bundle? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
+            if (manifest.engine != engine || manifest.tinyui != tinyui) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
             val files = HashMap<String, ByteArray>()
             for (module in manifest.runtime + manifest.pages) {

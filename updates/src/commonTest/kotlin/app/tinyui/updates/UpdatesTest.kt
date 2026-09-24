@@ -68,8 +68,8 @@ class UpdatesTest {
         for ((path, bytes) in content) server["$pkg/$hostVersion/$version/$path"] = bytes.encodeToByteArray()
     }
 
-    private fun updates(vararg bundles: Bundle, installId: String = "install-1", hostVersion: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE) =
-        Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, Fixture.TINYUI, verifier)
+    private fun updates(vararg bundles: Bundle, installId: String = "install-1", hostVersion: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE, tinyui: String = Fixture.TINYUI) =
+        Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, tinyui, verifier)
 
     private suspend fun pageBytes(bundle: Bundle) = bundle.page("shop/home").module.bytecode.decodeToString()
 
@@ -91,6 +91,19 @@ class UpdatesTest {
         assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v1", Source.INSTALLED)), events)
         assertEquals("HOME-v1", pageBytes(second.current("shop")))
         assertEquals(CheckResult.UpToDate("v1"), second.check("shop"))
+    }
+
+    @Test
+    fun anInstalledPackageForAnotherEngineOrTinyuiIsNotRunAfterTheHostChanges() = runTest {
+        publish(manifest())
+        for (host in listOf<() -> Updates>({ updates(embedded(), tinyui = "0.0.2") }, { updates(embedded(), engine = "f".repeat(40)) })) {
+            assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
+            events.clear()
+            val u = host()
+            assertEquals(Source.EMBEDDED, events.filterIsInstance<UpdateEvent.Running>().single().source)
+            assertEquals("HOME-v0", pageBytes(u.current("shop")))
+            assertFalse(fs.exists(dir / "shop/installed/v1"))
+        }
     }
 
     @Test
