@@ -139,11 +139,9 @@ M6 收尾（2026-09-24）评审中发现、与 M6 正交的问题，各自独立
 
 | 问题 | 在哪 | 现状与后果 | 方向 |
 |---|---|---|---|
-| 缺页会崩 | tinyui `compose/.../Bundle.kt` 的 `page()` | 页面名不在包里时 `require` 抛出，在 `UpdatesPage` 的 `produceState` 里没人接，App 崩。宿主新加一个入口指向新页面、内置包里还没有它时就会发生 | 改为走 `error` 槽 |
 | 公钥无法轮换 | tinyui-updates-server 包记录、updates.md §7 | 服务端每个包只登记一把公钥；换钥后仍信旧钥的已发 App 永久收不到更新 | 服务端支持一个包登记多把公钥，或文档写明"轮换须同时加 `hostVersion`、接受旧版本停更" |
 | `PROTOCOL` 形同虚设 | tinyui `PageHost.PROTOCOL` | 从 M1 起一直是 1，改 mount 参数、加 `host.call` 时都没加；"运行时 ABI"没有定义 | 定义 ABI 范围与加 1 规则；以后若要放宽"tinyui 版本相等"必须先有它 |
 | TrendingAI 没有 PR 级 CI | TrendingAI `.github/workflows` | 宿主测试只在 push 到 main（快照 workflow）与发版时跑，契约改了忘加 `HOST_VERSION` 要到合入后才红 | 加 PR 检查：`HostSnapshotTest` 与常规测试 |
-| 版本名后缀长度不固定 | tinyui `packages/cli/src/build.ts` | `git rev-parse --short` 的长度随对象数与克隆深度变，同一 commit 在 CI 与本机可能得到不同版本名 | 改 `--short=12` |
 | 看不到设备在跑哪一版 | TrendingAI `TinyUIUpdates.report()` | `Running` 事件没上报，发现不了"一直停在内置包"或指针 404 | 抽样上报 `Running` |
 | 快照盲区 | updates.md §4.1、§6.4 | 能力的参数与返回形状、页面 props、store key、`PageLocal` 都不在快照里，这些变了该不该加 `hostVersion` 全靠人判断 | 先记录；有需要时给能力加修订号或形状描述 |
 | 服务端移动指针不核对快照 | tinyui-updates-server | 兼容核对只在 CLI 的 `publish` 里，绕过 CLI 直接调端点就没有核对 | `PUT current.json` / `POST pointer` 时按冻结的快照复核 `requires` |

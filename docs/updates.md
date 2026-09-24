@@ -32,7 +32,7 @@ pages/**/*.bin
 | `runtime` / `pages` / `files` / `buildIds` | `tinyui build` | 不变；`pages` 与 `files` 的键是含包名的模块名（`subscription/home`） |
 | `name` | `tinyui build` | 包名，读自 `tinyui.config.json` |
 | `publicKey` | `tinyui build` | 验签公钥（§7 格式），读自 `tinyui.config.json`；**信任来源只有内置包里的这份**，下载的 manifest 里的只用于诊断 |
-| `version` | `tinyui build` | 包标识，目录名，只求唯一：`<createdAt 紧凑形式>-<git 短 sha 或 nogit>`，如 `20260918T100212Z-3f2a1c`；`--version` 可覆盖 |
+| `version` | `tinyui build` | 包标识，目录名，只求唯一：`<createdAt 紧凑形式>-<git 短 sha（12 位）或 nogit>`，如 `20260918T100212Z-3f2a1c9e04b7`；`--version` 可覆盖 |
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个） |
 | `protocol` | `tinyui build` | 所含 `tinyui-core` 的 `PROTOCOL`，读自子路径导出 `tinyui-core/protocol`（只含常量，不在 Node 里执行运行时模块） |

@@ -244,7 +244,7 @@ async function tinyuiVersion(root: string): Promise<string> {
 
 async function gitShortSha(root: string): Promise<string> {
     try {
-        const { stdout } = await execFileAsync("git", ["rev-parse", "--short", "HEAD"], { cwd: root });
+        const { stdout } = await execFileAsync("git", ["rev-parse", "--short=12", "HEAD"], { cwd: root });
         return stdout.trim() || "nogit";
     } catch {
         return "nogit";

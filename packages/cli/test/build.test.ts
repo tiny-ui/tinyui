@@ -110,7 +110,7 @@ describe("tinyui build", () => {
         assert.equal(manifest.name, "fixture");
         assert.equal(manifest.publicKey, config.publicKey);
         assert.match(manifest.createdAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-        assert.match(manifest.version, /^\d{8}T\d{6}Z-([0-9a-f]{7,}|nogit)$/);
+        assert.match(manifest.version, /^\d{8}T\d{6}Z-([0-9a-f]{12}|nogit)$/);
         assert.ok(manifest.version.startsWith(manifest.createdAt.replace(/[-:]/g, "")), `${manifest.version} starts with the compact createdAt`);
         assert.equal(manifest.protocol, 1);
         if (qjsc) {
