@@ -1,9 +1,9 @@
 # ADR-006 · 热下发：整包原子、宿主 hostVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新）；实现进度见 updates-plan.md
-- 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的完整产物，整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `hostVersion`，引擎 commit 与 patch 协议号只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 用旧内容发一个新版本（指针只往前走）；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新；同日新增 §2.11：运行时随宿主、包只含页面，包与宿主的 tinyui 版本从"相等"放宽为"宿主不低于包"，升 tinyui 不再加 `hostVersion`，§2.10"运行时仍放包里"作废）；实现进度见 updates-plan.md
+- 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的页面产物（运行时随宿主，§2.11），整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `hostVersion`，引擎 commit 要求相等、包的 tinyui 版本要求不高于宿主，两者只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 用旧内容发一个新版本（指针只往前走）；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
 - 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
-- 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则
+- 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则。§2.11 另影响：updates.md §1.1（manifest 去 `runtime`，`tinyui` 改义）、§1.3（publish 判下限）、§4.1（加 1 口径）、§4.3（客户端核对）、§6.4（快照 `tinyui` 行改义）；patch-protocol.md §6（K0 版本核对删去）；build-chain.md §2（build 不产出 `runtime/`，运行时由库构建）；runtime-api.md 写入公开面铁律；roadmap D 组"运行时 ABI 版本"一行删去
 
 ## 1. 背景
 
@@ -15,11 +15,11 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 |---|---|---|
 | 页面 = 模块 = 字节码，自包含无共享 chunk | build-chain.md §3 | 包只是页面的集合，分发单元不用再设计 |
 | 字节码与字长无关、只绑引擎 commit，文件头自带 commit，加载时自校验 | quickjs-kmp `docs/decisions.md` | Android / iOS 共用同一份包；引擎不匹配是确定性的 E6 |
-| tinyui 版本在 K0 核对 → E6；schema 不匹配走 E5 跳过 + `Placeholder`；`__mount` 清单让 JS `host.has()` 降级 | patch-protocol.md §6–7、ADR-003 | 硬兼容 / 软兼容的分界已画好，热下发只需把硬的两条提前到下载前 |
+| tinyui 版本在 K0 核对 → E6；schema 不匹配走 E5 跳过 + `Placeholder`；`__mount` 清单让 JS `host.has()` 降级 | patch-protocol.md §6–7、ADR-003 | 硬兼容 / 软兼容的分界已画好，热下发只需把硬的两条提前到下载前（§2.11 起 K0 核对删去，tinyui 版本改为下载前判"宿主不低于包"） |
 | `PageHost` 只收字节，库零 I/O，读资源在宿主 | `PageHost.kt`、TrendingAI `TinyUIHost.kt` | 热下发对库来说是"多一个字节来源 + 选哪个" |
 | release 不带 map，靠 `buildId` 离线对映射 | build-chain.md §7 | 错误上报链路不变 |
 
-产物尺寸：`core.bin` 20 KB、`native.bin` 3 KB、页面 1～4 KB；十几页的 App 整包不到 100 KB。
+产物尺寸：`core.bin` 20 KB、`native.bin` 3 KB、页面 1～4 KB；十几页的 App 整包不到 100 KB。运行时随宿主后（§2.11）包里只剩页面，运行时的 23 KB 随库进 App。
 
 ## 2. 候选与取舍
 
@@ -28,7 +28,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | | 整包（运行时 + 全部页面） | 按页独立发 |
 |---|---|---|
 | 业界 | Expo Updates、CodePush | Lynx / Kuikly 的模板包 |
-| 运行时与页面的匹配 | 天然一致，问题不存在 | 版本矩阵：页面要声明需要哪个运行时，或运行时另走一条分发 |
+| 运行时与页面的匹配 | 天然一致，问题不存在（§2.11 起运行时随宿主，匹配改由"宿主不低于包"保证） | 版本矩阵：页面要声明需要哪个运行时，或运行时另走一条分发 |
 | 跨页 params 契约 | 同一次 build，一致 | 可能漂 |
 | 代价 | 多传几十 KB | 分发系统复杂一个量级 |
 
@@ -38,11 +38,11 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 | | 宿主声明 `hostVersion`（Expo 的 `runtimeVersion` 规则） | 多维匹配（引擎 commit × tinyui 版本 × 宿主 schema 哈希） | semver 范围 |
 |---|---|---|---|
-| 规则 | 宿主承诺"同 hostVersion 下任何包都能跑"，改了宿主组件 / 能力 / 升了 tinyui 就 bump | 服务端按多维求交 | 包声明 `>=1.2 <2` |
+| 规则 | 宿主承诺"同 hostVersion 下任何包都能跑"，改了宿主组件 / 能力、抬了 tinyui 下限、换了引擎就 bump（§2.11 起单纯升 tinyui 不 bump） | 服务端按多维求交 | 包声明 `>=1.2 <2` |
 | 谁负责判断 | 人（发版时） | 服务端逻辑 | 客户端解析 |
 | 静态托管可行 | 是（作路径） | 否 | 勉强 |
 
-选 hostVersion，它同时是服务端目录名。`engine`（引擎 commit）与 `tinyui`（版本）写进 manifest 只做校验，防"发错目录"这种人为错误，不参与匹配逻辑。
+选 hostVersion，它同时是服务端目录名。`engine`（引擎 commit，要求相等）与 `tinyui`（版本，要求不高于宿主，§2.11）写进 manifest 只做校验，防"发错目录"这种人为错误，不参与匹配逻辑。
 
 兼容键回答的是"这一版页面能发给哪些已装好的 App"。页面依赖宿主给它的东西——宿主组件、宿主能力、tinyui 本身——而宿主只能随 App 发版改，页面随时可以热下发，两边的新旧必然错开。以一个订阅页为例：
 
@@ -134,36 +134,86 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 运行时与页面匹配 | 天然一致 | 包内天然一致 | 版本矩阵：页面要声明依赖哪个运行时 |
 | 服务端 / 库 | 现状 | 路径与存储多一层 `pkg`，库按包索引；协议形态不变 | 库要理解"页"这一级，指针按页 |
 | 跨单元契约漂移 | 无 | 只在包边界，而包边界 = 团队边界，本来就是团队间 API | 每一对页面之间都可能漂 |
-| 代价 | — | 每包多一份运行时（23 KB） | 分发系统复杂一个量级 |
+| 代价 | — | 每包多一份运行时（23 KB；§2.11 起运行时随宿主，此项消失） | 分发系统复杂一个量级 |
 
 选多包，并且**多包是基本情形，单包是 N=1**：文档、库 API、服务端都按多包写，没有单包特化路径。单页独立下发在所有维度上都被多包覆盖（一页一包也合法），不再保留为推迟项。
 
 随之定下的几件事：
 
 - **包名进模块名**：`<pkg>/<src/pages 下相对路径>`，`subscription/home`。"页面名 = 模块名 = 路由键"在多包下原样成立，任何一侧都不拼接；`pages/` 段去掉——包名已是命名空间，它不再携带信息。包名 `[a-z0-9-]+`，按业务域命名不按团队命名（团队会重组）
-- **运行时仍放包里**：多包让"A 团队升 `tinyui-core` 不牵动 B 团队"成为刚需，宿主带运行时会把版本矩阵带回来
+- ~~**运行时仍放包里**：多包让"A 团队升 `tinyui-core` 不牵动 B 团队"成为刚需，宿主带运行时会把版本矩阵带回来~~——2026-09-24 作废，运行时随宿主，理由见 §2.11
 - **URL 只放永久身份**：`/<app>/<channel>/<pkg>/<hostVersion>/…`。组织 / 租户是计费主体，会改名转让，只在管理面作 app 的可改字段，不进 URL。`channel` 是宿主构建变体决定的 App 级部署环境，排在 `pkg` 前，宿主的 base 仍是一段 `<app>/<channel>`
 - **密钥与 token 按 (app, pkg)**：A 团队物理上发不出 B 包；`name` 与 `hostVersion` 都在签名内，包不可能被发成别的包
 - **服务端内容按 (app, pkg, hostVersion, version) 存一份，channel 只是指针**：staging 验过的同一个 version 晋级到 production 不重传不重签，隔离靠 token 的 channel 范围
 - **不做跨包共享模块**：包自包含，共用工具代码各编一份；build-chain.md §3 原来留的"App 级共享模块"出口一并砍掉——多包下它会变成一条独立的分发链
 - **跨包通信照旧走 Kotlin**，store key 与 events topic 按包名加前缀，params 契约当团队间接口版本管（app-model.md §7）
 
+### 2.11 运行时随宿主，tinyui 版本从"相等"放宽为"宿主不低于包"（2026-09-24）
+
+原设计运行时随包，包与宿主的 tinyui 版本要求相等（publish、客户端下载前、K0 三处核对），升 tinyui 必加 `hostVersion`。TrendingAI 在 09-23～24 跟着 tinyui 升了 0.4.0 → 0.4.1 → 0.5.0 → 0.6.0，`hostVersion` 1 → 4，四份宿主快照之间只有 `tinyui` 一行不同；同期 `packages/core`、`packages/native` 的源码 diff 只有 `VERSION` 常量与 `PROTOCOL` → `version` 改名，`engine` 未变。三次加 1 没有一次对应真实的不兼容，却每次都要 JS 在新 `hostVersion` 下重发、晋级、宿主 pull 之后才能发版。根子是拿整个库的版本号当"运行时 ↔ Kotlin"内部协议的兼容键，而库版本还随 `updates` 模块这类与包无关的改动变。
+
+| | 运行时随包 + 版本相等（原） | 运行时随包 + 独立 ABI 号 | **运行时随宿主 + 宿主不低于包** |
+|---|---|---|---|
+| 运行时 ↔ Kotlin 协议 | 同一 tinyui 版本才对得上 | 协议变了由人加 ABI 号 | 同一个产物，不存在错位 |
+| 升 tinyui | 加 `hostVersion`，全部包重发 | ABI 未变则不加 | 不加 |
+| 靠什么守 | 相等核对 | 人记得加号——`PROTOCOL` 从 M1 到删除一直是 1，改 mount 参数、加 `host.call` 时都没加 | 运行时公开面只增不删（下方铁律） |
+| 运行时热修 | 能 | 能 | 不能，随 App 发版 |
+
+选运行时随宿主。ABI 号是把已被证明没人会加的 `PROTOCOL` 换个名字重来一遍。
+
+§2.10 原判"宿主带运行时会把版本矩阵带回来"：矩阵来自"运行时版本 × 页面构建版本"的任意组合都要单独判定；公开面只增不删之后，兼容退化成一条全序——页面在构建时的版本及以上的运行时都能跑——不存在矩阵。"A 团队升 `tinyui-core` 不牵动 B 团队"在相等规则下本就不成立（包的版本必须等于宿主）；随宿主之后，A 要用新运行时的东西仍需宿主升级并抬下限（加 `hostVersion`），B 只需把现有内容重发到新 `hostVersion`，不必重建。
+
+决定：
+
+- 包 = 页面字节码 + `manifest.json`。`tinyui-core` / `tinyui-native` 由库在构建时用与所链接引擎同一 commit 的 qjsc 编成字节码，以生成的 Kotlin 常量随库发布（core 库仍零 I/O、零文件依赖）；运行时的 source map 与 `buildId` 随库
+- manifest 的 `tinyui` 仍记构建时的 `tinyui-core` 版本，含义改为"页面需要的最低运行时"。客户端（启动选包、下载前）与 `PackageCheck` 判 `TinyUI.version >= manifest.tinyui`，1.0 之前也按版本号全序比较，由下方铁律保证；K0 的版本核对删去
+- 宿主快照的 `tinyui` 行改为该 `hostVersion` 的下限，即加 1 时的 tinyui 版本。宿主快照测试判"当前不低于下限"，单纯升 tinyui 快照不变；`publish` 判"包的 `tinyui` 不高于下限"，拒绝"老宿主会静默跳过"的发布
+- `hostVersion` 加 1 的情形缩为：宿主组件增删或改 schema；宿主能力增删或改参数与行为；抬 tinyui 下限（页面要用新运行时的东西）；换引擎。单纯升 tinyui 不加
+- `engine` 仍要求相等：页面字节码绑引擎 commit，换引擎按上条加 1
+- **铁律：运行时公开面只增不删、不改语义。** 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`、runtime-api.md 列出的 API、内置组件 schema。破坏性修改只能加新名字，或升 major。挡住的改动：内置组件 prop 改名或改义、删除已公开的 API、改编译器注入函数的调用约定
+
+**`hostVersion` 是宿主对页面承诺的版本，不是 tinyui 版本。** 承诺指宿主组件、宿主能力、保证提供的运行时下限与字节码引擎，承诺变了才加 1；tinyui 版本是库的实现版本，升级实现而承诺不变时 `hostVersion` 不动。原规则"升 tinyui 必加 1"让两者同步变化（0.4.0 → 0.6.0 对应 1 → 4），容易被当成同一个东西，而四份快照除 `tinyui` 行外完全相同，说明宿主承诺一次也没变过。
+
+`hostVersion` 在此之后的职责。"包能不能在本机跑"客户端已能从 manifest 自算（`engine` 相等、宿主 tinyui 不低于包、`requires` ⊆ 宿主提供），`hostVersion` 不再是兼容判断的必需品，留下的是客户端做不到的三件事：
+
+1. **投递分组**：宿主给页面的东西变了之后，老 App 与新 App 各要一个"当前版本"。只有一个指针时，页面一用新能力，老 App 就再也收不到任何更新（含 bug 修复）；指回不用新能力的版本，新 App 又退化。`hostVersion` 是这个分组键
+2. **发布前知道目标人群有什么**：`publish` 对着该 `hostVersion` 的快照判定，把"老设备静默跳过"拦在发布那一刻
+3. **同名改义的声明**：能力改了参数或行为但名字不变，客户端核对不出来；由改宿主的人加 1，旧页面到不了新宿主
+
+替代方案（指针列出多个候选版本、客户端挑能跑的最新一版，配"能力改义即换名"约定）要改投递协议，而协议一经发布不能再变（§2.6），为省下偶尔一次加 1 不值得。触发条件记 roadmap D 组：`hostVersion` 加 1 的频率重新成为负担。
+
+四个版本号各管一件事，不要混用：
+
+| 版本 | 形如 | 由谁定、记在哪 | 回答的问题 | 用在哪 |
+|---|---|---|---|---|
+| `hostVersion` | `5` | 宿主仓手动加 1（TrendingAI 的 `HOST_VERSION`），快照 `tinyui-host/<n>.txt` | 宿主对页面承诺了什么（能力契约的版本） | 投递路径分组、`publish` 核对 |
+| tinyui 版本 | `0.7.0` | 宿主的 Maven 依赖 `app.tinyui:tinyui`，即 `TinyUI.version`；JS 侧是 `tinyui-core` 的版本，写进 manifest 的 `tinyui` | 宿主：本机运行时是哪版；包：页面至少需要哪版运行时 | 客户端判"宿主不低于包"；快照的 `tinyui` 行是该 `hostVersion` 的下限 |
+| 包版本 | `20260924T030750Z-<12 位 sha>` | `tinyui build` 按构建时间 + JS 工程的 git 短 sha 生成（可用参数指定），manifest 的 `version` / `createdAt` | 这是页面内容的哪一次构建 | 指针指向谁、"比内置新才装"、拉黑、回滚（用旧内容发新版本） |
+| CLI 版本 | `0.7.0` | JS 工程的 `tinyui-cli` npm 依赖，与 `tinyui-core`、Kotlin 库同号同发 | 用哪版工具链构建 | 决定包的 `tinyui` 值与 qjsc（即 `engine`）；不得高于目标 `hostVersion` 的下限 |
+
+引擎 commit（manifest 的 `engine`）不单列：它由 CLI 与库各自钉死的 quickjs-kmp 决定，要求相等，换引擎按上文加 `hostVersion`。
+
+代价：运行时的 bug 只能随 App 修（0.4 → 0.6 运行时无功能改动，20 KB 且稳定）；库作者承担公开面的兼容；JS 工程的 `tinyui-cli` 不得高于目标 `hostVersion` 的下限，由 `publish` 报错指出。
+
+迁移：包格式不兼容（包内无 `runtime/`，manifest 去掉 `runtime` 字段），随 tinyui 0.7.0 一起落地，各宿主加 1 次 `hostVersion`，此前各 `hostVersion` 下已发布的包作废。TrendingAI 线上尚无带热下发的版本（1.9.0-beta.1 只含首次接入），无兼容负担。
+
 ## 3. 决策
 
 | 项 | 结论 |
 |---|---|
-| 包 | App 由 N≥1 个包组成；一个包 = 一次 `tinyui build` 的完整产物（`runtime/*.bin` + `pages/**/*.bin` + `manifest.json`），整包原子生效，各包独立；不做单页下发、不做跨包共享模块、不做 zip、不做 diff |
+| 包 | App 由 N≥1 个包组成；一个包 = 一次 `tinyui build` 的产物（`pages/**/*.bin` + `manifest.json`；运行时随宿主，§2.11），整包原子生效，各包独立；不做单页下发、不做跨包共享模块、不做 zip、不做 diff |
 | 包名与模块名 | 包名 `[a-z0-9-]+` 来自 `tinyui.config.json`；模块名 = 路由键 = `<pkg>/<相对路径>`，无 `pages/` 段 |
-| 兼容键 | 宿主声明的 `hostVersion`，作服务端路径；`engine` / `tinyui` 只校验 |
+| 兼容键 | 宿主声明的 `hostVersion`，作服务端路径；`engine` 要求相等、`tinyui` 要求不高于宿主，只校验；单纯升 tinyui 不加 `hostVersion` |
+| 运行时 | `tinyui-core` / `tinyui-native` 随库编成字节码进 App，包里不带；运行时公开面只增不删、不改语义（§2.11 铁律） |
 | 启用规则 | 下发包 `version ≠ installed` 且 `createdAt` 新于内置才装；App 升级带来更新的内置包时自动弃掉 installed；不能用下发把 App 降到比内置更老 |
 | 生效时机 | 下次进程启动 |
-| 失败语义 | 下发包的页面报 E2 / E6 → 当场用内置包重挂这一页，整包持久化拉黑并上报；E5 不算失败。启动时重算 installed 包 sha256，不一致同样拉黑。进程级崩溃不在库的回退范围：出口是灰度 + 回滚 + "`check()` 先于任何页面挂载"的接入约定，挂载标记见 §4.3。一个 (runtime, page) 对永远来自同一个包；不同页面可以短暂来自不同包（各自独立 Runtime） |
+| 失败语义 | 下发包的页面报 E2 / E6 → 当场用内置包重挂这一页，整包持久化拉黑并上报；E5 不算失败。启动时重算 installed 包 sha256，不一致同样拉黑。进程级崩溃不在库的回退范围：出口是灰度 + 回滚 + "`check()` 先于任何页面挂载"的接入约定，挂载标记见 §4.3。运行时永远来自宿主；不同页面可以短暂来自不同包（各自独立 Runtime） |
 | 库的边界 | `tinyui-updates` 独立 artifact；`Updates(packages: List<Bundle>, …)` 以一组包为单位做校验 / 落盘 / 选择 / 回退；不做网络、调度、UI；宿主给内置包列表、`fetch(path)`、`installId`、存储目录、`hostVersion`，不传公钥 |
 | 服务端协议 | 指针 + 内容；`<base>/<pkg>/<hostVersion>/current.json`（`no-store`，只含 `version` / `rollout` / `signature`）+ `<base>/<pkg>/<hostVersion>/<version>/…`（`immutable`，含 `manifest.json`）；请求不带参数；base = `/<app>/<channel>`，组织不进 URL |
 | 灰度 | manifest `rollout` 百分比，客户端按 `installId` 掷骰 |
 | 回滚 | 用旧内容发新版本，指针只往前走；无 `rollBackToEmbedded` |
 | 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256，覆盖 `<version>/manifest.json` 的原始字节，无规范化）；密钥按 (app, pkg)，发布方持私钥，服务端与客户端各验一次；公钥写在 `tinyui.config.json` 随 build 进 manifest，客户端只信内置包的 |
-| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `tinyui` / `hashes`；`tinyui bundle --host-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<hostVersion>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
+| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 不产出 `runtime/`，manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `tinyui` / `hashes`；`tinyui publish` 核对包的 `tinyui` 不高于目标 `hostVersion` 的下限；`tinyui bundle --host-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<hostVersion>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
 | 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，单 R2 桶，`Storage` 接口后置；内容按 (app, pkg, hostVersion, version) 存，channel 是指针；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
 | 仓边界 | `tinyui-updates` 在主仓 `updates/` 模块，与 core 同版本发；服务端独立仓；协议只写在 updates.md，发布后字段只增不改 |
 
@@ -210,4 +260,4 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 
 ### 4.5 不变的东西
 
-ADR-001～004 不动；ADR-005 §4 的模块名规则改为含包名（本文 §2.10）；`PageHost` / `TinyUIPage` 签名不变；patch 协议、schema 生成链、错误上报不变；quickjs-kmp 引擎不改（`engine` 从字节码文件头读，`QuickJs.upstreamCommit` 已有）；`qjsc-kmp` 二进制分发是构建链事项，见 roadmap D 组。
+ADR-001～004 不动；ADR-005 §4 的模块名规则改为含包名（本文 §2.10）；`PageHost` / `TinyUIPage` 签名不变（`RuntimeBundle` 改由库提供，§2.11）；patch 协议的 op 与入口、schema 生成链、错误上报不变；quickjs-kmp 引擎不改（`engine` 从字节码文件头读，`QuickJs.upstreamCommit` 已有）；`qjsc-kmp` 二进制分发是构建链事项，见 roadmap D 组。
