@@ -340,7 +340,7 @@ app token 与发布 token 一样可以签多个、只返回一次明文、服务
 | 请求 | 语义 |
 |---|---|
 | `POST /apps/<app>/packages`，body `{ "name", "publicKey" }` | 建包，登记验签公钥 |
-| `PUT /apps/<app>/packages/<pkg>/publicKey` | 换公钥（轮换后旧包不再能发布，已发布的不受影响） |
+| `PUT /apps/<app>/packages/<pkg>/publicKey` | 换公钥：此后该包所有 `hostVersion` 的指针都只收新钥的签名，已发布的不受影响；流程见 §7 |
 | `POST /apps/<app>/packages/<pkg>/tokens`，body `{ "channels": [...] }` | 签发发布 token，只返回一次；服务端只存哈希 |
 | `DELETE /apps/<app>/packages/<pkg>/tokens/<tokenId>` | 吊销 |
 
@@ -388,4 +388,10 @@ CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 mai
 - 密钥按 (app, pkg) 一对：`tinyui keys generate` 产私钥 PEM（PKCS#8）与上述格式的公钥。私钥只在该包发布方的 CI（`tinyui bundle --signing-key`）；公钥两处登记——包的 `tinyui.config.json`（随 build 进 manifest，随内置包进 App，是客户端的信任锚），服务端包记录（§6.3）。服务端永远接触不到私钥：token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认。一个团队持有的私钥只能签自己的包
 - **下载的 manifest 里的 `publicKey` 永远不是信任来源**，客户端只拿它与内置的比对以给出诊断信息
 - `channel` 不在被签内容里：同一份签名产物从 staging 晋级到 production 不重签；staging 与 production 的隔离靠 token 的 channel 范围（§6）
-- 公钥轮换 = 改 `tinyui.config.json` → 新内置包随 App 发版 + 服务端 `PUT /apps/<app>/packages/<pkg>/publicKey`；旧 App 版本仍认旧公钥，所以轮换期间要用两把私钥各发一份，或者接受旧版本不再收到更新
+- 公钥轮换**必须同时给宿主加 `hostVersion`，旧 `hostVersion` 从此冻结**：服务端每包只登记一把公钥、每个指针只有一个签名，旧 App 只认内置的旧钥，同一 `hostVersion` 上新旧 App 不可能都验过。步骤：
+  1. 确认旧 `hostVersion` 各 channel 的指针停在想冻结的版本——换钥后它不能再发布，也不能回滚（回滚即发新版本）
+  2. `tinyui keys generate` 出新钥，改 `tinyui.config.json` 的 `publicKey`
+  3. 宿主 `hostVersion` 加 1（快照合入 main 即上传，§4.1），`tinyui packages rotate-key` 登记新钥
+  4. 用新钥 `bundle` / `publish` 到新 `hostVersion`，宿主 `tinyui pull --accept-key <新公钥>` 刷新内置包，随 App 发版
+
+  旧 App 停在冻结的版本上，升级 App 后恢复更新。私钥泄露时先做 `rotate-key`（服务端即刻拒收旧钥签名，冻结点就是当时的指针），再走其余步骤。不中断旧 App 的轮换（预置备用钥）见 roadmap.md D 组
