@@ -20,6 +20,10 @@ class BuildManifest(
     val engine: String,
     val protocol: Int,
     val hashes: Map<String, String>,
+    /** The tinyui-core version the runtime modules came from. */
+    val tinyui: String = "",
+    /** Page module name → the host things it uses (docs/updates.md §1.1). */
+    val requires: Map<String, PageRequires> = emptyMap(),
     /** Present only in a manifest `tinyui bundle` wrote: the embedded package has none. */
     val hostVersion: String? = null,
 ) {
@@ -51,8 +55,19 @@ class BuildManifest(
                 engine = string("engine"),
                 protocol = root["protocol"]?.jsonPrimitive?.intOrNull ?: 0,
                 hashes = strings("hashes"),
+                tinyui = string("tinyui"),
+                requires = root["requires"]?.jsonObject?.mapValues { (_, v) ->
+                    val page = v.jsonObject
+                    PageRequires(
+                        components = page["components"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                        capabilities = page["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                    )
+                } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
             )
         }
     }
 }
+
+/** Dotted host components and `host.call` capability names one page uses. */
+class PageRequires(val components: List<String>, val capabilities: List<String>)

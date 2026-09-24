@@ -113,17 +113,21 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | 8 | JS 侧填错目标宿主版本 | 发布前核对（updates.md §1.3）：`tinyui build` 把每页用到的能力名与宿主组件名写进 manifest 的 `requires`；`publish` 上传前从热下发服务读目标版本的宿主快照比对，不通过即拒绝发布（`bundle` 保持离线）。快照由宿主 CI 在发 App 版本时上传，每版本只写一次。铁律：`host.call` 的名字必须是字面量、宿主组件必须能静态解析（build-chain.md §5.1）。设备侧核对暂不做 |
 | 9 | 服务端凭据分层 | 在实例 `ADMIN_TOKEN` 与包的发布 token 之间补 app token：一个 app 的完整管理权（注册包、公钥、签发发布 token、上传宿主快照），暂不细分权限范围；宿主 CI 用它上传快照；本 app 的发布 token 可读快照。权限与 URL 挂在 app（一个宿主 App）上，不挂在租户（`org`，可改可转让）上（updates.md §6） |
 | 10 | 宿主契约怎么枚举 | 能力名的真值在宿主 Kotlin；能力像组件一样 App 级注册（`CapabilityRegistry`），`HostCapability.call(argsJson, page)` 经 `PageLocal` 拿某一屏的对象；组件注册表、能力注册表、`PageSink` 合成 App 级 `TinyUIHost` 交给 `TinyUIPage` / `UpdatesPage`（native-api.md §7）。快照由库的 `HostSnapshot.render` 生成，检查是宿主自己的 host 侧单元测试，`-Ptinyui.updateHostSnapshot` 写入；已发版本的冻结只靠服务端 409（updates.md §4.1） |
-| 11 | 指针指向不新于内置的版本 | 期望状态即跑内置：等于内置版本时直接 `UpToDate`（不取 manifest、不看 rollout）；已装了更新版本的删掉，结果 `Reverted`，下次启动跑内置；比内置更旧的同样回到内置。内置包由 `tinyui pull` 取 `production` 当时那版（updates.md §1.4、§4.3） |
+| 11 | ~~指针指向不新于内置的版本~~ | ~~回到内置（`Reverted`）；内置包取 `production` 当时那版~~ 2026-09-24 被第 12、15 点取代 |
+| 12 | 内置包的口径 | 只要求兼容：是给当前 `hostVersion` 发布过的某个版本，与宿主引擎、协议、tinyui 一致，用到的宿主东西宿主都有；是否等于当前 `production` 不作要求（新旧尽力而为）。宿主仓用 `tinyui pull` 刷新，信任锚是已提交的内置包（包名、公钥），换钥须 `--accept-key`；灰度中或不更新时保持现状（updates.md §1.4） |
+| 13 | 宿主快照何时上传 | `hostVersion` 加 1 合入宿主 main 时由 main 的 CI 上传并冻结，发 App 时的上传只作幂等复核；合入后契约不能再改，只能再加 1（updates.md §4.1、§6.4） |
+| 14 | 内置包不兼容 | 库不再抛错：发 `EmbeddedIncompatible`，页面走 `error` 槽，`check()` 装上兼容版本后恢复。发版前由宿主测试用 `PackageCheck` 拦（updates.md §4.1、§4.4） |
+| 15 | 回滚 | 指针只往前走：服务端拒绝把指针指向不更新的版本；回滚 = 用旧内容发一个新 version 再晋级，所有设备都收得到。删 `releases rollback`（updates.md §6.2） |
 
 交付：
 
 - **tinyui**：`tinyui build` 静态找出每页用到的能力与宿主组件写进 manifest 的 `requires`，违反 build-chain.md §5.1 即失败；`tinyui publish` 上传前读目标宿主版本的快照核对（updates.md §1.3，快照格式 §6.4）；宿主契约快照——`TinyUIHost` 与 `HostSnapshot.render`（拍板第 10 点），sample 带一份 `HostSnapshotTest` 作宿主的写法样板。`tinyui:` 前缀约定写进 app-model.md
-- **trendingai-tinyui**：先恢复可构建——依赖从 `link:` 换成 npm 上与 TrendingAI 同版本的 tinyui 三包（0.4.0），加 `tinyui.config.json`（`name: "trendingai"`，公钥），模块名 `pages/subscription` → `trendingai/subscription`；`keys generate`，私钥写进 GitHub secret 与 `HarlonWang/secrets` 的 `tinyui-updates/signing/trendingai/trendingai.pem`；CI：合 main → build → `bundle --host-version <值>` → `publish --channel staging`，`hostVersion` 取 workflow 里的一个变量（抄宿主仓当前值；抄错时由 `publish` 对照服务端的宿主快照拒绝发布，见拍板第 8 点）；`production` environment 设人工批准，手动 workflow 跑 `releases promote / rollback / rollout`
+- **trendingai-tinyui**：先恢复可构建——依赖从 `link:` 换成 npm 上与 TrendingAI 同版本的 tinyui 三包（0.4.0），加 `tinyui.config.json`（`name: "trendingai"`，公钥），模块名 `pages/subscription` → `trendingai/subscription`；`keys generate`，私钥写进 GitHub secret 与 `HarlonWang/secrets` 的 `tinyui-updates/signing/trendingai/trendingai.pem`；CI：合 main → build → `bundle --host-version <值>` → `publish --channel staging`，`hostVersion` 取 workflow 里的一个变量（抄宿主仓当前值；抄错时 `publish` 对照该版本的服务端快照核对：快照不存在、或包用到的东西快照里没有即拒绝；抄成一个仍然兼容的旧值不会被拒，包只是发给了那个旧宿主版本，见拍板第 8 点）；`production` environment 设人工批准，手动 workflow 跑 `releases promote / rollout`；回滚 = 用旧内容发一个新 version 再 promote（第 15 点）
 - **服务端代码**：app token 的签发与吊销、各管理端点改为认 app token（updates.md §6.3）；宿主快照的上传与读取端点（§6.4，每个 (app, hostVersion) 只写一次）；CLI 配套 `apps tokens`、`hosts upload`
 - **服务端（线上，不可逆，执行前列命令确认）**：`apps create trendingai --name TrendingAI`（`org` 留空）；签一枚 app token 给 TrendingAI 宿主 CI 上传快照；`packages create trendingai --app trendingai`（登记公钥）；两枚发布 token，CI 用的限 `staging`，production environment 用的限 `production`
 - **TrendingAI**：依赖升到带 `TinyUIHost` 的 tinyui（0.4.0）并加 `tinyui-updates`；宿主的 TinyUI 入口改用 `Updates(listOf(embedded), hostVersion = "1", dir, installId = getOrCreateInstallId(), fetch = ktor)`，base URL `https://updates.tinyui.app/trendingai/<channel>`；设置页隐藏的 channel 开关（持久化，切回即恢复 `production`）；订阅页改用 `UpdatesPage`，`PAGE = "trendingai/subscription"`；App 启动即 `check()`（先于任何 TinyUI 页挂载）；`onEvent` 接埋点；五个能力搬进 App 级 `CapabilityRegistry`（`ui.snackbar` 经 `PageLocal` 取当前屏的 snackbar），`shared/tinyui-host/1.txt` 与快照测试进 CI，发版时 CI 把快照上传到热下发服务；内置包改为发 App 时从服务端拉当时 `production` 的那一版进 `composeResources/files/tinyui/trendingai/`（`pnpm sync` 只再生成 `HostSchemas.kt`），脚本还是 CLI 子命令做时定
 
-验收：合 main → CI 发 `staging` → 商店版 App 切到 staging 看到新文案 → 批准 workflow 晋级 `production` → 切回、重启看到；往 staging 发坏包 → 回退到内置并在埋点里看到 `RolledBack`；production workflow `rollback` → 重启回到上一版；宿主加一个能力而不加 `hostVersion` → 宿主 CI 失败。
+验收：合 main → CI 发 `staging` → 商店版 App 切到 staging 看到新文案 → 批准 workflow 晋级 `production` → 切回、重启看到；往 staging 发坏包 → 回退到内置并在埋点里看到 `RolledBack`；回滚：JS 仓 revert → 发新版本 → 晋级 → 重启回到旧内容（第 15 点）；宿主加一个能力而不加 `hostVersion` → 宿主 CI 失败。
 
 ## M7 · 第二个 App
 

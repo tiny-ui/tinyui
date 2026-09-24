@@ -41,7 +41,7 @@ pages/**/*.bin
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
-签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包的 manifest 没有 `hostVersion`，也没有指针文件——宿主知道自己的 hostVersion，内置包不参与灰度、不验签。
+签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包没有指针文件，不参与灰度、不验签；库不读内置包 manifest 的 `hostVersion`（宿主知道自己的值）。它由 `tinyui pull` 取来时带着这个字段，宿主的发版检查用它确认内置包是给当前宿主版本发布过的（§1.4）；本地构建的包没有这个字段。
 
 ### 1.2 `tinyui bundle`
 
@@ -71,21 +71,29 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 | 输入 | 来源 |
 |---|---|
 | 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities }`）：`host.call` 的能力名、带点的宿主组件名（`ta.Icon`）；内置组件不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
-| 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、tinyui 版本）。宿主发 App 版本时由其 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次，与已随发版冻结的快照一致；`publish` 从服务端读 |
+| 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、tinyui 版本）。`hostVersion` 加 1 合入宿主 main 时由宿主 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次；`publish` 从服务端读 |
 
 不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或 manifest 的 `tinyui` 不等于快照里的 tinyui 版本（新版 tinyui 的内置组件，旧宿主没有）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
 
 核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `publish` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
 
-### 1.4 发 App 时取内置包：`tinyui pull`
+### 1.4 内置包：宿主用 `tinyui pull` 刷新
 
 ```
-tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--root <dir>]
+tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--pkg <p> --accept-key <k>]
 ```
 
-内置包取服务端上 `production` 当前指向的那一版，而不是本地重新构建一份（M6 拍板第 11 点）：线上与 App 自带的是同一个版本，回滚到"App 自带的那版"就是回滚到一个服务端认得的版本（§4.3）。`pull` 走公开投递端点，不要 token；像设备一样用 `tinyui.config.json` 的公钥验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；忽略 `rollout`。输出与 `tinyui build` 的产物同布局（`manifest.json`、`runtime/`、`pages/`），整个替换 `--out`，manifest 是下载来的原始字节（带 `hostVersion`，内置包不读它）。包里没有 `.js.map`：内置包的栈同热下发的包一样，按 `buildId` 离线对映射（build-chain.md §7）。
+内置包是 App 的地板，只要求**兼容**：是给当前 `hostVersion` 发布过的某个版本，引擎、协议、tinyui 版本与宿主一致，用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。它是不是当前的 `production` 不作要求，新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上（M6 拍板第 12 点）。
 
-宿主仓不跑 Node 时（F-Droid 从源码构建），由 JS 工程在发 App 前跑它并把结果提交进宿主仓。
+`pull` 在宿主仓里跑（宿主的发版冒烟脚本顺手调用），把 `--channel` 当前指向的版本拉进内置包目录：
+
+- 信任锚是已提交的内置包：包名与验签公钥取 `--out` 里现有的 `manifest.json`。下载的包换了公钥即拒绝，确认过轮换才用 `--accept-key <新公钥>` 放行；JS 仓单方面换钥不会悄悄进入宿主。第一次拉取（目录为空）要显式给 `--pkg` 与 `--accept-key`
+- 指针正在灰度（`rollout` < 100）时保持现状：灰度中的版本不能成为每个新装用户的地板
+- 指针指向的版本不新于现有内置包（同一 `hostVersion` 下比 `createdAt`）时保持现状
+- 像设备一样验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；换入时先备份旧目录，失败即还原
+- 走公开投递端点，不要 token。输出与 `tinyui build` 产物同布局（`manifest.json`、`runtime/`、`pages/`），manifest 是下载来的原始字节；包里没有 `.js.map`，内置包的栈同热下发的包一样按 `buildId` 离线对映射（build-chain.md §7）
+
+宿主仓里的是提交的字节，F-Droid 从源码构建时不需要 Node。
 
 ## 2. 投递协议
 
@@ -101,7 +109,7 @@ tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<
 - 请求不带 query、不带自定义 header、不带任何设备信息；宿主的 `fetch` 实现可以自行加 header 或按路径分流到不同来源，库不知情
 - 同一 `<version>` 目录下的文件永不改内容（改内容必换 version），CDN 因此不会陈旧
 - 无更新时客户端只下载指针（约 100 字节）；`manifest.json` 与文件只在有新 version 且中签时才取
-- 回滚 = `current.json` 的 `version` 与 `signature` 换回上一版；灰度 = 改 `rollout`；两者都不碰 `<version>/` 下的任何文件
+- 指针只往前走：回滚 = 用旧内容发一个新 version（§6.2）；灰度 = 改 `rollout`，不碰 `<version>/` 下的任何文件
 - 投递面没有鉴权：包在安装包里本来就能反出来；来源与完整性由签名（§7）保证
 
 ### 2.1 托管与私有化实例
@@ -146,7 +154,7 @@ class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceM
 
 ```kotlin
 class Updates(
-    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名、engine 与宿主引擎不符 → 构造抛错
+    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine / protocol 与宿主不符 → 发 EmbeddedIncompatible 后照常构造（§4.4）
     val hostVersion: String,
     dir: Path,                                   // 宿主给的目录，如 Android filesDir/tinyui、iOS Application Support/tinyui；库内按 <dir>/<pkg>/ 分
     installId: String,                           // 稳定的安装标识；库不生成、不持久化、不上传
@@ -159,18 +167,21 @@ class Updates(
 
 **`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。宿主给页面的东西变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；升级 tinyui。只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
-漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 版本）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已随发版带出去的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
+漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 版本）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已合入 main 的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
 快照由 `HostSnapshot.render(host, hostVersion)` 从宿主的 `TinyUIHost` 生成（所以能力必须在 App 级注册，native-api.md §7），检查写成宿主自己的 host 侧单元测试，照 sample 的 `HostSnapshotTest`：
 
 - 当前 `hostVersion` 的快照文件不存在，或与 `render` 结果不同 → 失败，提示加 `hostVersion`
-- 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果。这等于人声明"这个版本还没随发版带出去"；本地不判断版本是否已发，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4），发版 CI 在那里失败
+- 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果。这等于人声明"这个版本还没合入 main"；本地不判断，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4）
+- 宿主 main 的 CI 在每次 push 时跑这个测试并 `hosts upload`（同字节幂等），`hostVersion` 加 1 的提交一进 main 快照即上传、冻结（M6 拍板第 13 点）。上传不等到发 App：发版前要先在新版本下发布包（内置包、staging 验证都要），而发布前要读快照
 - 快照文件在 `.gitattributes` 里固定 `eol=lf`：上传的是原始字节，CRLF 的副本会被当成另一份快照而得 409
 - `hostVersion` 在宿主里只写一处常量，`Updates(hostVersion = …)` 与这个测试都读它
 
 测试只构造 `TinyUIHost`、不执行任何能力与组件，所以能在 JVM 上跑；能力实现需要的仓库类对象在测试里传假的即可。
 
-**接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。指针回滚对已装上的用户生效靠的是下一次 `check()` 装上回退版本；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 指针回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
+内置包另有一个宿主测试（照 sample 的 `EmbeddedPackageTest`）：对每个内置包的 manifest 跑 `PackageCheck.problems(manifest, host)`，要求为空；内置包取自服务端的宿主再断言 `manifest.hostVersion` 等于当前 `hostVersion`（§1.4）。后一条在 `hostVersion` 刚加 1、JS 还没在新版本下发布时必然不过，所以它是发版检查，由宿主的发版脚本与发版 CI 跑，不进日常测试。
+
+**接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。回滚（一个新 version）对已装上的用户生效靠的是下一次 `check()` 装上它；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
 
 文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`），是本 artifact 独有的依赖，core 库不引入。ECDSA 验签走平台 API（§7）。
 
@@ -183,15 +194,15 @@ class Updates(
 | `suspend fun check(pkg: String): CheckResult` | 只查一个包 |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
-`CheckResult`：`UpToDate` / `Installed(version)` / `Reverted(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
+`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running`、`EmbeddedIncompatible` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
 
 | 事件 | 何时 | 字段（均含 `pkg`） |
 |---|---|---|
+| `EmbeddedIncompatible` | 构造时，内置包不能在本宿主上跑 | `version`、`mismatch`：`ENGINE` / `PROTOCOL` 的集合（§4.4） |
 | `Running` | 构造时每包一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
 | `UpToDate` | `check()` | `version` |
 | `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `HOST_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
-| `Reverted` | `check()` | `version`：指针指向的、不新于内置的版本；已装的包被删，下次启动跑内置（§4.3） |
 | `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
@@ -207,9 +218,9 @@ class Updates(
 | | 下载量对照 | 服务端数到的 `<version>/` 下载次数 vs 客户端上报的 `Installed`，对不上即上报链路或 CDN 有问题 | 投递日志 + `Installed` | 二期 |
 | 灰度决策 | 灰度命中率 | 中签比例是否贴近 `rollout`，偏离即宿主 `installId` 有问题 | `Skipped(ROLLOUT)` vs `Installed` | MVP |
 | | 灰度期健康对比 | 灰度人群与内置包人群的回退率、失败率对比，决定推 100% 还是回滚 | `RolledBack`、`Failed` 按 version 分组 | MVP |
-| | 拨杆就地操作 | 曲线旁直接改 `rollout` 或回滚指针（§6.2 的 UI 版） | 发布协议 | MVP |
+| | 拨杆就地操作 | 曲线旁直接改 `rollout`，或一键触发回滚（发布方 CI 用旧内容重发一个新 version 再晋级；私钥只在发布方，服务端不能自己签，§6.2） | 发布协议 | MVP |
 | 止血 | 回退率告警 | `RolledBack / Installed` 超阈值即通知（webhook / 邮件） | `RolledBack`、`Installed` | 二期 |
-| | 自动止血 | 超阈值自动把 rollout 拨 0 或指针退回上一个好版本，按包开关与阈值 | 同上 + 发布协议 | 二期 |
+| | 自动止血 | 超阈值自动把 rollout 拨 0（止住新的安装），并通知发布方回滚，按包开关与阈值 | 同上 + 发布协议 | 二期 |
 | | 失败原因分布 | `Failed` 按 stage、`Skipped` 按 reason 分布——发错目录、公钥没换、CDN 缓存坏各有各的形状 | `Failed.stage`、`Skipped.reason` | MVP |
 | 排障 | 回退关联的页面错误 | `RolledBack` 的 kind / page / buildId 聚合，可对回 source map | `RolledBack` | 二期 |
 | | 兼容性错配 | 各不匹配项各多少台；App 新版发出后旧 hostVersion 还剩多少活跃设备，决定何时停发旧 hostVersion | `Skipped.mismatch` | 二期 |
@@ -226,7 +237,7 @@ class Updates(
 fetch <pkg>/<hostVersion>/current.json ─解析失败──────────────────────────────▶ Failed(pointer)
   │
   ├─ version == installed.version 或 version ∈ failed ────────────────▶ UpToDate / Skipped(failed)
-  ├─ version == embedded.version ─有 installed─删 installed─────────────▶ Reverted   // 否则 UpToDate；不取 manifest、不看 rollout
+  ├─ version == embedded.version（内置可用）──────────────────────────▶ UpToDate   // 不取 manifest、不看 rollout
   ├─ hash(installId + ":" + pkg + ":" + version) % 100 ≥ rollout ─────▶ Skipped(rollout)
   │
   ▼ fetch <pkg>/<hostVersion>/<version>/manifest.json，拿到原始字节
@@ -234,7 +245,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   ├─ 解析失败 ────────────────────────────────────────────────────────▶ Failed(manifest)
   ├─ name ≠ pkg / version ≠ 指针 version / hostVersion ≠ 宿主值
   │  / engine ≠ QuickJs.upstreamCommit / protocol ≠ PROTOCOL ─────────▶ Skipped(incompatible)   // 发错目录，上报
-  ├─ createdAt ≤ embedded.createdAt ─有 installed─删 installed─────────▶ Reverted   // 否则 Skipped(older-than-embedded)
+  ├─ createdAt ≤ embedded.createdAt（内置可用）────────────────────────▶ Skipped(older-than-embedded)
   │
   ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
@@ -244,7 +255,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
 
 manifest 一到手先验签再解析：签名不对的 manifest 里任何字段都不可信。验签用的公钥永远是内置 manifest 的，下载 manifest 的 `publicKey` 不参与验签。指针不在签名内，篡改它最多让客户端跳过更新或去取一个本就合法的包，与切断网络等价。掷骰哈希是 sha256 前 4 字节按大端读作无符号整数再取模 100，以 `pkg` 与 `version` 为盐：每个包每次发布独立抽样（monorepo 里同一次 CI 产出的多个包 `version` 可能相同，不加 `pkg` 会让它们的灰度人群重合）；已装上的用户不因 `rollout` 下调而回退。
 
-指针指向不新于内置的版本（2026-09-23 定，M6）时，期望状态就是跑内置：发 App 时内置包取自服务端的 production（§1.4），回滚到 App 自带的那一版因此是最常见的回滚，已装了更新版本的设备必须收得到。比内置还旧的目标同样回到内置——设备不会跑比 App 自带更旧的包，内置是离目标最近的那一版。指针正好指向内置版本时连 manifest 都不取，每次启动只多一个指针请求。
+指针只往前走（§6.2），所以正常流程里指针不会指向比已装版本更旧的版本；`older-than-embedded` 只出现在 App 升级带来了比线上更新的内置包时。
 
 ### 4.4 启动选择
 
@@ -259,6 +270,8 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
 构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置或 `hostVersion` 不等于宿主值的 installed 当场删除（App 升级带来了更新的内置包或 bump 了 hostVersion）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+
+内置包的引擎或协议与宿主不符时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 
 ### 4.5 失败回退
 
@@ -309,9 +322,11 @@ app token 与发布 token 一样可以签多个、只返回一次明文、服务
 | 请求 | 语义 |
 |---|---|
 | `GET /<app>/<pkg>/<hostVersion>/releases` | 已发布的 version 列表：`createdAt`（包的构建时刻，来自 manifest）、`publishedAt`（服务端记下的发布时刻）、各 channel 的指针与 `rollout` |
-| `POST /<app>/<channel>/<pkg>/<hostVersion>/pointer`，body `{ "version": …, "rollout"?: … }` | 指针指向 (app, pkg, hostVersion) 下任一已发布 version——回滚与跨 channel 晋级是同一个操作；或只改当前指针的 `rollout`。服务端用记录里该 version 的 `signature` 重写 `current.json` |
+| `POST /<app>/<channel>/<pkg>/<hostVersion>/pointer`，body `{ "version": …, "rollout"?: … }` | 晋级：指针指向 (app, pkg, hostVersion) 下已发布、且比当前更新的 version；或只改当前指针的 `rollout`。服务端用记录里该 version 的 `signature` 重写 `current.json` |
 
-服务端按 version 保存 release 记录（`createdAt`、`signature`），指针切换不需要重新上传；改 `rollout` 只改指针，签名不受影响（§7）。CLI：`tinyui releases list` / `rollback <version>` / `rollout <p>` / `promote <version> --to <channel>`。
+服务端按 version 保存 release 记录（`createdAt`、`signature`），指针切换不需要重新上传；改 `rollout` 只改指针，签名不受影响（§7）。CLI：`tinyui releases list` / `rollout <p>` / `promote <version> --to <channel>`。
+
+**指针只往前走**（M6 拍板第 15 点）：发布（`PUT current.json`）与晋级都拒绝把指针指向 `createdAt` 不新于当前指向的版本（409），同一 version 重发、只改灰度不算移动。回滚 = 在 JS 仓 revert、发布一个内容等于旧版的新 version、晋级——它比所有设备上的版本都新，包括内置了坏版本的新装用户，所以回滚一定落得到；设备侧也就不需要"指回旧版本"的分支。
 
 ### 6.3 管理 app 与包
 
@@ -336,7 +351,7 @@ CLI：`tinyui apps create` / `tinyui apps tokens create|revoke` / `tinyui packag
 
 ### 6.4 宿主快照
 
-宿主快照（§1.3、§4.1）是 `tinyui-host/<hostVersion>.txt` 的原始字节：该宿主版本提供的宿主组件、能力名与 tinyui 版本。宿主发 App 版本时由其 CI 上传，`publish` 发布前读取核对。格式是宿主侧生成工具与 CLI 之间的契约：
+宿主快照（§1.3、§4.1）是 `tinyui-host/<hostVersion>.txt` 的原始字节：该宿主版本提供的宿主组件、能力名与 tinyui 版本。`hostVersion` 加 1 合入宿主 main 时由其 CI 上传（§4.1），`publish` 发布前读取核对。格式是宿主侧生成工具与 CLI 之间的契约：
 
 ```
 hostVersion 2
@@ -361,10 +376,10 @@ capabilities
 
 | 请求 | 凭据 | 语义 |
 |---|---|---|
-| `PUT /apps/<app>/hosts/<hostVersion>`，body 为快照字节 | `ADMIN_TOKEN` 或本 app 的 app token | 每个 (app, hostVersion) 只写一次：同字节重传返回已存在，不同字节 → 409——已随发版带出的宿主版本，其快照冻结 |
+| `PUT /apps/<app>/hosts/<hostVersion>`，body 为快照字节 | `ADMIN_TOKEN` 或本 app 的 app token | 每个 (app, hostVersion) 只写一次：同字节重传返回已存在，不同字节 → 409——已合入 main 的宿主版本，其快照冻结 |
 | `GET /apps/<app>/hosts/<hostVersion>` | 以上两种，或本 app 任一包的发布 token | 原字节；没上传过 → 404，`publish` 据此拒绝发布 |
 
-CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 CI 用）。
+CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 main 的 CI 用）。
 
 ## 7. 签名
 

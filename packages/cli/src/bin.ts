@@ -19,7 +19,7 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
-       tinyui pull --channel <c> --host-version <n> --out <dir> [--app <a>] [--root <dir>]
+       tinyui pull --channel <c> --host-version <n> --out <dir> [--app <a>] [--pkg <p> --accept-key <k>]
        tinyui apps create <id> --name <n> [--org <o>]
        tinyui apps tokens create <app>
        tinyui apps tokens revoke <app> --id <token-id>
@@ -29,7 +29,6 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui tokens create <pkg> --channels <a,b> [--app <a>]
        tinyui tokens revoke <pkg> --id <token-id> [--app <a>]
        tinyui releases list --host-version <hostVersion> [--pkg <p>] [--app <a>] [--json]
-       tinyui releases rollback <version> --host-version <hostVersion> --channel <c> [--pkg <p>] [--app <a>]
        tinyui releases rollout <0-100> --host-version <hostVersion> --channel <c> [--pkg <p>] [--app <a>]
        tinyui releases promote <version> --host-version <hostVersion> --to <c> [--pkg <p>] [--app <a>]
 
@@ -62,10 +61,12 @@ publish    upload a bundle and move the channel pointer (docs/updates.md §6.1)
   --dir      a tinyui bundle output root or one <pkg>/<hostVersion> inside it (default: ./dist/ota)
   --rollout  overrides the percentage current.json was bundled with
 
-pull       the version a channel points at, verified, as the host's embedded package (docs/updates.md §1.4)
-  --channel  the channel to take it from, usually production; never defaulted
-  --out      replaced as a whole with manifest.json, runtime/ and pages/
-  --root     project whose tinyui.config.json gives the package name and the key to verify with (default: cwd)
+pull       refresh a host's embedded package to what a channel points at (docs/updates.md §1.4); run in the host repo
+  --channel     the channel to take it from, usually production; never defaulted
+  --out         the embedded package directory: its manifest.json names the package and the key to trust;
+                replaced as a whole, kept when the channel is mid-rollout or not newer
+  --pkg         only for the first pull into an empty --out
+  --accept-key  trust this key instead of the embedded package's: the first pull, or a checked rotation
   no token: it reads the public delivery endpoints
 
 the publishing and management commands talk to --url, default ${DEFAULT_URL} (or $TINYUI_UPDATES_URL)
@@ -218,15 +219,16 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     pull: {
-        options: { ...URL_OPTION, app: { type: "string" }, channel: { type: "string" }, "host-version": { type: "string" }, out: { type: "string" }, root: { type: "string" } },
+        options: { ...URL_OPTION, app: { type: "string" }, channel: { type: "string" }, "host-version": { type: "string" }, out: { type: "string" }, pkg: { type: "string" }, "accept-key": { type: "string" } },
         run: async (v) => {
-            const config = await loadConfig(resolve((v["root"] as string | undefined) ?? "."));
             const channel = requireName("--channel", required(v["channel"], "pull: --channel is required"));
             const hostVersion = required(v["host-version"], "pull: --host-version is required");
             if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
             const out = required(v["out"], "pull: --out is required; it is replaced as a whole");
-            const result = await pull({ url: resolveUrl(v["url"] as string | undefined), app: await appId(v), channel, pkg: config.name, hostVersion, publicKey: config.publicKey, out });
-            process.stderr.write(`${config.name} ${channel} -> ${result.version}, ${result.files.length} files in ${out}\n`);
+            const pkg = v["pkg"] === undefined ? undefined : requireName("--pkg", v["pkg"] as string);
+            const acceptKey = v["accept-key"] as string | undefined;
+            const result = await pull({ url: resolveUrl(v["url"] as string | undefined), app: await appId(v), channel, hostVersion, out, ...(pkg && { pkg }), ...(acceptKey && { acceptKey }) });
+            process.stderr.write(result.changed ? `${out} -> ${result.version}\n` : `${out} kept at ${result.version}: ${result.reason}\n`);
             process.stdout.write(`${result.version}\n`);
             return 0;
         },
@@ -298,15 +300,16 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
     }
     const target = { app, pkg, hostVersion, channel: "" };
     let body: { version?: string; rollout?: number };
-    if (action === "rollback" || action === "promote") {
-        const version = pathSegment(required(positionals[2], `releases ${action}: a version is required`), "a version");
-        target.channel = requireName("the channel", required(action === "promote" ? v["to"] : v["channel"], `releases ${action}: ${action === "promote" ? "--to" : "--channel"} is required`));
+    if (action === "promote") {
+        const version = pathSegment(required(positionals[2], "releases promote: a version is required"), "a version");
+        target.channel = requireName("the channel", required(v["to"], "releases promote: --to is required"));
         body = { version };
     } else if (action === "rollout") {
         target.channel = requireName("--channel", required(v["channel"], "releases rollout: --channel is required"));
         body = { rollout: percentage(required(positionals[2], "releases rollout: a percentage is required"), "releases rollout") };
     } else {
-        throw new Error("releases: expected list, rollback, rollout or promote");
+        // a rollback is a new version with the old content: pointers only move forward (docs/updates.md §6.2)
+        throw new Error("releases: expected list, rollout or promote");
     }
     const pointer = await movePointer(client, target, body);
     process.stderr.write(`${app}/${pkg}/${hostVersion} ${target.channel} -> ${pointer.version} at rollout ${pointer.rollout}\n`);

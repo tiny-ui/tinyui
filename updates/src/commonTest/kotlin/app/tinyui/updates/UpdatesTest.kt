@@ -139,24 +139,13 @@ class UpdatesTest {
     }
 
     @Test
-    fun rollingThePointerBackToEmbeddedOrOlderDropsTheInstalledPackage() = runTest {
-        publish(manifest())
-        assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
-        server["shop/1/current.json"] = """{"version":"v0","rollout":0,"signature":"ok"}""".encodeToByteArray()
-        events.clear()
-        val u = updates(embedded())
-        assertEquals("HOME-v1", pageBytes(u.current("shop")))
-        assertEquals(CheckResult.Reverted("v0"), u.check("shop"), "back to embedded whatever the rollout")
-        assertEquals(UpdateEvent.Reverted("shop", "v0"), events.last())
-        assertEquals("HOME-v1", pageBytes(u.current("shop")), "the process keeps what it started with")
-        assertFalse(fs.exists(dir / "shop/installed/v1"))
-        assertEquals("HOME-v0", pageBytes(updates(embedded()).current("shop")))
-
-        publish(manifest())
-        assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
-        publish(manifest(version = "vOld", createdAt = "2026-09-22T08:00:00Z"))
-        assertEquals(CheckResult.Reverted("vOld"), updates(embedded()).check("shop"), "older than embedded: embedded is the closest")
-        assertEquals(CheckResult.Skipped("vOld", SkipReason.OLDER_THAN_EMBEDDED), updates(embedded()).check("shop"), "nothing left to drop")
+    fun anEmbeddedPackageForAnotherEngineDegradesInsteadOfFailingTheHost() = runTest {
+        val hostEngine = "0".repeat(40)
+        val u = updates(embedded(), engine = hostEngine)
+        assertEquals(listOf(UpdateEvent.EmbeddedIncompatible("shop", "v0", setOf(Mismatch.ENGINE)), UpdateEvent.Running("shop", "v0", Source.EMBEDDED)), events)
+        publish(manifest(createdAt = "2026-09-22T08:00:00Z", engine = hostEngine))
+        assertEquals(CheckResult.Installed("v1"), u.check("shop"), "older than the unusable embedded package, still the one that can run")
+        assertEquals("HOME-v1", pageBytes(updates(embedded(), engine = hostEngine).current("shop")))
     }
 
     @Test
@@ -273,9 +262,8 @@ class UpdatesTest {
     }
 
     @Test
-    fun refusesPackagesThatCannotRunOnThisHost() {
+    fun refusesAMisconfiguredHost() {
         assertFailsWith<IllegalArgumentException> { updates(embedded(), embedded()) }
-        assertFailsWith<IllegalArgumentException> { updates(embedded(), engine = "0".repeat(40)) }
         for (bad in listOf("../x", "1.2.0", "0", "01", "")) assertFailsWith<IllegalArgumentException>(bad) { updates(embedded(), hostVersion = bad) }
         assertFailsWith<IllegalArgumentException> { updates(embedded()).current("nowhere") }
     }
