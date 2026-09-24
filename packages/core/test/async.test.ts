@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { drain, mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
+import { Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk, VERSION } from "../src/index.ts"
 const { call, query, onEmit } = internal;;
 import * as timers from "../src/timers.ts";
 
@@ -91,8 +91,8 @@ describe("other entries", () => {
         tinyui().visible(true);
     });
 
-    it("exposes the protocol version", () => {
-        assert.equal(tinyui().protocol, 1);
+    it("exposes the version", () => {
+        assert.equal(tinyui().version, VERSION);
         g;
     });
 });

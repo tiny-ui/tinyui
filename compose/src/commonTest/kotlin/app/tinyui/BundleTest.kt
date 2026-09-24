@@ -29,7 +29,7 @@ class BundleTest {
           "version": "20260922T090000Z-3f2a1c",
           "createdAt": "2026-09-22T09:00:00Z",
           "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
-          "protocol": 1,
+          "tinyui": "0.5.0",
           "hashes": { "tinyui-core": "00", "tinyui-native": "01", "shop/home": "02", "shop/cart": "03" }
         }
     """.trimIndent()
@@ -50,7 +50,7 @@ class BundleTest {
         val bundle = Bundle.load(files())
         assertEquals("shop", bundle.name)
         assertEquals("20260922T090000Z-3f2a1c", bundle.manifest.version)
-        assertEquals(1, bundle.manifest.protocol)
+        assertEquals("0.5.0", bundle.manifest.tinyui)
         assertNull(bundle.manifest.hostVersion, "an embedded manifest has no hostVersion")
         val page = bundle.page("shop/home")
         assertEquals("shop/home", page.module.name)

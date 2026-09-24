@@ -25,7 +25,7 @@ final enum class app.tinyui.updates/Mismatch : kotlin/Enum<app.tinyui.updates/Mi
     enum entry ENGINE // app.tinyui.updates/Mismatch.ENGINE|null[0]
     enum entry HOST_VERSION // app.tinyui.updates/Mismatch.HOST_VERSION|null[0]
     enum entry NAME // app.tinyui.updates/Mismatch.NAME|null[0]
-    enum entry PROTOCOL // app.tinyui.updates/Mismatch.PROTOCOL|null[0]
+    enum entry TINYUI // app.tinyui.updates/Mismatch.TINYUI|null[0]
     enum entry VERSION // app.tinyui.updates/Mismatch.VERSION|null[0]
 
     final val entries // app.tinyui.updates/Mismatch.entries|#static{}entries[0]

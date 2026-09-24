@@ -112,7 +112,7 @@ describe("tinyui build", () => {
         assert.match(manifest.createdAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
         assert.match(manifest.version, /^\d{8}T\d{6}Z-([0-9a-f]{12}|nogit)$/);
         assert.ok(manifest.version.startsWith(manifest.createdAt.replace(/[-:]/g, "")), `${manifest.version} starts with the compact createdAt`);
-        assert.equal(manifest.protocol, 1);
+        assert.equal(manifest.tinyui, JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")).version);
         if (qjsc) {
             assert.match(manifest.engine, /^[0-9a-f]{40}$/);
             assert.deepEqual(Object.keys(manifest.hashes), [...manifest.runtime, ...manifest.pages]);

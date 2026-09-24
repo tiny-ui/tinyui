@@ -4,7 +4,6 @@ import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
@@ -59,7 +58,6 @@ export interface Manifest {
     createdAt: string;
     /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
     engine: string;
-    protocol: number;
     /** Version of the `tinyui-core` the runtime modules came from: which built-in components the pages may use. */
     tinyui: string;
     /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
@@ -114,7 +112,6 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         version: options.version ?? `${createdAt.replace(/[-:]/g, "")}-${await gitShortSha(root)}`,
         createdAt,
         engine: runtime[0]?.bin ? await engineCommit(runtime[0].bin) : "",
-        protocol: await runtimeProtocol(root),
         tinyui: await tinyuiVersion(root),
         hashes,
         requires,
@@ -222,17 +219,9 @@ async function engineCommit(bin: string): Promise<string> {
     return commit;
 }
 
-/** `PROTOCOL` of the `tinyui-core` the pages resolve to, through its constants-only subpath export. */
-async function runtimeProtocol(root: string): Promise<number> {
-    const file = createRequire(join(root, "package.json")).resolve("tinyui-core/protocol");
-    const { PROTOCOL } = (await import(pathToFileURL(file).href)) as { PROTOCOL: unknown };
-    if (typeof PROTOCOL !== "number") throw new Error(`${file} does not export PROTOCOL`);
-    return PROTOCOL;
-}
-
 async function tinyuiVersion(root: string): Promise<string> {
     // the package's exports map hides package.json, so walk up from a file it does export
-    let dir = dirname(createRequire(join(root, "package.json")).resolve("tinyui-core/protocol"));
+    let dir = dirname(createRequire(join(root, "package.json")).resolve("tinyui-core"));
     for (;;) {
         const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8").catch(() => "{}")) as { name?: string; version?: string };
         if (pkg.name === "tinyui-core" && pkg.version) return pkg.version;

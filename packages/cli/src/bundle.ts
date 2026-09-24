@@ -123,10 +123,9 @@ async function readManifest(dist: string): Promise<Manifest> {
     } catch (e) {
         throw new Error(`cannot read ${file}: ${(e as Error).message}`);
     }
-    for (const key of ["name", "publicKey", "version", "createdAt", "engine"] as const) {
+    for (const key of ["name", "publicKey", "version", "createdAt", "engine", "tinyui"] as const) {
         if (typeof raw[key] !== "string") throw new Error(`${file} has no "${key}"; rebuild with a current tinyui-cli`);
     }
-    if (typeof raw.protocol !== "number") throw new Error(`${file} has no "protocol"; rebuild with a current tinyui-cli`);
     const names = (key: "runtime" | "pages") => {
         const list = raw[key];
         if (!Array.isArray(list) || !list.every((m) => typeof m === "string")) throw new Error(`${file}: "${key}" must list module names`);

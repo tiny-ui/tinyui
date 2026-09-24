@@ -6,7 +6,7 @@ enum class Source { EMBEDDED, INSTALLED }
 enum class SkipReason { INCOMPATIBLE, FAILED_BEFORE, OLDER_THAN_EMBEDDED, ROLLOUT }
 
 /** Which signed manifest field disagreed with this host (docs/updates.md §4.3). */
-enum class Mismatch { NAME, VERSION, ENGINE, PROTOCOL, HOST_VERSION }
+enum class Mismatch { NAME, VERSION, ENGINE, TINYUI, HOST_VERSION }
 
 enum class FailStage { POINTER, MANIFEST, SIGNATURE, DOWNLOAD, INTEGRITY, STORAGE }
 
@@ -26,7 +26,7 @@ sealed class UpdateEvent {
     data class UpToDate(override val pkg: String, val version: String) : UpdateEvent()
     data class Skipped(override val pkg: String, val version: String, val reason: SkipReason, val mismatch: Set<Mismatch> = emptySet()) : UpdateEvent()
     data class Installed(override val pkg: String, val version: String) : UpdateEvent()
-    /** At construction: the embedded package cannot run on this host (an engine or protocol [mismatch]); its pages fail until an update installs. */
+    /** At construction: the embedded package cannot run on this host (an engine or tinyui [mismatch]); its pages fail until an update installs. */
     data class EmbeddedIncompatible(override val pkg: String, val version: String, val mismatch: Set<Mismatch>) : UpdateEvent()
     data class Failed(override val pkg: String, val version: String?, val stage: FailStage, val message: String) : UpdateEvent()
     data class RolledBack(override val pkg: String, val version: String, val page: String, val kind: String, val buildId: String, val message: String) : UpdateEvent()

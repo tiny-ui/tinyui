@@ -15,7 +15,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 |---|---|---|
 | 页面 = 模块 = 字节码，自包含无共享 chunk | build-chain.md §3 | 包只是页面的集合，分发单元不用再设计 |
 | 字节码与字长无关、只绑引擎 commit，文件头自带 commit，加载时自校验 | quickjs-kmp `docs/decisions.md` | Android / iOS 共用同一份包；引擎不匹配是确定性的 E6 |
-| `PROTOCOL` 在 K0 核对 → E6；schema 不匹配走 E5 跳过 + `Placeholder`；`__mount` 清单让 JS `host.has()` 降级 | patch-protocol.md §6–7、ADR-003 | 硬兼容 / 软兼容的分界已画好，热下发只需把硬的两条提前到下载前 |
+| tinyui 版本在 K0 核对 → E6；schema 不匹配走 E5 跳过 + `Placeholder`；`__mount` 清单让 JS `host.has()` 降级 | patch-protocol.md §6–7、ADR-003 | 硬兼容 / 软兼容的分界已画好，热下发只需把硬的两条提前到下载前 |
 | `PageHost` 只收字节，库零 I/O，读资源在宿主 | `PageHost.kt`、TrendingAI `TinyUIHost.kt` | 热下发对库来说是"多一个字节来源 + 选哪个" |
 | release 不带 map，靠 `buildId` 离线对映射 | build-chain.md §7 | 错误上报链路不变 |
 
@@ -42,7 +42,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 谁负责判断 | 人（发版时） | 服务端逻辑 | 客户端解析 |
 | 静态托管可行 | 是（作路径） | 否 | 勉强 |
 
-选 hostVersion，它同时是服务端目录名。`engine`（引擎 commit）与 `protocol` 写进 manifest 只做校验，防"发错目录"这种人为错误，不参与匹配逻辑。
+选 hostVersion，它同时是服务端目录名。`engine`（引擎 commit）与 `tinyui`（版本）写进 manifest 只做校验，防"发错目录"这种人为错误，不参与匹配逻辑。
 
 兼容键回答的是"这一版页面能发给哪些已装好的 App"。页面依赖宿主给它的东西——宿主组件、宿主能力、tinyui 本身——而宿主只能随 App 发版改，页面随时可以热下发，两边的新旧必然错开。以一个订阅页为例：
 
@@ -154,7 +154,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 |---|---|
 | 包 | App 由 N≥1 个包组成；一个包 = 一次 `tinyui build` 的完整产物（`runtime/*.bin` + `pages/**/*.bin` + `manifest.json`），整包原子生效，各包独立；不做单页下发、不做跨包共享模块、不做 zip、不做 diff |
 | 包名与模块名 | 包名 `[a-z0-9-]+` 来自 `tinyui.config.json`；模块名 = 路由键 = `<pkg>/<相对路径>`，无 `pages/` 段 |
-| 兼容键 | 宿主声明的 `hostVersion`，作服务端路径；`engine` / `protocol` 只校验 |
+| 兼容键 | 宿主声明的 `hostVersion`，作服务端路径；`engine` / `tinyui` 只校验 |
 | 启用规则 | 下发包 `version ≠ installed` 且 `createdAt` 新于内置才装；App 升级带来更新的内置包时自动弃掉 installed；不能用下发把 App 降到比内置更老 |
 | 生效时机 | 下次进程启动 |
 | 失败语义 | 下发包的页面报 E2 / E6 → 当场用内置包重挂这一页，整包持久化拉黑并上报；E5 不算失败。启动时重算 installed 包 sha256，不一致同样拉黑。进程级崩溃不在库的回退范围：出口是灰度 + 回滚 + "`check()` 先于任何页面挂载"的接入约定，挂载标记见 §4.3。一个 (runtime, page) 对永远来自同一个包；不同页面可以短暂来自不同包（各自独立 Runtime） |
@@ -163,7 +163,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 灰度 | manifest `rollout` 百分比，客户端按 `installId` 掷骰 |
 | 回滚 | 用旧内容发新版本，指针只往前走；无 `rollBackToEmbedded` |
 | 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256，覆盖 `<version>/manifest.json` 的原始字节，无规范化）；密钥按 (app, pkg)，发布方持私钥，服务端与客户端各验一次；公钥写在 `tinyui.config.json` 随 build 进 manifest，客户端只信内置包的 |
-| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes`；`tinyui bundle --host-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<hostVersion>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
+| CLI | `tinyui.config.json`（`name` / `publicKey` / `pages`）；`tinyui build` 的 manifest 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `tinyui` / `hashes`；`tinyui bundle --host-version --signing-key` 产出上传目录 `dist/ota/<pkg>/<hostVersion>/`（`current.json` + `<version>/`）；`tinyui publish` 走发布协议；`keys` / `apps` / `packages` / `tokens` / `releases` 子命令是全部管理面 |
 | 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，单 R2 桶，`Storage` 接口后置；内容按 (app, pkg, hostVersion, version) 存，channel 是指针；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
 | 仓边界 | `tinyui-updates` 在主仓 `updates/` 模块，与 core 同版本发；服务端独立仓；协议只写在 updates.md，发布后字段只增不改 |
 

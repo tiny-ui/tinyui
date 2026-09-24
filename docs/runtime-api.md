@@ -25,7 +25,7 @@
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | | `manifest()` | Kotlin 下发的组件 / 能力清单 |
-| 版本 | `VERSION`、`PROTOCOL` | 包版本；patch 协议版本号 |
+| 版本 | `VERSION` | 包版本，也是运行时与 Kotlin 侧对齐的依据（patch-protocol.md §6） |
 | 内部 | `internal.{call, query, send, onEmit}` | core 与 `tinyui-native` 之间的桥契约（§9），业务不用 |
 
 不在 v1：`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal` / `observable`（每页一个引擎，模块作用域就是页面作用域）。
@@ -246,7 +246,7 @@ export default function Home(props: HomeProps): Node { … }
 | K2 | `dispatch(nodeId: number, event: string, payloadJson: string)` | |
 | K3 | `resolve(cbId: number, resultJson: string)` / `reject(cbId: number, errorJson: string)` | `errorJson` 为 `{ code: string, message: string }` |
 | K5 | `emit(topic: string, payloadJson: string)` | |
-| — | `protocol: number` | patch 协议版本，与 `PROTOCOL` 相同；Kotlin 在 K0 核对，不等则 E6 |
+| — | `version: string` | 与 `VERSION` 相同；Kotlin 在 K0 核对它等于 `TinyUI.version`，不等则 E6 |
 
 每个 K 入口在 Kotlin 侧是同一次 `withEngine` 里的**两次调用**：先调入口函数，再调 `flush()`（理由见 [js-runtime.html](./js-runtime.html) §2）。
 

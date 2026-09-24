@@ -35,9 +35,8 @@ pages/**/*.bin
 | `version` | `tinyui build` | 包标识，目录名，只求唯一：`<createdAt 紧凑形式>-<git 短 sha（12 位）或 nogit>`，如 `20260918T100212Z-3f2a1c9e04b7`；`--version` 可覆盖 |
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个） |
-| `protocol` | `tinyui build` | 所含 `tinyui-core` 的 `PROTOCOL`，读自子路径导出 `tinyui-core/protocol`（只含常量，不在 Node 里执行运行时模块） |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.bin` 的 sha256 hex，键与 `files` 一致 |
-| `tinyui` | `tinyui build` | 运行时模块取自的 `tinyui-core` 版本，决定页面能用哪些内置组件；`publish` 核对它等于目标宿主的 tinyui 版本（§1.3），客户端不读 |
+| `tinyui` | `tinyui build` | 运行时模块取自的 `tinyui-core` 版本，决定页面能用哪些内置组件；`publish` 核对它等于目标宿主的 tinyui 版本（§1.3），客户端核对它等于 `TinyUI.version`（§4.3）；运行时与 Kotlin 侧的全部约定靠它对齐（patch-protocol.md §6） |
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
@@ -83,7 +82,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--pkg <p> --accept-key <k>]
 ```
 
-内置包是 App 的地板，只要求**兼容**：是给当前 `hostVersion` 发布过的某个版本，引擎、协议、tinyui 版本与宿主一致，用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。它是不是当前的 `production` 不作要求，新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上（M6 拍板第 12 点）。
+内置包是 App 的地板，只要求**兼容**：是给当前 `hostVersion` 发布过的某个版本，引擎、tinyui 版本与宿主一致，用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。它是不是当前的 `production` 不作要求，新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上（M6 拍板第 12 点）。
 
 `pull` 在宿主仓里跑（宿主的发版冒烟脚本顺手调用），把 `--channel` 当前指向的版本拉进内置包目录：
 
@@ -154,7 +153,7 @@ class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceM
 
 ```kotlin
 class Updates(
-    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine / protocol 与宿主不符 → 发 EmbeddedIncompatible 后照常构造（§4.4）
+    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine / tinyui 与宿主不符 → 发 EmbeddedIncompatible 后照常构造（§4.4）
     val hostVersion: String,
     dir: Path,                                   // 宿主给的目录，如 Android filesDir/tinyui、iOS Application Support/tinyui；库内按 <dir>/<pkg>/ 分
     installId: String,                           // 稳定的安装标识；库不生成、不持久化、不上传
@@ -198,10 +197,10 @@ class Updates(
 
 | 事件 | 何时 | 字段（均含 `pkg`） |
 |---|---|---|
-| `EmbeddedIncompatible` | 构造时，内置包不能在本宿主上跑 | `version`、`mismatch`：`ENGINE` / `PROTOCOL` 的集合（§4.4） |
+| `EmbeddedIncompatible` | 构造时，内置包不能在本宿主上跑 | `version`、`mismatch`：`ENGINE` / `TINYUI` 的集合（§4.4） |
 | `Running` | 构造时每包一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
 | `UpToDate` | `check()` | `version` |
-| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `PROTOCOL` / `HOST_VERSION` 的集合 |
+| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `TINYUI` / `HOST_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
 | `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
@@ -244,7 +243,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   ├─ 用内置 publicKey 对原始字节验 signature 失败 ─────────────────────▶ Failed(signature)   // 上报
   ├─ 解析失败 ────────────────────────────────────────────────────────▶ Failed(manifest)
   ├─ name ≠ pkg / version ≠ 指针 version / hostVersion ≠ 宿主值
-  │  / engine ≠ QuickJs.upstreamCommit / protocol ≠ PROTOCOL ─────────▶ Skipped(incompatible)   // 发错目录，上报
+  │  / engine ≠ QuickJs.upstreamCommit / tinyui ≠ TinyUI.version ─────▶ Skipped(incompatible)   // 发错目录，上报
   ├─ createdAt ≤ embedded.createdAt（内置可用）────────────────────────▶ Skipped(older-than-embedded)
   │
   ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
@@ -271,7 +270,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` 等于宿主值、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置或 `hostVersion` 不等于宿主值的 installed 当场删除（App 升级带来了更新的内置包或 bump 了 hostVersion）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
 
-内置包的引擎或协议与宿主不符时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
+内置包的引擎或 tinyui 版本与宿主不符时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 
 ### 4.5 失败回退
 
