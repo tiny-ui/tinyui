@@ -22,6 +22,12 @@ describe("isCompatible", () => {
     });
 
     it("rejects what is not a version", () => {
-        assert.throws(() => isCompatible("0.7", "0.7.0"), /not a tinyui version/);
+        for (const bad of ["0.7", "01.0.0", "0.7.0-rc.01", "0.7.0-"]) assert.throws(() => isCompatible(bad, "0.7.0"), /not a tinyui version/, bad);
+    });
+
+    it("compares numbers of any size exactly, the same as the Kotlin side", () => {
+        assert.ok(isCompatible("0.99999999999999999999.0", "0.7.0"));
+        assert.ok(!isCompatible("0.7.0", "0.99999999999999999999.0"));
+        assert.ok(!isCompatible("0.7.0-rc.9007199254740992", "0.7.0-rc.9007199254740993"), "beyond a double's precision");
     });
 });

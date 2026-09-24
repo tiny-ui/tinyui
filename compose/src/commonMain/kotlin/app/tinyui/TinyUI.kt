@@ -33,21 +33,21 @@ object TinyUI {
     }
 }
 
-/** The same precedence as the CLI's `version.ts`: a pre-release sorts before its release. */
-private class SemVer(val major: Int, val minor: Int, val patch: Int, val pre: List<String>) : Comparable<SemVer> {
+/** The same precedence as the CLI's `version.ts`: numbers compared as text, so none is too large to parse. */
+private class SemVer(val core: List<String>, val pre: List<String>) : Comparable<SemVer> {
+    val major: String get() = core[0]
+
     override fun compareTo(other: SemVer): Int {
-        compareValues(major, other.major).let { if (it != 0) return it }
-        compareValues(minor, other.minor).let { if (it != 0) return it }
-        compareValues(patch, other.patch).let { if (it != 0) return it }
+        for (i in 0..2) compareNumeric(core[i], other.core[i]).let { if (it != 0) return it }
         if (pre.isEmpty() || other.pre.isEmpty()) return other.pre.size - pre.size
         for ((x, y) in pre.zip(other.pre)) {
             if (x == y) continue
-            val nx = x.toIntOrNull()
-            val ny = y.toIntOrNull()
+            val nx = NUMERIC.matches(x)
+            val ny = NUMERIC.matches(y)
             return when {
-                nx != null && ny != null -> compareValues(nx, ny)
-                nx != null -> -1
-                ny != null -> 1
+                nx && ny -> compareNumeric(x, y)
+                nx -> -1
+                ny -> 1
                 else -> x.compareTo(y)
             }
         }
@@ -55,12 +55,18 @@ private class SemVer(val major: Int, val minor: Int, val patch: Int, val pre: Li
     }
 
     companion object {
-        private val PATTERN = Regex("""(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?""")
+        private val NUMERIC = Regex("0|[1-9][0-9]*")
+        private val PATTERN = Regex("""(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?""")
+
+        /** Digits without leading zeros: the longer one is larger, equal lengths compare as text. */
+        private fun compareNumeric(a: String, b: String): Int = if (a.length != b.length) a.length - b.length else a.compareTo(b)
 
         fun parse(version: String): SemVer? {
             val m = PATTERN.matchEntire(version) ?: return null
-            val (major, minor, patch, pre) = m.destructured
-            return SemVer(major.toInt(), minor.toInt(), patch.toInt(), if (pre.isEmpty()) emptyList() else pre.split('.'))
+            val (major, minor, patch, preText) = m.destructured
+            val pre = if (preText.isEmpty()) emptyList() else preText.split('.')
+            if (pre.any { id -> id.all { it in '0'..'9' } && !NUMERIC.matches(id) }) return null
+            return SemVer(listOf(major, minor, patch), pre)
         }
     }
 }

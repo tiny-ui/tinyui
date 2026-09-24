@@ -25,6 +25,13 @@ class TinyUITest {
         assertTrue(TinyUI.isCompatible("0.7.0", "0.7.0-rc.1"))
         assertFalse(TinyUI.isCompatible("0.7.0-rc.1", "0.7.0"))
         assertTrue(TinyUI.isCompatible("0.7.0-rc.10", "0.7.0-rc.2"))
-        for (bad in listOf("", "0.7", "v0.7.0", "01.0.0")) assertFalse(TinyUI.isCompatible("0.7.0", bad), bad)
+        for (bad in listOf("", "0.7", "v0.7.0", "01.0.0", "0.7.0-rc.01")) assertFalse(TinyUI.isCompatible("0.7.0", bad), bad)
+    }
+
+    @Test
+    fun numbersOfAnySizeCompareExactly() {
+        assertTrue(TinyUI.isCompatible("0.99999999999999999999.0", "0.7.0"), "beyond Int and Long")
+        assertFalse(TinyUI.isCompatible("0.7.0", "0.99999999999999999999.0"))
+        assertFalse(TinyUI.isCompatible("0.7.0-rc.9007199254740992", "0.7.0-rc.9007199254740993"), "beyond a double's precision")
     }
 }
