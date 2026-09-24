@@ -1,5 +1,5 @@
 hostVersion 1
-tinyui 0.5.0
+tinyui 0.6.0
 
 components
 
