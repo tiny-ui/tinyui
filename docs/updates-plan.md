@@ -139,7 +139,6 @@ M6 收尾（2026-09-24）评审中发现、与 M6 正交的问题，各自独立
 
 | 问题 | 在哪 | 现状与后果 | 方向 |
 |---|---|---|---|
-| TrendingAI 没有 PR 级 CI | TrendingAI `.github/workflows` | 宿主测试只在 push 到 main（快照 workflow）与发版时跑，契约改了忘加 `HOST_VERSION` 要到合入后才红 | 加 PR 检查：`HostSnapshotTest` 与常规测试 |
 | 看不到设备在跑哪一版 | TrendingAI `TinyUIUpdates.report()` | `Running` 事件没上报，发现不了"一直停在内置包"或指针 404 | 抽样上报 `Running` |
 | 快照盲区 | updates.md §4.1、§6.4 | 能力的参数与返回形状、页面 props、store key、`PageLocal` 都不在快照里，这些变了该不该加 `hostVersion` 全靠人判断 | 先记录；有需要时给能力加修订号或形状描述 |
 
