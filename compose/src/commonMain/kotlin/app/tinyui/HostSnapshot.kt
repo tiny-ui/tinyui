@@ -7,6 +7,23 @@ import kotlinx.serialization.json.JsonPrimitive
 
 /** The host snapshot `tinyui-host/<hostVersion>.txt` (docs/updates.md §4.1, format §6.4). */
 object HostSnapshot {
+    /**
+     * The host test's check (docs/updates.md §4.1): what keeps [host] from being a host of [snapshot], the committed
+     * `tinyui-host/<hostVersion>.txt`; empty when it is one. Components and capabilities must match exactly; the
+     * `tinyui` line is the lower bound of this host version, so this host's tinyui only has to be compatible with it.
+     */
+    fun problems(snapshot: String, host: TinyUIHost, hostVersion: String): List<String> = buildList {
+        val lines = snapshot.lines()
+        val current = render(host, hostVersion).lines()
+        if (lines.firstOrNull() != current.first()) add("the snapshot says \"${lines.firstOrNull()}\", the host is at hostVersion $hostVersion")
+        val floor = lines.getOrNull(1)?.removePrefix("tinyui ")
+        if (floor == null || !TinyUI.isCompatible(TinyUI.version, floor)) {
+            add("tinyui ${TinyUI.version} is not compatible with this host version's lower bound $floor (same major, not older)")
+        }
+        if (lines.drop(2) != current.drop(2)) add("components or capabilities differ from the snapshot")
+    }
+
+    /** The snapshot of [host] at [hostVersion]; its `tinyui` line is this library's version, the lower bound when first written. */
     fun render(host: TinyUIHost, hostVersion: String): String {
         require(hostVersion.matches(Regex("[1-9][0-9]*"))) { "hostVersion must be a positive integer, got \"$hostVersion\"" }
         val components = host.components.schemas.filter { '.' in it.type }.associate { it.type to describe(it) }

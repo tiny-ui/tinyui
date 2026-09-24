@@ -60,8 +60,8 @@ import app.tinyui.schema.LocalChildModifier
 import app.tinyui.schema.NodeScope
 import app.tinyui.schema.SizeValue
 
-/** Bytecode of the runtime modules every page imports, as `tinyui build` writes them under `runtime/`. */
-class RuntimeBundle(val core: ByteArray, val native: ByteArray)
+/** Bytecode of the runtime modules every page imports; [TinyUI.runtime] outside of tests. */
+internal class RuntimeBundle(val core: ByteArray, val native: ByteArray)
 
 /** One page's bytecode; [name] is the module name (`sample/todos`) and [buildId] comes from `manifest.json`. */
 class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "")
@@ -79,7 +79,7 @@ class PageFailure(val error: PageError) {
  * owned by the page (docs/adr-002 §4), closed with the engine.
  */
 @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
-class PageHost(
+class PageHost internal constructor(
     private val runtimeBundle: RuntimeBundle,
     private val page: PageModule,
     val host: TinyUIHost,
@@ -89,6 +89,15 @@ class PageHost(
     private val entryTimeoutMs: Long = 5_000,
     private val sourceMaps: SourceMaps = SourceMaps.EMPTY,
 ) {
+    constructor(
+        page: PageModule,
+        host: TinyUIHost,
+        services: HostServices = HostServices.Default,
+        propsJson: String = "{}",
+        entryTimeoutMs: Long = 5_000,
+        sourceMaps: SourceMaps = SourceMaps.EMPTY,
+    ) : this(TinyUI.runtime, page, host, services, propsJson, entryTimeoutMs, sourceMaps)
+
     private val registry: ComponentRegistry get() = host.components
     private val sink: PageSink get() = host.sink
     private val context by lazy { PageContext(page.name, services.locals.associate { it.local to it.value }) }
@@ -125,8 +134,6 @@ class PageHost(
                     val namespace = runBytecode(page.bytecode, ObjectTransport.REF) as JsRef
                     if (namespace.isPromise) { namespace.close(); error("page module is still pending after microtasks were drained") }
                     val self = evaluate("__tinyui", objects = ObjectTransport.REF) as JsRef
-                    val version = (self.get("version") as? JsValue.Str)?.value
-                    check(version == TinyUI.version) { "runtime module is tinyui $version, the host has ${TinyUI.version}" }
                     val fns = ENTRY_NAMES.associateWith { self.get(it, ObjectTransport.REF) as JsRef }
                     val e = Entries(self, fns).also { entries = it }
                     namespace.use { ns ->

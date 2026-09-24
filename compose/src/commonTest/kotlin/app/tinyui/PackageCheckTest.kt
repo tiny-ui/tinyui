@@ -26,7 +26,7 @@ class PackageCheckTest {
         tinyui: String = TinyUI.version,
         requires: Map<String, PageRequires> = mapOf("shop/home" to PageRequires(listOf("ta.Icon"), listOf("checkout.start", "store.get"))),
     ) = BuildManifest(
-        runtime = emptyList(), pages = listOf("shop/home"), files = emptyMap(), buildIds = emptyMap(),
+        pages = listOf("shop/home"), files = emptyMap(), buildIds = emptyMap(),
         name = "shop", publicKey = "k", version = "v1", createdAt = "2026-09-24T00:00:00Z",
         engine = engine, hashes = emptyMap(), tinyui = tinyui, requires = requires,
     )
@@ -41,7 +41,7 @@ class PackageCheckTest {
         val problems = PackageCheck.problems(
             manifest(
                 engine = "0".repeat(40),
-                tinyui = "0.0.1",
+                tinyui = "99.0.0",
                 requires = mapOf("shop/home" to PageRequires(listOf("ta.Rating"), listOf("coupon.apply"))),
             ),
             host,
@@ -49,12 +49,18 @@ class PackageCheckTest {
         assertEquals(
             listOf(
                 "built for engine ${"0".repeat(40)}, the host embeds ${QuickJs.upstreamCommit}",
-                "built with tinyui 0.0.1, the host has ${TinyUI.version}",
+                "built with tinyui 99.0.0, which does not run on this host's ${TinyUI.version} (same major, not newer)",
                 "shop/home uses component ta.Rating, which the host does not register",
                 "shop/home calls coupon.apply, which the host does not provide",
             ),
             problems,
         )
+    }
+
+    @Test
+    fun aPackageBuiltAgainstAnOlderTinyuiOfTheSameMajorRuns() {
+        val older = TinyUI.version.substringBefore('.') + ".0.0"
+        assertEquals(emptyList(), PackageCheck.problems(manifest(tinyui = older), host))
     }
 
     @Test

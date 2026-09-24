@@ -94,7 +94,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 ...(v["version"] !== undefined && { version: v["version"] as string }),
                 jsOnly: v["js-only"] as boolean,
             });
-            for (const m of [...result.runtime, ...result.pages]) process.stdout.write(`${m.name} -> ${m.bin ?? m.js}\n`);
+            for (const m of result.pages) process.stdout.write(`${m.name} -> ${m.bin ?? m.js}\n`);
             return 0;
         },
     },

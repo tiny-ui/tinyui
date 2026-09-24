@@ -72,6 +72,25 @@ class HostSnapshotTest {
     }
 
     @Test
+    fun aHostOfTheSnapshotHasNoProblemsItsTinyuiOnlyHasToBeCompatibleWithTheLowerBound() {
+        val host = host()
+        val snapshot = HostSnapshot.render(host, "3")
+        assertEquals(emptyList(), HostSnapshot.problems(snapshot, host, "3"))
+        val floor = TinyUI.version.substringBefore('.') + ".0.0"
+        assertEquals(emptyList(), HostSnapshot.problems(snapshot.replace("tinyui ${TinyUI.version}", "tinyui $floor"), host, "3"))
+    }
+
+    @Test
+    fun namesAnotherHostVersionANewerLowerBoundAndChangedSections() {
+        val host = host()
+        val snapshot = HostSnapshot.render(host, "3")
+        assertEquals(1, HostSnapshot.problems(snapshot, host, "4").size)
+        val newer = HostSnapshot.problems(snapshot.replace("tinyui ${TinyUI.version}", "tinyui 99.0.0"), host, "3")
+        assertEquals(listOf("tinyui ${TinyUI.version} is not compatible with this host version's lower bound 99.0.0 (same major, not older)"), newer)
+        assertEquals(listOf("components or capabilities differ from the snapshot"), HostSnapshot.problems(snapshot.replace("  ta.Icon", "  ta.Icon2"), host, "3"))
+    }
+
+    @Test
     fun writesBothSectionsEvenWhenEmpty() {
         val bare = TinyUIHost(ComponentRegistry().registerBuiltins(), sink)
         assertEquals("hostVersion 1\ntinyui ${TinyUI.version}\n\ncomponents\n\ncapabilities\n", HostSnapshot.render(bare, "1"))

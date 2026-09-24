@@ -55,7 +55,7 @@ fun UpdatesPage(
         return
     }
     TinyUIPage(
-        page.runtime, page.module, host, services, propsJson, modifier, page.sourceMaps,
+        page.module, host, services, propsJson, modifier, page.sourceMaps,
         error = { failure ->
             // only the failures that mean the package cannot run here (docs/updates.md §4.5)
             if ((failure.kind == "E2" || failure.kind == "E6") && page.bundle !== updates.embedded(pkg)) {

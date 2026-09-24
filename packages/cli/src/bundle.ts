@@ -126,7 +126,7 @@ async function readManifest(dist: string): Promise<Manifest> {
     for (const key of ["name", "publicKey", "version", "createdAt", "engine", "tinyui"] as const) {
         if (typeof raw[key] !== "string") throw new Error(`${file} has no "${key}"; rebuild with a current tinyui-cli`);
     }
-    const names = (key: "runtime" | "pages") => {
+    const names = (key: "pages") => {
         const list = raw[key];
         if (!Array.isArray(list) || !list.every((m) => typeof m === "string")) throw new Error(`${file}: "${key}" must list module names`);
         return list as string[];
@@ -136,11 +136,11 @@ async function readManifest(dist: string): Promise<Manifest> {
         if (typeof map !== "object" || map === null || !Object.values(map).every((v) => typeof v === "string")) throw new Error(`${file}: "${key}" must map module names to strings`);
         return map as Record<string, string>;
     };
-    const modules = [...names("runtime"), ...names("pages")];
+    const modules = names("pages");
     if (new Set(modules).size !== modules.length) throw new Error(`${file}: a module is listed twice`);
     for (const key of ["files", "hashes", "buildIds"] as const) {
         const keys = Object.keys(table(key)).sort();
-        if (keys.join("\n") !== [...modules].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "runtime" and "pages"`);
+        if (keys.join("\n") !== [...modules].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "pages"`);
     }
     return raw as Manifest;
 }

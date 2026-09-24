@@ -35,7 +35,6 @@ interface Manifest {
     version: string;
     createdAt: string;
     hostVersion?: string;
-    runtime: string[];
     pages: string[];
     files: Record<string, string>;
     hashes: Record<string, string>;
@@ -89,7 +88,7 @@ export async function pull(options: PullOptions): Promise<PullResult> {
     if (current?.hostVersion === options.hostVersion && manifest.createdAt <= current.createdAt) return keep(`embedded ${current.version} is not older than ${version}`);
 
     const files = new Map<string, Uint8Array>();
-    for (const module of [...manifest.runtime, ...manifest.pages]) {
+    for (const module of manifest.pages) {
         const path = `${manifest.files[module]}.bin`;
         if (!path.split("/").every(isPathSegment)) throw new Error(`manifest.files[${module}] is not a relative path: ${path}`);
         const bytes = await get(`${version}/${path}`);

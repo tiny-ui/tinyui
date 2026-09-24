@@ -143,7 +143,7 @@ class Updates internal constructor(
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {
             if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
-            if (embedded.manifest.tinyui != tinyui) add(Mismatch.TINYUI)
+            if (!TinyUI.isCompatible(tinyui, embedded.manifest.tinyui)) add(Mismatch.TINYUI)
         }
         private val embeddedCreatedAt: String? get() = embedded.manifest.createdAt.takeIf { unusable.isEmpty() }
 
@@ -164,14 +164,14 @@ class Updates internal constructor(
             fs.deleteRecursively(installedDir / keep)
         }
 
-        /** The installed package when it is still the one to run: newer than embedded, this host version, engine and tinyui, intact. */
+        /** The installed package when it is still the one to run: newer than embedded, this host version and engine, a compatible tinyui, intact. */
         private fun loadInstalled(dir: Path): Bundle? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
-            if (manifest.engine != engine || manifest.tinyui != tinyui) return null
+            if (manifest.engine != engine || !TinyUI.isCompatible(tinyui, manifest.tinyui)) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
             val files = HashMap<String, ByteArray>()
-            for (module in manifest.runtime + manifest.pages) {
+            for (module in manifest.pages) {
                 val path = manifest.file(module) + ".bin"
                 val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
                 if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
@@ -224,7 +224,7 @@ class Updates internal constructor(
                 if (manifest.version != version) add(Mismatch.VERSION)
                 if (manifest.hostVersion != hostVersion) add(Mismatch.HOST_VERSION)
                 if (manifest.engine != engine) add(Mismatch.ENGINE)
-                if (manifest.tinyui != tinyui) add(Mismatch.TINYUI)
+                if (!TinyUI.isCompatible(tinyui, manifest.tinyui)) add(Mismatch.TINYUI)
             }
             if (mismatch.isNotEmpty()) return CheckResult.Skipped(version, SkipReason.INCOMPATIBLE, mismatch)
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)
@@ -261,7 +261,7 @@ class Updates internal constructor(
         /** Every file of [manifest] into [staging], each checked against `hashes`; null once all are there. */
         private suspend fun downloadInto(staging: Path, manifest: BuildManifest, manifestBytes: ByteArray): CheckResult.Failed? {
             val version = manifest.version
-            for (module in manifest.runtime + manifest.pages) {
+            for (module in manifest.pages) {
                 val path = manifest.file(module) + ".bin"
                 val bytes = try {
                     fetch("$name/$hostVersion/$version/$path")

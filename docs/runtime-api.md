@@ -1,6 +1,6 @@
 # JS 运行时 API：`tinyui-core` v1
 
-- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`；2026-09-24 加 §11 兼容承诺，§9 的 K0 版本核对删去，见 ADR-006 §2.11）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
+- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`；2026-09-24 加 §11 兼容承诺，§9 删去 `version` 入口与 K0 版本核对，见 ADR-006 §2.11）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`resource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
@@ -246,7 +246,6 @@ export default function Home(props: HomeProps): Node { … }
 | K2 | `dispatch(nodeId: number, event: string, payloadJson: string)` | |
 | K3 | `resolve(cbId: number, resultJson: string)` / `reject(cbId: number, errorJson: string)` | `errorJson` 为 `{ code: string, message: string }` |
 | K5 | `emit(topic: string, payloadJson: string)` | |
-| — | `version: string` | 与 `VERSION` 相同；运行时随宿主后两侧天然同版本，Kotlin 不再核对，仅供诊断 |
 
 每个 K 入口在 Kotlin 侧是同一次 `withEngine` 里的**两次调用**：先调入口函数，再调 `flush()`（理由见 [js-runtime.html](./js-runtime.html) §2）。
 

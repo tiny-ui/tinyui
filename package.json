@@ -10,7 +10,9 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "schema": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/app/tinyui/components/generated/BuiltinSchemas.kt --package app.tinyui.components.generated --node-import ../node.ts",
-    "schema:check": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/app/tinyui/components/generated/BuiltinSchemas.kt --package app.tinyui.components.generated --node-import ../node.ts --check"
+    "schema:check": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/app/tinyui/components/generated/BuiltinSchemas.kt --package app.tinyui.components.generated --node-import ../node.ts --check",
+    "runtime": "node packages/cli/scripts/runtime.ts compose/src/commonMain/kotlin/app/tinyui/generated/RuntimeBytecode.kt",
+    "runtime:check": "node packages/cli/scripts/runtime.ts compose/src/commonMain/kotlin/app/tinyui/generated/RuntimeBytecode.kt --check"
   },
   "devDependencies": {
     "typescript": "7.0.2"

@@ -13,7 +13,7 @@ import { TransformError, transformJsx } from "./transform.ts";
 
 const execFileAsync = promisify(execFile);
 
-/** Runtime module name as the engine sees it → output file under `runtime/`. */
+/** Runtime module name as the engine sees it → output file under `runtime/`; built into the Kotlin library, not into packages (docs/adr-006-hot-updates.md §2.11). */
 export const RUNTIME_MODULES = { "tinyui-core": "core", "tinyui-native": "native" } as const;
 
 export interface BuildOptions {
@@ -40,16 +40,14 @@ export interface BuiltModule {
 }
 
 export interface BuildResult {
-    runtime: BuiltModule[];
     pages: BuiltModule[];
     manifest: string;
 }
 
 /** `manifest.json` as `tinyui build` writes it (docs/updates.md §1.1). */
 export interface Manifest {
-    runtime: string[];
     pages: string[];
-    /** Module name → output path without extension (`runtime/core`, `pages/home`); hosts locate `.bin` / `.js.map` through it. */
+    /** Module name → output path without extension (`pages/home`); hosts locate `.bin` / `.js.map` through it. */
     files: Record<string, string>;
     buildIds: Record<string, string>;
     name: string;
@@ -58,7 +56,7 @@ export interface Manifest {
     createdAt: string;
     /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
     engine: string;
-    /** Version of the `tinyui-core` the runtime modules came from: which built-in components the pages may use. */
+    /** Version of the `tinyui-core` the pages were built against: the oldest runtime they run on (docs/updates.md §1.1). */
     tinyui: string;
     /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
@@ -82,42 +80,55 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
 
     // stale outputs would otherwise be packaged along with the current pages
     await rm(join(out, "pages"), { recursive: true, force: true });
-    await rm(join(out, "runtime"), { recursive: true, force: true });
-    const runtime = await bundleRuntime(root, out);
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
-    const modules = [...runtime, ...pages];
     const requires = await pageRequires(pages);
-    for (const m of modules) {
-        m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
-        await rootRelativeSources(root, m.map);
-    }
+    await finish(root, pages, qjsc);
     const hashes: Record<string, string> = {};
-    if (qjsc) {
-        for (const m of modules) {
-            m.bin = m.js.replace(/\.js$/, ".bin");
-            await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
-            hashes[m.name] = createHash("sha256").update(await readFile(m.bin)).digest("hex");
-        }
-    }
+    for (const m of pages) if (m.bin) hashes[m.name] = createHash("sha256").update(await readFile(m.bin)).digest("hex");
 
     const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const manifest = join(out, "manifest.json");
     const content: Manifest = {
-        runtime: runtime.map((m) => m.name),
         pages: pages.map((m) => m.name),
-        files: Object.fromEntries(modules.map((m) => [m.name, relative(out, m.js).replace(/\.js$/, "").split(sep).join("/")])),
-        buildIds: Object.fromEntries(modules.map((m) => [m.name, m.buildId])),
+        files: Object.fromEntries(pages.map((m) => [m.name, relative(out, m.js).replace(/\.js$/, "").split(sep).join("/")])),
+        buildIds: Object.fromEntries(pages.map((m) => [m.name, m.buildId])),
         name: config.name,
         publicKey: config.publicKey,
         version: options.version ?? `${createdAt.replace(/[-:]/g, "")}-${await gitShortSha(root)}`,
         createdAt,
-        engine: runtime[0]?.bin ? await engineCommit(runtime[0].bin) : "",
+        engine: pages[0]?.bin ? await engineCommit(pages[0].bin) : "",
         tinyui: await tinyuiVersion(root),
         hashes,
         requires,
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
-    return { runtime, pages, manifest };
+    return { pages, manifest };
+}
+
+/**
+ * The runtime modules as bytecode under `<out>/runtime/`, resolved from `<root>/node_modules`; the Kotlin library embeds
+ * them (`pnpm runtime`), a package never carries them.
+ */
+export async function buildRuntime(options: { root: string; out: string; qjsc?: string }): Promise<BuiltModule[]> {
+    const root = resolve(options.root);
+    const out = resolve(options.out);
+    const qjsc = await findQjsc(options.qjsc);
+    if (!qjsc) throw new Error("qjsc-kmp not found; pass --qjsc, set TINYUI_QJSC, or put it on PATH");
+    await rm(join(out, "runtime"), { recursive: true, force: true });
+    const runtime = await bundleRuntime(root, out);
+    await finish(root, runtime, qjsc);
+    return runtime;
+}
+
+/** buildIds, root-relative maps, and bytecode when [qjsc] is given. */
+async function finish(root: string, modules: BuiltModule[], qjsc: string | undefined): Promise<void> {
+    for (const m of modules) {
+        m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
+        await rootRelativeSources(root, m.map);
+        if (!qjsc) continue;
+        m.bin = m.js.replace(/\.js$/, ".bin");
+        await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
+    }
 }
 
 /** Every page's host usage; all pages are checked before failing, so one build reports every violation. */

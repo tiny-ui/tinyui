@@ -56,7 +56,7 @@ describe("tinyui pull", () => {
 
         const first = await pull(into(out, { pkg: "fixture", acceptKey: pair.publicKey }));
         assert.deepEqual(first, { version: OLD, changed: true });
-        assert.deepEqual((await readdir(out)).sort(), ["manifest.json", "pages", "runtime"]);
+        assert.deepEqual((await readdir(out)).sort(), ["manifest.json", "pages"]);
         assert.deepEqual(await readFile(join(out, "manifest.json")), await readFile(join(hostDir, OLD, "manifest.json")), "the signed bytes, untouched");
         assert.equal((await pull(into(out))).reason, `already ${OLD}`);
 

@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun TinyUIPage(
-    runtime: RuntimeBundle,
     page: PageModule,
     host: TinyUIHost,
     services: HostServices = HostServices.Default,
@@ -31,8 +30,8 @@ fun TinyUIPage(
     error: @Composable (PageFailure) -> Unit = { PageFailureScreen(it) },
     onHost: (PageHost) -> Unit = {},
 ) {
-    val pageHost = remember(runtime, page, host, services, propsJson, sourceMaps) {
-        PageHost(runtime, page, host, services, propsJson, sourceMaps = sourceMaps)
+    val pageHost = remember(page, host, services, propsJson, sourceMaps) {
+        PageHost(page, host, services, propsJson, sourceMaps = sourceMaps)
     }
     DisposableEffect(pageHost) {
         onHost(pageHost)

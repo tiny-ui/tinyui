@@ -38,8 +38,6 @@ describe("tinyui bundle", () => {
             "manifest.json",
             "pages/home.bin",
             "pages/orders.bin",
-            "runtime/core.bin",
-            "runtime/native.bin",
         ]);
         const pointer = JSON.parse(await readFile(result.pointer, "utf8")) as Pointer;
         assert.deepEqual(Object.keys(pointer), ["version", "rollout", "signature"]);
@@ -109,7 +107,7 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: rebuilt, hostVersion: "1", signingKey, out: join(dist, "ota") }), /already holds a different build/);
         // a directory without a manifest is never cleaned up on the caller's behalf
         const partial = await fakeDist(join(tmp, "dist-partial"));
-        await mkdir(join(partial, "ota", "fixture", "1", "20260922T090000Z-3f2a1c", "runtime"), { recursive: true });
+        await mkdir(join(partial, "ota", "fixture", "1", "20260922T090000Z-3f2a1c", "pages"), { recursive: true });
         await assert.rejects(bundle({ dist: partial, hostVersion: "1", signingKey }), /exists without a manifest.json/);
         assert.deepEqual((await readdir(join(partial, "ota", "fixture", "1"))).filter((f) => f.endsWith(".tmp")), []);
     });
@@ -123,7 +121,7 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist, hostVersion: "..", signingKey }), /host version must be a positive integer/);
         const name = await fakeDist(join(tmp, "dist-name"), (m) => { m.name = "../pkg"; });
         await assert.rejects(bundle({ dist: name, hostVersion: "1", signingKey }), /manifest name must match/);
-        const files = await fakeDist(join(tmp, "dist-files"), (m) => { m.files["tinyui-core"] = "../outside/core"; });
+        const files = await fakeDist(join(tmp, "dist-files"), (m) => { m.files["fixture/home"] = "../outside/core"; });
         await mkdir(join(tmp, "outside"), { recursive: true });
         await writeFile(join(tmp, "outside", "core.bin"), "x");
         await assert.rejects(bundle({ dist: files, hostVersion: "1", signingKey }), /points outside/);
@@ -135,8 +133,10 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: jsOnly, hostVersion: "1", signingKey }), /has no bytecode/);
         const old = await fakeDist(join(tmp, "dist-old"), (m) => { delete (m as Partial<Manifest>).publicKey; });
         await assert.rejects(bundle({ dist: old, hostVersion: "1", signingKey }), /has no "publicKey"/);
-        const missing = await fakeDist(join(tmp, "dist-missing"), (m) => { delete m.files["tinyui-native"]; });
+        const missing = await fakeDist(join(tmp, "dist-missing"), (m) => { delete m.files["fixture/orders"]; });
         await assert.rejects(bundle({ dist: missing, hostVersion: "1", signingKey }), /"files" does not cover exactly/);
+        const leftover = await fakeDist(join(tmp, "dist-runtime"), (m) => { m.files["tinyui-core"] = "runtime/core"; });
+        await assert.rejects(bundle({ dist: leftover, hostVersion: "1", signingKey }), /"files" does not cover exactly/, "a runtime module is not the package's");
         const extra = await fakeDist(join(tmp, "dist-extra"), (m) => { m.hashes["ghost"] = "00"; });
         await assert.rejects(bundle({ dist: extra, hostVersion: "1", signingKey }), /"hashes" does not cover exactly/);
         const dist = await fakeDist(join(tmp, "dist-hostVersion"));
@@ -163,7 +163,7 @@ describe("tinyui bundle", () => {
         const bytes = await readFile(result.manifest);
         assert.ok(verify(config.publicKey, bytes, pointer.signature));
         const manifest = JSON.parse(bytes.toString("utf8")) as Manifest;
-        for (const m of [...built.runtime, ...built.pages]) {
+        for (const m of built.pages) {
             const copied = await readFile(join(result.dir, result.version, manifest.files[m.name]! + ".bin"));
             assert.equal(createHash("sha256").update(copied).digest("hex"), manifest.hashes[m.name]);
         }

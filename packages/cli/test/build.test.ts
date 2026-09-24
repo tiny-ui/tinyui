@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
-import { build, type BuildResult } from "../src/build.ts";
+import { build, buildRuntime, type BuildResult } from "../src/build.ts";
 import { findQjsc } from "../src/qjsc.ts";
 
 const root = join(import.meta.dirname, "fixtures", "app");
@@ -24,7 +24,10 @@ describe("tinyui build", () => {
 
     it("names pages <pkg>/<path under src/pages>", () => {
         assert.deepEqual(result.pages.map((m) => m.name), ["fixture/home", "fixture/nested/detail"]);
-        assert.deepEqual(result.runtime.map((m) => m.name), ["tinyui-core", "tinyui-native"]);
+    });
+
+    it("leaves the runtime out of the package: it ships with the Kotlin library", async () => {
+        await assert.rejects(access(join(out, "runtime")));
     });
 
     it("turns JSX into h() calls with the factory imported from tinyui-core", async () => {
@@ -60,20 +63,12 @@ describe("tinyui build", () => {
     });
 
     it("writes a source map next to every module", async () => {
-        for (const m of [...result.runtime, ...result.pages]) {
+        for (const m of result.pages) {
             const map = JSON.parse(await readFile(m.map, "utf8")) as { sources: string[] };
             assert.ok(map.sources.length > 0, `${m.name} has sources`);
         }
         const home = JSON.parse(await readFile(join(out, "pages", "home.js.map"), "utf8")) as { sources: string[] };
         assert.ok(home.sources.includes("src/pages/home.tsx"), `sources are root-relative: ${home.sources}`);
-        const core = JSON.parse(await readFile(join(out, "runtime", "core.js.map"), "utf8")) as { sources: string[] };
-        assert.ok(core.sources.every((s) => s.includes(":") || !s.startsWith("/")), `runtime sources are relative: ${core.sources}`);
-    });
-
-    it("bundles each runtime module on its own", async () => {
-        const core = await readFile(join(out, "runtime", "core.js"), "utf8");
-        assert.match(core, /export \{/);
-        assert.doesNotMatch(core, /from "tinyui-/);
     });
 
     it("rejects two sources for one page name", async () => {
@@ -91,12 +86,10 @@ describe("tinyui build", () => {
 
     it("lists everything in manifest.json", async () => {
         const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
-        assert.deepEqual(manifest.runtime, ["tinyui-core", "tinyui-native"]);
+        assert.equal("runtime" in manifest, false);
         assert.deepEqual(manifest.pages, ["fixture/home", "fixture/nested/detail"]);
-        assert.deepEqual(Object.keys(manifest.buildIds), [...manifest.runtime, ...manifest.pages]);
+        assert.deepEqual(Object.keys(manifest.buildIds), manifest.pages);
         assert.deepEqual(manifest.files, {
-            "tinyui-core": "runtime/core",
-            "tinyui-native": "runtime/native",
             "fixture/home": "pages/home",
             "fixture/nested/detail": "pages/nested/detail",
         });
@@ -115,7 +108,7 @@ describe("tinyui build", () => {
         assert.equal(manifest.tinyui, JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")).version);
         if (qjsc) {
             assert.match(manifest.engine, /^[0-9a-f]{40}$/);
-            assert.deepEqual(Object.keys(manifest.hashes), [...manifest.runtime, ...manifest.pages]);
+            assert.deepEqual(Object.keys(manifest.hashes), manifest.pages);
             for (const hash of Object.values(manifest.hashes)) assert.match(hash as string, /^[0-9a-f]{64}$/);
         } else {
             assert.equal(manifest.engine, "");
@@ -160,11 +153,27 @@ describe("tinyui build", () => {
         }
     });
 
-    it("compiles every module to bytecode when qjsc-kmp is available", { skip: !qjscFound && !process.env["CI"] && "qjsc-kmp not found" }, async () => {
-        for (const m of [...result.runtime, ...result.pages]) {
+    it("compiles every page to bytecode when qjsc-kmp is available", { skip: !qjscFound && !process.env["CI"] && "qjsc-kmp not found" }, async () => {
+        for (const m of result.pages) {
             assert.ok(m.bin, `${m.name} has bytecode`);
             const bytes = await readFile(m.bin!);
             assert.equal(bytes.subarray(0, 4).toString("latin1"), "QJKB", `${m.name} bytecode header`);
         }
+    });
+});
+
+describe("buildRuntime", { skip: !qjscFound && !process.env["CI"] && "qjsc-kmp not found" }, () => {
+    let out: string;
+    after(() => (out ? rm(out, { recursive: true, force: true }) : undefined));
+
+    it("bundles each runtime module on its own and compiles it under its module name", async () => {
+        out = await mkdtemp(join(tmpdir(), "tinyui-runtime-"));
+        const runtime = await buildRuntime({ root: join(import.meta.dirname, ".."), out });
+        assert.deepEqual(runtime.map((m) => m.name), ["tinyui-core", "tinyui-native"]);
+        const core = await readFile(join(out, "runtime", "core.js"), "utf8");
+        assert.match(core, /export \{/);
+        assert.doesNotMatch(core, /from "tinyui-/);
+        assert.match(await readFile(join(out, "runtime", "native.js"), "utf8"), /from "tinyui-core"/);
+        for (const m of runtime) assert.equal((await readFile(m.bin!)).subarray(0, 4).toString("latin1"), "QJKB");
     });
 });

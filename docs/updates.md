@@ -138,7 +138,7 @@ class Bundle(val manifest: BuildManifest, files: BundleFiles) {
     suspend fun page(name: String): LoadedPage     // name 是含包名的模块名；运行时取库内置的那份；map 读得到就交给 SourceMaps
     companion object { suspend fun load(files: BundleFiles): Bundle }   // 读 manifest.json
 }
-class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceMaps: SourceMaps, val bundle: Bundle)
+class LoadedPage(val module: PageModule, val sourceMaps: SourceMaps, val bundle: Bundle)
 ```
 
 `BuildManifest` 解析 §1.1 全部字段，`name` / `publicKey` 缺失即解析失败。内置包的 `BundleFiles` 由宿主用 `Res.readBytes` 实现（每包一个资源子目录，如 `files/tinyui/<pkg>/`）；`Bundle` 不知道字节从哪来。

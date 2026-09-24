@@ -3,7 +3,6 @@ import { createOwner, disposeOwner, insideRender, onCleanup, runPending, runWith
 import { handlers, patches, resetIds, type Node, type Props } from "./node.ts";
 import { apply, rejectPending, report, resolvePending } from "./host.ts";
 import { installGlobals } from "./timers.ts";
-import { VERSION } from "./version.ts";
 
 export interface HostManifest {
     components: Record<string, { props: string[]; events: string[]; commands: string[] }>;
@@ -42,8 +41,6 @@ function guarded(entry: string, fn: () => void): void {
 }
 
 export const entries = {
-    version: VERSION,
-
     mount(page: (props: Props) => Node, propsJson: string, hostJson: string): void {
         if (root) throw new Error("mount() called twice");
         current = JSON.parse(hostJson) as HostManifest;

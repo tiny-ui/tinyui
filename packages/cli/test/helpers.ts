@@ -6,7 +6,7 @@ import type { Manifest } from "../src/build.ts";
 
 /** A `tinyui build` output written by hand: bundle only needs the manifest and the `.bin` files it lists. */
 export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifest) => void = () => {}): Promise<string> {
-    const files = { "tinyui-core": "runtime/core", "tinyui-native": "runtime/native", "fixture/home": "pages/home", "fixture/orders": "pages/orders" };
+    const files = { "fixture/home": "pages/home", "fixture/orders": "pages/orders" };
     const hashes: Record<string, string> = {};
     for (const [module, path] of Object.entries(files)) {
         const bytes = Buffer.concat([Buffer.from("QJKB"), Buffer.alloc(8), Buffer.from("a".repeat(40)), Buffer.from(module)]);
@@ -15,7 +15,6 @@ export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifes
         hashes[module] = createHash("sha256").update(bytes).digest("hex");
     }
     const manifest: Manifest = {
-        runtime: ["tinyui-core", "tinyui-native"],
         pages: ["fixture/home", "fixture/orders"],
         files,
         buildIds: Object.fromEntries(Object.keys(files).map((m) => [m, "00000000"])),

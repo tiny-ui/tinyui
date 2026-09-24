@@ -15,7 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Loads what `tinyui build` produced for the sample through the real engine; skips when the sample was not built. */
+/** Loads what `tinyui build` produced for the sample through the real engine with the embedded runtime; skips when the sample was not built. */
 class BundleSmokeTest {
     private val out = File("../sample/shared/build/tinyui-cli/sample")
 
@@ -24,10 +24,10 @@ class BundleSmokeTest {
         if (!out.isDirectory) return
         JsEngine(JsEngineConfig(moduleScheme = PageHost.MODULE_SCHEME)).use { engine ->
             for (fn in listOf("__host_apply", "__host_query", "__host_call", "__host_send", "__host_report")) engine.registerFunction(fn) { JsValue.Undefined }
-            assertEquals("tinyui-core", engine.registerModule(out.resolve("runtime/core.bin").readBytes()))
-            assertEquals("tinyui-native", engine.registerModule(out.resolve("runtime/native.bin").readBytes()))
-            engine.evaluateModule("import \"tinyui-core\"; export const v = globalThis.__tinyui.version;").use {
-                assertEquals(JsValue.Str(TinyUI.version), it.get("v"))
+            assertEquals("tinyui-core", engine.registerModule(TinyUI.runtime.core))
+            assertEquals("tinyui-native", engine.registerModule(TinyUI.runtime.native))
+            engine.evaluateModule("import \"tinyui-core\"; export const v = typeof globalThis.__tinyui.mount;").use {
+                assertEquals(JsValue.Str("function"), it.get("v"))
             }
             engine.runBytecode(out.resolve("pages/counter.bin").readBytes()).let { if (it is AutoCloseable) it.close() }
         }
@@ -49,7 +49,7 @@ class BundleSmokeTest {
                 if (request.url.endsWith("page=1")) HttpResponse(200, """{"items":[{"id":1,"title":"a","done":false}],"next":2}""")
                 else throw HostException("E_HTTP", "500")
         }
-        val host = PageHost(loaded.runtime, loaded.module, TinyUIHost(ComponentRegistry().registerBuiltins(), sink), HostServices(http = http), sourceMaps = loaded.sourceMaps)
+        val host = PageHost(loaded.module, TinyUIHost(ComponentRegistry().registerBuiltins(), sink), HostServices(http = http), sourceMaps = loaded.sourceMaps)
         host.start()
         try {
             // the list only exists once the first page has loaded; node ids are dense, so scan them
