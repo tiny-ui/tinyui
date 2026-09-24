@@ -288,6 +288,6 @@ Kotlin 侧的统一上报对象 `PageError` 与栈回映射见 [build-chain.md](
 
 运行时随宿主（ADR-006 §2.11）：页面用构建时的 tinyui 版本编出，在这个版本及以上的宿主上都要能跑。所以：
 
-**运行时公开面只增不删、不改语义。** 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`（[jsx-transform.md](./jsx-transform.md)）、§1 列出的 API、内置组件的 schema（[components.md](./components.md)）。破坏性修改只能加新名字，或升 major。
+**运行时公开面只增不删、不改语义。** 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`（[jsx-transform.md](./jsx-transform.md)）、§1 列出的 API、内置组件的 schema（[components.md](./components.md)）。破坏性修改只能加新名字，或升 major；1.0 之前不允许破坏，真要破坏即发 1.0。升 major 后旧 major 构建的页面被客户端判不兼容（updates.md §1.1），宿主须加 `hostVersion`。
 
 挡住的改动：内置组件 prop 改名或改义；删除已公开的 API；改编译器注入函数的调用约定。§9 的桥入口是运行时与 Kotlin 之间的内部契约，两侧同一 PR 改、随同一个库版本发，不在此列。

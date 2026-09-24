@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"不高于宿主"，宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -35,7 +35,7 @@ pages/**/*.bin
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.bin` 一致，取第一个）；客户端要求等于宿主 |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.bin` 的 sha256 hex，键与 `files` 一致 |
-| `tinyui` | `tinyui build` | JS 工程构建时的 `tinyui-core` 版本，即页面需要的最低运行时（能用哪些内置组件与运行时 API）；`publish` 核对它不高于目标宿主版本的 tinyui 下限（§1.3），客户端核对它不高于 `TinyUI.version`（§4.3）。成立的前提是运行时公开面只增不删（runtime-api.md §11） |
+| `tinyui` | `tinyui build` | JS 工程构建时的 `tinyui-core` 版本，即页面需要的最低运行时（能用哪些内置组件与运行时 API）；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities }`：该页用到的带点宿主组件名与 `host.call` 能力名，各自排序；内置组件不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
@@ -70,7 +70,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 | 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities }`）：`host.call` 的能力名、带点的宿主组件名（`ta.Icon`）；内置组件不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
 | 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、tinyui 下限）。`hostVersion` 加 1 合入宿主 main 时由宿主 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次；`publish` 从服务端读 |
 
-不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或 manifest 的 `tinyui` 高于快照里的 tinyui 下限（页面可能用到新版运行时的东西，这个 `hostVersion` 下最旧的宿主没有，装不上而静默跳过）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
+不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力或宿主组件不在快照里；或快照里的 tinyui 下限与 manifest 的 `tinyui` 不兼容（§1.1；包更新：页面可能用到新版运行时的东西，这个 `hostVersion` 下最旧的宿主没有，装不上而静默跳过；major 不同：公开面已有破坏）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
 
 核对的是名字，覆盖不到已有能力的参数形状与行为，那部分仍按 §4.1 的 bump 规则由人判断。绕过 `publish` 直接调发布端点的，目前拦不住；`requires` 进 manifest 并受签名覆盖，日后服务端在 `PUT current.json` 时同样可以核对。快照的上传与读取见 §6.4。
 
@@ -80,7 +80,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--pkg <p> --accept-key <k>]
 ```
 
-内置包是 App 的地板，只要求**兼容**：是给当前 `hostVersion` 发布过的某个版本，引擎与宿主一致、tinyui 不高于宿主，用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。它是不是当前的 `production` 不作要求，新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上（M6 拍板第 12 点）。
+内置包是 App 的地板，只要求**兼容**：是给当前 `hostVersion` 发布过的某个版本，引擎与宿主一致、tinyui 与宿主兼容（§1.1），用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。它是不是当前的 `production` 不作要求，新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上（M6 拍板第 12 点）。
 
 `pull` 在宿主仓里跑（宿主的发版冒烟脚本顺手调用），把 `--channel` 当前指向的版本拉进内置包目录：
 
@@ -151,7 +151,7 @@ class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceM
 
 ```kotlin
 class Updates(
-    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine 与宿主不符或 tinyui 高于宿主 → 发 EmbeddedIncompatible 后照常构造（§4.4）
+    packages: List<Bundle>,                      // 内置包，各自 manifest.name 即包名；重名 → 构造抛错；engine 与宿主不符或 tinyui 不兼容 → 发 EmbeddedIncompatible 后照常构造（§4.4）
     val hostVersion: String,
     dir: Path,                                   // 宿主给的目录，如 Android filesDir/tinyui、iOS Application Support/tinyui；库内按 <dir>/<pkg>/ 分
     installId: String,                           // 稳定的安装标识；库不生成、不持久化、不上传
@@ -162,13 +162,13 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
-**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；抬高 tinyui 下限（页面要用新版运行时的东西）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 变化，build-chain.md §5）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 变化，build-chain.md §5）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、tinyui 下限）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已合入 main 的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
 快照由 `HostSnapshot.render(host, hostVersion)` 从宿主的 `TinyUIHost` 生成（所以能力必须在 App 级注册，native-api.md §7），检查写成宿主自己的 host 侧单元测试，照 sample 的 `HostSnapshotTest`：
 
-- 当前 `hostVersion` 的快照文件不存在，或组件、能力两段与 `render` 结果不同，或当前 tinyui 低于快照的下限 → 失败，提示加 `hostVersion`。`tinyui` 行只比下限：单纯升 tinyui 不会让测试失败
+- 当前 `hostVersion` 的快照文件不存在，或组件、能力两段与 `render` 结果不同，或当前 tinyui 与快照的下限不兼容（§1.1）→ 失败，提示加 `hostVersion`。`tinyui` 行只判兼容：同 major 内单纯升 tinyui 不会让测试失败，跨 major 会
 - 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果，`tinyui` 行即当前 tinyui 版本，成为这个 `hostVersion` 的下限。这等于人声明"这个版本还没合入 main"；本地不判断，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4）
 - 宿主 main 的 CI 在每次 push 时跑这个测试并 `hosts upload`（同字节幂等），`hostVersion` 加 1 的提交一进 main 快照即上传、冻结（M6 拍板第 13 点）。上传不等到发 App：发版前要先在新版本下发布包（内置包、staging 验证都要），而发布前要读快照
 - 快照文件在 `.gitattributes` 里固定 `eol=lf`：上传的是原始字节，CRLF 的副本会被当成另一份快照而得 409
@@ -241,7 +241,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   ├─ 用内置 publicKey 对原始字节验 signature 失败 ─────────────────────▶ Failed(signature)   // 上报
   ├─ 解析失败 ────────────────────────────────────────────────────────▶ Failed(manifest)
   ├─ name ≠ pkg / version ≠ 指针 version / hostVersion ≠ 宿主值
-  │  / engine ≠ QuickJs.upstreamCommit / tinyui > TinyUI.version ─────▶ Skipped(incompatible)   // 发错目录，上报
+  │  / engine ≠ QuickJs.upstreamCommit / tinyui 与 TinyUI.version 不兼容 ▶ Skipped(incompatible)   // 发错目录，上报
   ├─ createdAt ≤ embedded.createdAt（内置可用）────────────────────────▶ Skipped(older-than-embedded)
   │
   ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
@@ -266,9 +266,9 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 不高于宿主、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 高于宿主的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；宿主只会升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
 
-内置包的引擎与宿主不符或 tinyui 高于宿主时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
+内置包的引擎与宿主不符或 tinyui 不兼容时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 
 ### 4.5 失败回退
 

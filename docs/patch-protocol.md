@@ -63,7 +63,7 @@ Kotlin 侧承诺（ADR-003 §3.2）：
 
 本协议没有独立的版本号，也不需要。运行时模块（`tinyui-core` / `tinyui-native`）随宿主：它们的字节码与 Kotlin 侧出自同一次库构建（ADR-006 §2.11），两侧之间的全部约定（本文的 op、K 入口、`__host_*` 函数、`mount` 清单格式）天然同版本，改动两侧同一 PR，不做运行时核对。页面只经运行时公开面与运行时打交道，兼容规则见 runtime-api.md §11。
 
-schema 层面的变化（新组件、新 prop、新事件）随 tinyui 版本走，页面构建时的 tinyui 不高于宿主即可用（updates.md §4.3）；同一版本内宿主组件的差异由 ADR-003 的清单下发与 E5 跳过处理。
+schema 层面的变化（新组件、新 prop、新事件）随 tinyui 版本走，页面构建时的 tinyui 与宿主兼容即可用（同 major 且宿主不低于包，updates.md §1.1）；同一版本内宿主组件的差异由 ADR-003 的清单下发与 E5 跳过处理。
 
 ## 7. Kotlin 侧的 E5 处理
 

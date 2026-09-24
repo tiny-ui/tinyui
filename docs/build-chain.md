@@ -78,7 +78,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 字节码编译放 CLI 而不放 Gradle：业务 App 不会有本仓的 build-logic，`tinyui build` 必须自己出最终产物。`qjsc-kmp` 二进制查找顺序：`--qjsc` 参数 → `TINYUI_QJSC` 环境变量 → npm 包 `qjsc-kmp` 的预编译版 → PATH。
 
-字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），所以 JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 之间，只要两个版本钉的 `quickjsKmp` 相同，引擎就对得上；JS 工程的 `tinyui-cli` 不得高于目标宿主的 tinyui 下限（updates.md §1.3）。某个 tinyui 版本升级了 `quickjsKmp` 时，宿主升到它就是换引擎，按 updates.md §4.1 加 `hostVersion`，下限随之抬到这个版本。
+字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），所以 JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 之间，只要两个版本钉的 `quickjsKmp` 相同，引擎就对得上；JS 工程的 `tinyui-cli` 须与目标宿主的 tinyui 下限兼容：同 major 且不高于它（updates.md §1.1、§1.3）。某个 tinyui 版本升级了 `quickjsKmp` 时，宿主升到它就是换引擎，按 updates.md §4.1 加 `hostVersion`，下限随之抬到这个版本。
 
 | 场景 | 来源 |
 |---|---|
@@ -94,7 +94,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行；`ta` 这类组件对象不能被改写、删属性或整个传出去
 - 页面里不要再声明名叫 `host`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
 
-内置组件不受限（随 tinyui 版本走，发布前核对包的 tinyui 不高于目标宿主的下限即可）。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
+内置组件不受限（随 tinyui 版本走，发布前核对目标宿主的下限与包的 tinyui 兼容即可（updates.md §1.1））。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
 
 ## 6. 各处职责
 
