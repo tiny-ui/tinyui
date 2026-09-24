@@ -1,6 +1,6 @@
 # JS 运行时 API：`tinyui-core` v1
 
-- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
+- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`；2026-09-24 加 §11 兼容承诺，§9 的 K0 版本核对删去，见 ADR-006 §2.11）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`resource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
@@ -246,7 +246,7 @@ export default function Home(props: HomeProps): Node { … }
 | K2 | `dispatch(nodeId: number, event: string, payloadJson: string)` | |
 | K3 | `resolve(cbId: number, resultJson: string)` / `reject(cbId: number, errorJson: string)` | `errorJson` 为 `{ code: string, message: string }` |
 | K5 | `emit(topic: string, payloadJson: string)` | |
-| — | `version: string` | 与 `VERSION` 相同；Kotlin 在 K0 核对它等于 `TinyUI.version`，不等则 E6 |
+| — | `version: string` | 与 `VERSION` 相同；运行时随宿主后两侧天然同版本，Kotlin 不再核对，仅供诊断 |
 
 每个 K 入口在 Kotlin 侧是同一次 `withEngine` 里的**两次调用**：先调入口函数，再调 `flush()`（理由见 [js-runtime.html](./js-runtime.html) §2）。
 
@@ -283,3 +283,11 @@ Kotlin 侧的统一上报对象 `PageError` 与栈回映射见 [build-chain.md](
 - ADR-001 §5 写"动态 prop 写成 `() => …` thunk"，本文改为编译器生成 `thunk(fn)` 包装、组件侧以 getter 读取；运行时接口仍是"函数型动态 prop"，只是多了一层可识别的包装（区分动态 prop 与 `For` / `Show` 的 children 函数）
 - ADR-002 J 入口写成 `__host.apply` 等方法，本文改为平坦全局名，原因是 quickjs-kmp 的 `registerFunction` 只注册全局函数
 - ADR-004 的 `argsJson` 在 patch 里是内嵌 JSON 对象，不是字符串（整条消息本来就是 JSON）
+
+## 11. 兼容承诺
+
+运行时随宿主（ADR-006 §2.11）：页面用构建时的 tinyui 版本编出，在这个版本及以上的宿主上都要能跑。所以：
+
+**运行时公开面只增不删、不改语义。** 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`（[jsx-transform.md](./jsx-transform.md)）、§1 列出的 API、内置组件的 schema（[components.md](./components.md)）。破坏性修改只能加新名字，或升 major。
+
+挡住的改动：内置组件 prop 改名或改义；删除已公开的 API；改编译器注入函数的调用约定。§9 的桥入口是运行时与 Kotlin 之间的内部契约，两侧同一 PR 改、随同一个库版本发，不在此列。

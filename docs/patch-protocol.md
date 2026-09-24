@@ -1,6 +1,6 @@
 # patch 协议 v1
 
-- 状态：已定（2026-09-16）；bench 的 verify 模式与 Kotlin 解析器都以此为准
+- 状态：已定（2026-09-16；2026-09-24 按 ADR-006 §2.11 改 §6：运行时随宿主，K0 版本核对删去）；bench 的 verify 模式与 Kotlin 解析器都以此为准
 - 来源：ADR-001（五种 op 草案）、ADR-002 §3.6（JSON 文本、数组形态、prop 摊平）、ADR-003 §3.4 / §3.5（写入时转换、E5、事件标记）、ADR-004 §3.2（`x` 命令 op）
 - 两侧：JS 运行时的 `flush()` 产出；Kotlin `NodeTree.apply` 流式解析并写入
 
@@ -61,9 +61,9 @@ Kotlin 侧承诺（ADR-003 §3.2）：
 
 ## 6. 版本
 
-本协议没有独立的版本号。运行时模块随包下发、Kotlin 侧随宿主固定，两侧之间的全部约定（本文的 op、K 入口、`__host_*` 函数、`mount` 清单格式）靠"同一个 tinyui 版本"对齐：运行时把 `tinyui-core` 的 `VERSION` 作为 `__tinyui.version` 暴露，Kotlin 在 K0 之后核对它等于 `TinyUI.version`，不等即 E6（页面失败，同"字节码与引擎不匹配"）。热下发把同一条提前到下载前（updates.md §1.3、§4.3）。
+本协议没有独立的版本号，也不需要。运行时模块（`tinyui-core` / `tinyui-native`）随宿主：它们的字节码与 Kotlin 侧出自同一次库构建（ADR-006 §2.11），两侧之间的全部约定（本文的 op、K 入口、`__host_*` 函数、`mount` 清单格式）天然同版本，改动两侧同一 PR，不做运行时核对。页面只经运行时公开面与运行时打交道，兼容规则见 runtime-api.md §11。
 
-schema 层面的变化（新组件、新 prop、新事件）也随 tinyui 版本走；同一版本内宿主组件的差异由 ADR-003 的清单下发与 E5 跳过处理。
+schema 层面的变化（新组件、新 prop、新事件）随 tinyui 版本走，页面构建时的 tinyui 不高于宿主即可用（updates.md §4.3）；同一版本内宿主组件的差异由 ADR-003 的清单下发与 E5 跳过处理。
 
 ## 7. Kotlin 侧的 E5 处理
 

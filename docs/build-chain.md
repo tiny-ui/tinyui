@@ -1,12 +1,12 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、页面级配置文件不在本期（`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完，见 §5）；字节码行号回映射见 §7
 
 ## 1. 目标与验收
 
-`tinyui build` 把每个页面的 TSX 编成一个 ESM 模块字节码，`tinyui-core` / `tinyui-native` 各编成一个运行时模块字节码，App 内置这些字节码，每页一个 Runtime 按 ADR-002 K0 的顺序加载。
+`tinyui build` 把每个页面的 TSX 编成一个 ESM 模块字节码；`tinyui-core` / `tinyui-native` 各编成一个运行时模块字节码，由库构建时编好、随库发布（ADR-006 §2.11）。每页一个 Runtime 按 ADR-002 K0 的顺序加载。
 
 验收：sample（包名 `sample`）的 `src/pages/home.tsx` 经 CLI 产出 `pages/home.bin`，Android / iOS 上 App 启动后显示页面 `default` 导出的返回值，其中含 `import.meta.url` 的值 `tinyui:sample/home`——模块名、external、注册顺序三件事一次验完。CI 的 gradle 与 pnpm 两条 job 都经过这条链。
 
@@ -14,7 +14,7 @@
 
 ```
 src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-kmp -m -n <pkg>/home──▶ dist/pages/home.bin
-tinyui-core 包入口 ──esbuild──▶ dist/runtime/core.js     ──qjsc-kmp -m -n tinyui-core──▶ dist/runtime/core.bin
+tinyui-core 包入口 ──esbuild──▶ runtime/core.js ──qjsc-kmp -m -n tinyui-core──▶ runtime/core.bin   （库构建时，随库发布）
 tinyui-native 同上（对它而言 tinyui-core 是 external）
 ```
 
@@ -23,7 +23,7 @@ tinyui-native 同上（对它而言 tinyui-core 是 external）
 | esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`inject` 一个内存模块自动引入 `h` / `Fragment`，页面不手写）；业务内部相对 import 合并进页面模块；`tinyui-core` / `tinyui-native` 在插件 `onResolve` 里标 `external` + `sideEffects: false`，保持裸说明符且未用到时整条 import 被去掉；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对运行时模块的解析 |
 | qjsc-kmp | 源码模块 → 字节码，`-n` 给定模块名，`--strip-source` 保留行号去源码 | 校验模块图（引擎加载时查表） |
 
-**页面名即模块名即路由键**：`<pkg>/<src/pages 下的相对路径>`——包 `subscription` 的 `src/pages/home.tsx` → `subscription/home`，`src/pages/plans/detail.tsx` → `subscription/plans/detail`，无后缀。包名来自工程根的 `tinyui.config.json`（`{ "name", "publicKey", "pages": "src/pages" }`，`name` 匹配 `[a-z0-9-]+`，`publicKey` 见 updates.md §7），是命名空间，所以没有 `pages/` 段；一个 App 挂几个包（ADR-006 §2.10），路由键就靠这个前缀不撞。页面路径的每一段限定 `[A-Za-z0-9._-]+`（`tinyui build` 拒绝其余的，含中文文件名）：它随产物路径进热下发的投递 URL，而 percent-encoding 要在 CLI、服务端、Kotlin 客户端三处各对称实现一次，任一处偏差就是客户端收不到更新且只能发 App 修（updates.md §6.1、§7 同一类风险）。页面内容与组件文案不受影响，只有文件名受限；日后若要放开，改 build 一处把模块名与输出路径解耦即可（`files` 本就是映射），协议与另外两端不动。运行时模块名固定 `tinyui-core`、`tinyui-native`，产物文件是 `runtime/core`、`runtime/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单、每个模块的产物路径 `files` 与 `buildIds`，包身份 `name` / `publicKey` 与热下发用的 `version` / `createdAt` / `engine` / `tinyui` / `hashes` 见 [updates.md](./updates.md) §1.1；Kotlin 侧路由表的来源，宿主用 `BuildManifest.file(name)` 定位 `.bin` / `.js.map`，见 [app-model.md](./app-model.md)）。
+**页面名即模块名即路由键**：`<pkg>/<src/pages 下的相对路径>`——包 `subscription` 的 `src/pages/home.tsx` → `subscription/home`，`src/pages/plans/detail.tsx` → `subscription/plans/detail`，无后缀。包名来自工程根的 `tinyui.config.json`（`{ "name", "publicKey", "pages": "src/pages" }`，`name` 匹配 `[a-z0-9-]+`，`publicKey` 见 updates.md §7），是命名空间，所以没有 `pages/` 段；一个 App 挂几个包（ADR-006 §2.10），路由键就靠这个前缀不撞。页面路径的每一段限定 `[A-Za-z0-9._-]+`（`tinyui build` 拒绝其余的，含中文文件名）：它随产物路径进热下发的投递 URL，而 percent-encoding 要在 CLI、服务端、Kotlin 客户端三处各对称实现一次，任一处偏差就是客户端收不到更新且只能发 App 修（updates.md §6.1、§7 同一类风险）。页面内容与组件文案不受影响，只有文件名受限；日后若要放开，改 build 一处把模块名与输出路径解耦即可（`files` 本就是映射），协议与另外两端不动。运行时模块名固定 `tinyui-core`、`tinyui-native`，由库构建并随库发布，不进 `tinyui build` 的产物。产物目录 `pages/**/*.bin`、`manifest.json`（页面模块清单、每个模块的产物路径 `files` 与 `buildIds`，包身份 `name` / `publicKey` 与热下发用的 `version` / `createdAt` / `engine` / `tinyui` / `hashes` 见 [updates.md](./updates.md) §1.1；Kotlin 侧路由表的来源，宿主用 `BuildManifest.file(name)` 定位 `.bin` / `.js.map`，见 [app-model.md](./app-model.md)）。
 
 业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "tinyui-core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "tinyui-core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module 'tinyui-core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
 
@@ -31,7 +31,7 @@ tinyui-native 同上（对它而言 tinyui-core 是 external）
 
 ## 3. 页面即构建单元
 
-一个页面 = 一个路由单元 = 一个 Runtime（ADR-002）= 一份模块字节码；分发单元是包（一次 build 的全部页面 + 运行时，ADR-006）。构建产物按页自包含：页面 import 的业务内部代码（工具函数、业务组件）全部合并进该页模块，两个页面共用的代码在两份字节码里各有一份。
+一个页面 = 一个路由单元 = 一个 Runtime（ADR-002）= 一份模块字节码；分发单元是包（一次 build 的全部页面，运行时随宿主，ADR-006）。构建产物按页自包含：页面 import 的业务内部代码（工具函数、业务组件）全部合并进该页模块，两个页面共用的代码在两份字节码里各有一份。
 
 这样定的理由：每页一个 Runtime 且模块缓存挂在 JSContext 上（quickjs-kmp `docs/decisions.md`"Runtime / Context"条），跨页共享代码在引擎层本来就不存在——即使拆出共享 chunk，每页仍要各注册、各编译一遍，运行时的时间与内存一分不省。重复只花安装包体积，而字节码模块的加载路径（注册 → import 命中表）对页面数是线性的，不需要 chunk 清单这层东西。
 
@@ -78,7 +78,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 字节码编译放 CLI 而不放 Gradle：业务 App 不会有本仓的 build-logic，`tinyui build` 必须自己出最终产物。`qjsc-kmp` 二进制查找顺序：`--qjsc` 参数 → `TINYUI_QJSC` 环境变量 → npm 包 `qjsc-kmp` 的预编译版 → PATH。
 
-字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），对齐因此只剩"JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 同版本"。
+字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），所以 JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 之间，只要两个版本钉的 `quickjsKmp` 相同，引擎就对得上；JS 工程的 `tinyui-cli` 不得高于目标宿主的 tinyui 下限（updates.md §1.3）。某个 tinyui 版本升级了 `quickjsKmp` 时，宿主升到它就是换引擎，按 updates.md §4.1 加 `hostVersion`，下限随之抬到这个版本。
 
 | 场景 | 来源 |
 |---|---|
@@ -94,7 +94,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行；`ta` 这类组件对象不能被改写、删属性或整个传出去
 - 页面里不要再声明名叫 `host`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
 
-内置组件不受限（随 tinyui 版本走，发布前核对版本相等即可）。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
+内置组件不受限（随 tinyui 版本走，发布前核对包的 tinyui 不高于目标宿主的下限即可）。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
 
 ## 6. 各处职责
 
@@ -116,7 +116,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 **回映射在哪做**：dev 构建把 `.js.map` 一起打进 App，Kotlin 侧 `SourceMaps` 按模块名惰性解析（source map v3 的 VLQ，约百行，无依赖），只解析栈里出现的行；release 不进包，sink 拿到原始栈 + `buildId`，离线对 map（Sentry / Crashlytics 的做法）。否掉 JS 侧运行时映射：字节码与内存都涨，出错时还要跑 JS。
 
-**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`，`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
+**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`（运行时模块的 buildId 与 map 随库，ADR-006 §2.11），`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
 
 **map 的路径**：thunk pass 的内联 map 以绝对路径作 `source`（相对路径会被 esbuild 再按文件目录解析一次，出现 `src/pages/src/pages/` 的重复，2026-09-17 修），esbuild 输出后 CLI 把 `sources` 改写为相对项目根（`src/pages/todos.tsx`、`../../packages/core/src/host.ts`），运行时与离线符号化都以此显示。
 
