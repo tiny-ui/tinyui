@@ -83,7 +83,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<pkg> [--app <a>] [--root <dir>]
 ```
 
-内置包取服务端上 `production` 当前指向的那一版，而不是本地重新构建一份（M6 拍板第 7 点）：线上与 App 自带的是同一个版本，回滚到"App 自带的那版"就是回滚到一个服务端认得的版本（§4.3）。`pull` 走公开投递端点，不要 token；像设备一样用 `tinyui.config.json` 的公钥验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；忽略 `rollout`。输出与 `tinyui build` 的产物同布局（`manifest.json`、`runtime/`、`pages/`），整个替换 `--out`，manifest 是下载来的原始字节（带 `hostVersion`，内置包不读它）。包里没有 `.js.map`：内置包的栈同热下发的包一样，按 `buildId` 离线对映射（build-chain.md §7）。
+内置包取服务端上 `production` 当前指向的那一版，而不是本地重新构建一份（M6 拍板第 11 点）：线上与 App 自带的是同一个版本，回滚到"App 自带的那版"就是回滚到一个服务端认得的版本（§4.3）。`pull` 走公开投递端点，不要 token；像设备一样用 `tinyui.config.json` 的公钥验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；忽略 `rollout`。输出与 `tinyui build` 的产物同布局（`manifest.json`、`runtime/`、`pages/`），整个替换 `--out`，manifest 是下载来的原始字节（带 `hostVersion`，内置包不读它）。包里没有 `.js.map`：内置包的栈同热下发的包一样，按 `buildId` 离线对映射（build-chain.md §7）。
 
 宿主仓不跑 Node 时（F-Droid 从源码构建），由 JS 工程在发 App 前跑它并把结果提交进宿主仓。
 
