@@ -2,7 +2,6 @@ package app.tinyui
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -18,7 +17,6 @@ class BuildManifest(
     val version: String,
     val createdAt: String,
     val engine: String,
-    val protocol: Int,
     val hashes: Map<String, String>,
     /** The tinyui-core version the runtime modules came from. */
     val tinyui: String = "",
@@ -53,7 +51,6 @@ class BuildManifest(
                 version = string("version"),
                 createdAt = string("createdAt"),
                 engine = string("engine"),
-                protocol = root["protocol"]?.jsonPrimitive?.intOrNull ?: 0,
                 hashes = strings("hashes"),
                 tinyui = string("tinyui"),
                 requires = root["requires"]?.jsonObject?.mapValues { (_, v) ->

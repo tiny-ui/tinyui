@@ -125,10 +125,10 @@ class PageHost(
                     val namespace = runBytecode(page.bytecode, ObjectTransport.REF) as JsRef
                     if (namespace.isPromise) { namespace.close(); error("page module is still pending after microtasks were drained") }
                     val self = evaluate("__tinyui", objects = ObjectTransport.REF) as JsRef
+                    val version = (self.get("version") as? JsValue.Str)?.value
+                    check(version == TinyUI.version) { "runtime module is tinyui $version, the host has ${TinyUI.version}" }
                     val fns = ENTRY_NAMES.associateWith { self.get(it, ObjectTransport.REF) as JsRef }
                     val e = Entries(self, fns).also { entries = it }
-                    val protocol = (self.get("protocol") as? JsValue.Num)?.value?.toInt()
-                    check(protocol == PROTOCOL) { "protocol $protocol from the runtime module, host implements $PROTOCOL" }
                     namespace.use { ns ->
                         (ns.get("default", ObjectTransport.REF) as JsRef).use { default ->
                             e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(FrameworkCapabilities + host.capabilities.names)))
@@ -373,8 +373,6 @@ class PageHost(
     companion object {
         /** `import.meta.url` of a page module is `tinyui:<name>` (docs/adr-005-engine.md). */
         const val MODULE_SCHEME = "tinyui"
-        /** docs/patch-protocol.md §6 */
-        const val PROTOCOL = 1
         private val ENTRY_NAMES = listOf("mount", "unmount", "visible", "dispatch", "resolve", "reject", "emit", "flush")
     }
 }

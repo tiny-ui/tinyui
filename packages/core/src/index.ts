@@ -1,5 +1,5 @@
-export const VERSION = "0.5.0";
-export { PROTOCOL, pageVisible, manifest } from "./page.ts";
+export { VERSION } from "./version.ts";
+export { pageVisible, manifest } from "./page.ts";
 export type { HostManifest } from "./page.ts";
 export { signal, memo, effect, onCleanup, untrack } from "./reactive.ts";
 export { observable, unwrap } from "./observable.ts";

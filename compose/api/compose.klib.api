@@ -248,7 +248,7 @@ final class app.tinyui.schema/ComponentSchema { // app.tinyui.schema/ComponentSc
 }
 
 final class app.tinyui/BuildManifest { // app.tinyui/BuildManifest|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/Int, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String = ..., kotlin.collections/Map<kotlin/String, app.tinyui/PageRequires> = ..., kotlin/String? = ...) // app.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.Int;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.PageRequires>;kotlin.String?){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String = ..., kotlin.collections/Map<kotlin/String, app.tinyui/PageRequires> = ..., kotlin/String? = ...) // app.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.PageRequires>;kotlin.String?){}[0]
 
     final val buildIds // app.tinyui/BuildManifest.buildIds|{}buildIds[0]
         final fun <get-buildIds>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/BuildManifest.buildIds.<get-buildIds>|<get-buildIds>(){}[0]
@@ -266,8 +266,6 @@ final class app.tinyui/BuildManifest { // app.tinyui/BuildManifest|null[0]
         final fun <get-name>(): kotlin/String // app.tinyui/BuildManifest.name.<get-name>|<get-name>(){}[0]
     final val pages // app.tinyui/BuildManifest.pages|{}pages[0]
         final fun <get-pages>(): kotlin.collections/List<kotlin/String> // app.tinyui/BuildManifest.pages.<get-pages>|<get-pages>(){}[0]
-    final val protocol // app.tinyui/BuildManifest.protocol|{}protocol[0]
-        final fun <get-protocol>(): kotlin/Int // app.tinyui/BuildManifest.protocol.<get-protocol>|<get-protocol>(){}[0]
     final val publicKey // app.tinyui/BuildManifest.publicKey|{}publicKey[0]
         final fun <get-publicKey>(): kotlin/String // app.tinyui/BuildManifest.publicKey.<get-publicKey>|<get-publicKey>(){}[0]
     final val requires // app.tinyui/BuildManifest.requires|{}requires[0]
@@ -459,8 +457,6 @@ final class app.tinyui/PageHost { // app.tinyui/PageHost|null[0]
     final object Companion { // app.tinyui/PageHost.Companion|null[0]
         final const val MODULE_SCHEME // app.tinyui/PageHost.Companion.MODULE_SCHEME|{}MODULE_SCHEME[0]
             final fun <get-MODULE_SCHEME>(): kotlin/String // app.tinyui/PageHost.Companion.MODULE_SCHEME.<get-MODULE_SCHEME>|<get-MODULE_SCHEME>(){}[0]
-        final const val PROTOCOL // app.tinyui/PageHost.Companion.PROTOCOL|{}PROTOCOL[0]
-            final fun <get-PROTOCOL>(): kotlin/Int // app.tinyui/PageHost.Companion.PROTOCOL.<get-PROTOCOL>|<get-PROTOCOL>(){}[0]
     }
 }
 

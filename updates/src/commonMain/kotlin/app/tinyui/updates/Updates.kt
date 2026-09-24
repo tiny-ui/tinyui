@@ -3,7 +3,7 @@ package app.tinyui.updates
 import app.tinyui.BuildManifest
 import app.tinyui.Bundle
 import app.tinyui.PageFailure
-import app.tinyui.PageHost
+import app.tinyui.TinyUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
@@ -38,7 +38,7 @@ class Updates internal constructor(
     private val onEvent: (UpdateEvent) -> Unit,
     private val fs: FileSystem,
     private val engine: String,
-    private val protocol: Int,
+    private val tinyui: String,
     private val verifier: SignatureVerifier,
 ) {
     constructor(
@@ -48,7 +48,7 @@ class Updates internal constructor(
         installId: String,
         fetch: suspend (path: String) -> ByteArray,
         onEvent: (UpdateEvent) -> Unit = {},
-    ) : this(packages, hostVersion, dir, installId, fetch, onEvent, platformFileSystem, QuickJs.upstreamCommit, PageHost.PROTOCOL, PlatformSignatureVerifier)
+    ) : this(packages, hostVersion, dir, installId, fetch, onEvent, platformFileSystem, QuickJs.upstreamCommit, TinyUI.version, PlatformSignatureVerifier)
 
     private val packages: Map<String, Package>
     private val checkLock = Mutex()
@@ -143,7 +143,7 @@ class Updates internal constructor(
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {
             if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
-            if (embedded.manifest.protocol != protocol) add(Mismatch.PROTOCOL)
+            if (embedded.manifest.tinyui != tinyui) add(Mismatch.TINYUI)
         }
         private val embeddedCreatedAt: String? get() = embedded.manifest.createdAt.takeIf { unusable.isEmpty() }
 
@@ -164,10 +164,11 @@ class Updates internal constructor(
             fs.deleteRecursively(installedDir / keep)
         }
 
-        /** The installed package when it is still the one to run: newer than embedded, this host version, intact. */
+        /** The installed package when it is still the one to run: newer than embedded, this host version, engine and tinyui, intact. */
         private fun loadInstalled(dir: Path): Bundle? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
+            if (manifest.engine != engine || manifest.tinyui != tinyui) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
             val files = HashMap<String, ByteArray>()
             for (module in manifest.runtime + manifest.pages) {
@@ -223,7 +224,7 @@ class Updates internal constructor(
                 if (manifest.version != version) add(Mismatch.VERSION)
                 if (manifest.hostVersion != hostVersion) add(Mismatch.HOST_VERSION)
                 if (manifest.engine != engine) add(Mismatch.ENGINE)
-                if (manifest.protocol != protocol) add(Mismatch.PROTOCOL)
+                if (manifest.tinyui != tinyui) add(Mismatch.TINYUI)
             }
             if (mismatch.isNotEmpty()) return CheckResult.Skipped(version, SkipReason.INCOMPATIBLE, mismatch)
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return CheckResult.Skipped(version, SkipReason.OLDER_THAN_EMBEDDED)

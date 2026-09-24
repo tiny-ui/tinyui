@@ -41,7 +41,7 @@ class UpdatesTest {
         version: String = "v1",
         createdAt: String = "2026-09-22T10:00:00Z",
         engine: String = Fixture.ENGINE,
-        protocol: Int = 1,
+        tinyui: String = Fixture.TINYUI,
         publicKey: String = Fixture.PUBLIC_KEY,
         files: Map<String, String> = mapOf("runtime/core.bin" to "CORE-$version", "runtime/native.bin" to "NATIVE-$version", "pages/home.bin" to "HOME-$version"),
         hostVersion: String? = "1",
@@ -49,7 +49,7 @@ class UpdatesTest {
         val modules = mapOf("tinyui-core" to "runtime/core", "tinyui-native" to "runtime/native", "$name/home" to "pages/home")
         val hashes = modules.entries.joinToString(",") { (m, p) -> "\"$m\":\"${files.getValue("$p.bin").encodeUtf8().sha256().hex()}\"" }
         val hostVersion = if (hostVersion == null) "" else ",\"hostVersion\":\"$hostVersion\""
-        return """{"runtime":["tinyui-core","tinyui-native"],"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","protocol":$protocol,"hashes":{$hashes}$hostVersion}"""
+        return """{"runtime":["tinyui-core","tinyui-native"],"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","tinyui":"$tinyui","hashes":{$hashes}$hostVersion}"""
     }
 
     private fun embedded(name: String = "shop", version: String = "v0", createdAt: String = "2026-09-22T09:00:00Z"): Bundle {
@@ -68,8 +68,8 @@ class UpdatesTest {
         for ((path, bytes) in content) server["$pkg/$hostVersion/$version/$path"] = bytes.encodeToByteArray()
     }
 
-    private fun updates(vararg bundles: Bundle, installId: String = "install-1", hostVersion: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE) =
-        Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, 1, verifier)
+    private fun updates(vararg bundles: Bundle, installId: String = "install-1", hostVersion: String = "1", verifier: SignatureVerifier = lenient, engine: String = Fixture.ENGINE, tinyui: String = Fixture.TINYUI) =
+        Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, tinyui, verifier)
 
     private suspend fun pageBytes(bundle: Bundle) = bundle.page("shop/home").module.bytecode.decodeToString()
 
@@ -91,6 +91,19 @@ class UpdatesTest {
         assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v1", Source.INSTALLED)), events)
         assertEquals("HOME-v1", pageBytes(second.current("shop")))
         assertEquals(CheckResult.UpToDate("v1"), second.check("shop"))
+    }
+
+    @Test
+    fun anInstalledPackageForAnotherEngineOrTinyuiIsNotRunAfterTheHostChanges() = runTest {
+        publish(manifest())
+        for (host in listOf<() -> Updates>({ updates(embedded(), tinyui = "0.0.2") }, { updates(embedded(), engine = "f".repeat(40)) })) {
+            assertEquals(CheckResult.Installed("v1"), updates(embedded()).check("shop"))
+            events.clear()
+            val u = host()
+            assertEquals(Source.EMBEDDED, events.filterIsInstance<UpdateEvent.Running>().single().source)
+            assertEquals("HOME-v0", pageBytes(u.current("shop")))
+            assertFalse(fs.exists(dir / "shop/installed/v1"))
+        }
     }
 
     @Test
@@ -124,8 +137,8 @@ class UpdatesTest {
         val u = updates(embedded())
         publish(manifest(name = "other"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME)), u.check("shop"))
-        publish(manifest(engine = "f".repeat(40), protocol = 2, hostVersion = "2"))
-        assertEquals(setOf(Mismatch.ENGINE, Mismatch.PROTOCOL, Mismatch.HOST_VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
+        publish(manifest(engine = "f".repeat(40), tinyui = "0.0.2", hostVersion = "2"))
+        assertEquals(setOf(Mismatch.ENGINE, Mismatch.TINYUI, Mismatch.HOST_VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
         publish(manifest(version = "v9"), pointerVersion = "v1")
         assertEquals(setOf(Mismatch.VERSION), (u.check("shop") as CheckResult.Skipped).mismatch)
         publish(manifest(createdAt = "2026-09-22T09:00:00Z"))
@@ -154,11 +167,11 @@ class UpdatesTest {
         assertEquals(CheckResult.Skipped("v1", SkipReason.ROLLOUT), updates(embedded()).check("shop"))
         publish(manifest(), rollout = 50)
         val hits = (1..200).count { i ->
-            Updates(listOf(embedded()), "1", root / "roll-$i", "install-$i", fetch, {}, fs, Fixture.ENGINE, 1, lenient).check("shop") is CheckResult.Installed
+            Updates(listOf(embedded()), "1", root / "roll-$i", "install-$i", fetch, {}, fs, Fixture.ENGINE, Fixture.TINYUI, lenient).check("shop") is CheckResult.Installed
         }
         assertTrue(hits in 70..130, "about half of 200 installs are in a 50% rollout, got $hits")
-        val once = Updates(listOf(embedded()), "1", root / "once", "install-7", fetch, {}, fs, Fixture.ENGINE, 1, lenient).check("shop")
-        val again = Updates(listOf(embedded()), "1", root / "again", "install-7", fetch, {}, fs, Fixture.ENGINE, 1, lenient).check("shop")
+        val once = Updates(listOf(embedded()), "1", root / "once", "install-7", fetch, {}, fs, Fixture.ENGINE, Fixture.TINYUI, lenient).check("shop")
+        val again = Updates(listOf(embedded()), "1", root / "again", "install-7", fetch, {}, fs, Fixture.ENGINE, Fixture.TINYUI, lenient).check("shop")
         assertEquals(once::class, again::class, "the same install rolls the same")
     }
 
@@ -276,7 +289,7 @@ class UpdatesTest {
         val u = updates(embedded(), verifier = PlatformSignatureVerifier)
         assertEquals(CheckResult.Installed(Fixture.VERSION), u.check("shop"))
         assertEquals("HOME2", pageBytes(updates(embedded(), verifier = PlatformSignatureVerifier).current("shop")))
-        server["shop/1/${Fixture.VERSION}/manifest.json"] = Fixture.MANIFEST.replace("\"protocol\": 1", "\"protocol\": 2").encodeToByteArray()
+        server["shop/1/${Fixture.VERSION}/manifest.json"] = Fixture.MANIFEST.replace("\"tinyui\": \"${Fixture.TINYUI}\"", "\"tinyui\": \"0.0.2\"").encodeToByteArray()
         fs.deleteRecursively(dir)
         assertEquals(FailStage.SIGNATURE, (updates(embedded(), verifier = PlatformSignatureVerifier).check("shop") as CheckResult.Failed).stage)
     }

@@ -24,7 +24,6 @@ export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifes
         version: "20260922T090000Z-3f2a1c",
         createdAt: "2026-09-22T09:00:00Z",
         engine: "a".repeat(40),
-        protocol: 1,
         tinyui: "0.3.0",
         hashes,
         requires: {

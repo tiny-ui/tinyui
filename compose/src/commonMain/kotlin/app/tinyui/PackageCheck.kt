@@ -7,7 +7,6 @@ object PackageCheck {
     /** Every reason [manifest]'s package cannot run on [host]; empty when it can. */
     fun problems(manifest: BuildManifest, host: TinyUIHost): List<String> = buildList {
         if (manifest.engine != QuickJs.upstreamCommit) add("built for engine ${manifest.engine}, the host embeds ${QuickJs.upstreamCommit}")
-        if (manifest.protocol != PageHost.PROTOCOL) add("built for protocol ${manifest.protocol}, the host implements ${PageHost.PROTOCOL}")
         if (manifest.tinyui != TinyUI.version) add("built with tinyui ${manifest.tinyui.ifEmpty { "(unknown)" }}, the host has ${TinyUI.version}")
         val capabilities = FrameworkCapabilities.toSet() + host.capabilities.names
         for ((page, uses) in manifest.requires.entries.sortedBy { it.key }) {

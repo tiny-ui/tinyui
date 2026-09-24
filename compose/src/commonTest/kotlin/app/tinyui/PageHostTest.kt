@@ -26,7 +26,7 @@ class PageHostTest {
     private val core = module("tinyui-core", """
         let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
-            protocol: 1,
+            version: "$VERSION",
             mount(p, props, host) {
                 page = p; const name = JSON.parse(props).name ?? "world";
                 patches.push(["c",1,"Text"],["p",1,"text","hello " + name + " / " + Object.keys(JSON.parse(host).components).length],
@@ -210,12 +210,13 @@ class PageHostTest {
     }
 
     @Test
-    fun protocolMismatchIsE6() = runTest {
-        val badCore = module("tinyui-core", "globalThis.__tinyui = { protocol: 99 }; export const VERSION = 'x';")
+    fun runtimeFromAnotherTinyuiIsE6() = runTest {
+        val badCore = module("tinyui-core", "globalThis.__tinyui = { version: '0.0.1' }; export const VERSION = '0.0.1';")
         val host = PageHost(RuntimeBundle(badCore, native), page, tinyui)
         host.start()
         host.await { host.failure != null }
         assertEquals("E6", host.failure!!.kind)
+        assertEquals("runtime module is tinyui 0.0.1, the host has ${TinyUI.version}", host.failure!!.message)
         assertEquals("E6", errors.single().kind)
         host.close()
     }

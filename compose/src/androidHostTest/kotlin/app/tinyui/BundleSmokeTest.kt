@@ -26,8 +26,8 @@ class BundleSmokeTest {
             for (fn in listOf("__host_apply", "__host_query", "__host_call", "__host_send", "__host_report")) engine.registerFunction(fn) { JsValue.Undefined }
             assertEquals("tinyui-core", engine.registerModule(out.resolve("runtime/core.bin").readBytes()))
             assertEquals("tinyui-native", engine.registerModule(out.resolve("runtime/native.bin").readBytes()))
-            engine.evaluateModule("import \"tinyui-core\"; export const p = globalThis.__tinyui.protocol;").use {
-                assertEquals(JsValue.Num(PageHost.PROTOCOL), it.get("p"))
+            engine.evaluateModule("import \"tinyui-core\"; export const v = globalThis.__tinyui.version;").use {
+                assertEquals(JsValue.Str(TinyUI.version), it.get("v"))
             }
             engine.runBytecode(out.resolve("pages/counter.bin").readBytes()).let { if (it is AutoCloseable) it.close() }
         }
