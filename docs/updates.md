@@ -314,6 +314,8 @@ app token 与发布 token 一样可以签多个、只返回一次明文、服务
 
 顺序由 CLI 保证：内容先、指针后。指针请求在内容不齐时拒绝，所以乱序不会产生半个包。
 
+服务端不核对宿主快照：§1.3 的核对只在 `publish` 里，**CLI 是唯一受支持的发布路径**。绕过 CLI 直接写指针，`tinyui` 不符仍由客户端拒装（§4.3），`requires` 不满足则会照常下发，页面降级（E5 占位、`E_UNSUPPORTED`）且不触发 §4.5 回退。§6.2 的移动指针只在同一 `hostVersion` 已发布过的版本间进行，快照又冻结不可改，发布时的核对对它继续成立，无需复核。服务端复核的触发条件见 roadmap.md D 组。
+
 `tinyui publish --channel <c> [--app <app>] [--dir dist/ota]`：读 §1.2 的目录（包名从 manifest 来），先 PUT `<version>/` 下全部文件含 `manifest.json`（服务端幂等，同字节即已存在），再 PUT `current.json`。token 只从 `$TINYUI_TOKEN` 读，管理端点从 `$TINYUI_ADMIN_TOKEN` 读，实例地址取 `--url` / `$TINYUI_UPDATES_URL` / 托管实例。
 
 ### 6.2 管理 release

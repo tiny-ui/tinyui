@@ -58,6 +58,7 @@
 | 应用级服务 Runtime（不挂 UI、随 App 生命周期的引擎） | app-model.md | 业务出现不属于任何页面的常驻 JS 逻辑 |
 | 手势组合内置组件 | ADR-004 | 业务需求出现 |
 | 公钥轮换不中断旧 App：预置备用钥（`publicKeys` 为一组，客户端任一内置钥验过即可，服务端登记一组并可吊销单把，manifest 记签名用的钥） | updates.md §7 | 出现第一次真实的轮换诉求，或托管实例接入外部租户 |
+| 服务端在 `PUT current.json` 时核对宿主快照：核对逻辑只在服务端一份，另开只读核对端点，CLI 删自己的 `checkHost` 改调它预检 | updates.md §6.1 | 出现 CLI 以外的发布路径（控制台、租户自写工具），或托管实例接入外部租户 |
 | 运行时 ABI 版本（放宽"包与宿主 tinyui 版本相等"，边界不变的 tinyui 升级不必加 `hostVersion`） | patch-protocol.md §6 | 宿主升级 tinyui 导致的整批重新发布成为负担；先划定 JS 运行时与 Kotlin 侧的边界，再定加 1 规则并以快照测试守住 |
 | `Image` 与图片加载管线（coil3 vs 宿主 loader） | components.md §3 | 出现需要图片的页面 |
 | ~~`weight`~~ / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `weight`、`border`、`Column` / `Row` 的 `scroll` 已加（2026-09-17，TrendingAI 订阅页触发）；`alignSelf` 等需求 |
