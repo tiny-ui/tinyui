@@ -23,7 +23,7 @@ val host = TinyUIHost(
 TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 ```
 
-除 `components`、`sink`、`dataDir` 外都可缺省，缺省行为见各节。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字与 `channels` 的名字（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
+除 `components`、`sink`、`dataDir` 外都可缺省，缺省行为见各节。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
 
 `locals` 是这一次挂载交给 `host.call` 能力的对象（§13），只有兜底能力用得到。
 
@@ -36,7 +36,7 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 | `device.info` | 对象：`os`、`osVersion`、`model` |
 | `store.get` | 任意（§4） |
 | `storage.get` | 任意（§7） |
-| `storage.set` | `null`，或错误码 `E_QUOTA`（§7） |
+| `storage.set` | `null`，或错误码 `"E_QUOTA"`；`tinyui-native` 收到错误码即抛 `HostError`（§7） |
 | `i18n.t` | 字符串（§8） |
 | `i18n.locale` | 字符串（§8） |
 | `session.get` | `{ loggedIn, userId }`（§9） |
@@ -51,7 +51,7 @@ navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJs
 navigation.onResult((result, from) => …);       // 渲染期调用；K5 topic navigation.result
 ```
 
-宿主实现 `Navigator` 接口，交给 `TinyUIHost`；把结果送回上一页时，宿主持有该页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `host.emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。缺省 `Navigator.None`（调用无效果）。跳原生页的路由名由 `Navigator` 解释，认不出时忽略，不进快照。
+宿主实现 `Navigator` 接口，交给 `TinyUIHost`；把结果送回上一页时，宿主持有该页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `host.emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。缺省 `Navigator.None`（调用无效果）。跳原生页的路由名由 `Navigator` 解释，不进快照；`push` 是 J4，页面拿不到结果，认不出的名字由 `Navigator` 忽略并经 `PageSink` 上报。
 
 ## 4. `store`
 
@@ -163,6 +163,7 @@ class SessionSource(val state: StateFlow<Session>, val signIn: suspend (source: 
 - J2 `session.get` 取初值，K5 topic `session` 推送变化；框架订阅 `state`，推给所有活页面，页面不重建
 - `userId` 是稳定、非敏感的用户标识，不是 token
 - 宿主没提供 `session` 时：`state()` 恒为 `{ loggedIn: false, userId: null }`，`signIn` 以 `E_UNSUPPORTED` reject
+- 提供了 `session` 的宿主，快照的能力段多一行 `session.signIn`；调用了 `session.signIn` 的页面把它记进 `requires`，发布前照能力名核对（updates.md §1.3）。提供或撤掉会话都是宿主契约变化，`hostVersion` 加 1
 
 ## 10. `ui`
 

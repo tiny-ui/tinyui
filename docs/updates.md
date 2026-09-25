@@ -54,6 +54,7 @@ tinyui bundle --host-version <hostVersion> --signing-key <私钥 PEM> [--rollout
 dist/ota/<pkg>/<hostVersion>/current.json             指针：{ "version", "rollout", "signature" }
 dist/ota/<pkg>/<hostVersion>/<version>/manifest.json  build 的 manifest + hostVersion，写定后不再变
 dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
+dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n 列出的文件（有才写）
 ```
 
 `current.json` 只有三个字段：`version` 指向哪个目录；`rollout` 0～100 的整数，缺省 100，服务端可改；`signature` 是对 `<version>/manifest.json` 原始字节的签名（§7）。指针里只有投递策略与签名值，没有任何需要签名保护的字段。
@@ -68,7 +69,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.bin
 
 | 输入 | 来源 |
 |---|---|
-| 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities, channels }`）：`host.call` 的能力名、带点的宿主组件名（`ta.Icon`）、`http.client` 的通道名；内置组件与 `default` 通道不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
+| 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities, channels }`）：`host.call` 的能力名与 `session.signIn`（页面调用了它时）、带点的宿主组件名（`ta.Icon`）、`http.client` 的通道名；内置组件与 `default` 通道不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
 | 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、通道名、tinyui 下限）。`hostVersion` 加 1 合入宿主 main 时由宿主 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次；`publish` 从服务端读 |
 
 不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力、通道或宿主组件不在快照里；或快照里的 tinyui 下限与 manifest 的 `tinyui` 不兼容（§1.1；包更新：页面可能用到新版运行时的东西，这个 `hostVersion` 下最旧的宿主没有，装不上而静默跳过；major 不同：公开面已有破坏）。目标宿主版本还没有快照（宿主没上传过）也拒绝。
@@ -102,6 +103,7 @@ tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<
 | `<pkg>/<hostVersion>/current.json` | 可变指针 | `Cache-Control: no-store` |
 | `<pkg>/<hostVersion>/<version>/manifest.json` | 不可变，签名覆盖其原始字节 | `Cache-Control: public, max-age=31536000, immutable` |
 | `<pkg>/<hostVersion>/<version>/<files[module]>.bin` | 不可变内容 | 同上 |
+| `<pkg>/<hostVersion>/<version>/<i18n.files[locale]>` | 不可变内容（包内 i18n 资源，build-chain.md §8） | 同上 |
 
 - `pkg` 库从内置 manifest 读，`hostVersion` 宿主给；宿主只拼 base，一个 App 不管几个包都是一个 base URL、一个 `fetch`
 - 请求不带 query、不带自定义 header、不带任何设备信息；宿主的 `fetch` 实现可以自行加 header 或按路径分流到不同来源，库不知情
@@ -163,7 +165,7 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
-**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份（语言、会话、埋点出口、链接打开器等框架标准接口的形状随 tinyui 走，宿主接没接、怎么实现都不加，ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 变化，build-chain.md §5）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 变化，build-chain.md §5）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、通道名、tinyui 下限）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已合入 main 的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
@@ -181,7 +183,7 @@ class Updates(
 
 **接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。回滚（一个新 version）对已装上的用户生效靠的是下一次 `check()` 装上它；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
 
-文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`），是本 artifact 独有的依赖，core 库不引入。ECDSA 验签走平台 API（§7）。
+文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`）；core 库自 ADR-007 起也依赖 okio（`storage`）。ECDSA 验签走平台 API（§7）。
 
 ### 4.2 API 面
 
@@ -245,7 +247,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   │  / engine ≠ QuickJs.upstreamCommit / tinyui 与 TinyUI.version 不兼容 ▶ Skipped(incompatible)   // 发错目录，上报
   ├─ createdAt ≤ embedded.createdAt（内置可用）────────────────────────▶ Skipped(older-than-embedded)
   │
-  ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>.bin → <pkg>/staging/<version>/，每个核对 sha256
+  ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>（files 的 .bin 与 i18n.files）→ <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
   ▼ manifest 原始字节写入 staging/<version>/manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed
   ▼ Installed(version)   // 下次启动生效

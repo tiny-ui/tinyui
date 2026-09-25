@@ -36,7 +36,7 @@ TrendingAI 订阅页（roadmap 第 6 条）是第一个真实页面。它对宿�
 | 框架（`app.tinyui:tinyui` + `tinyui-native`） | tinyui 版本（随宿主） | 通用原生能力的**实现**：HTTP 默认通道、按包持久化存储、toast / 对话框、打开链接、`Icon` 渲染、`Loading`、包内 i18n 加载、App 级 store、页面可见性 |
 | 宿主 | App 发版 | 页面物理上拿不到的：身份（网络通道里的 token）、用户语言、登录会话与登录流程、埋点出口、链接打开策略；以及真正 App 专属、需要返回值的动作（`host.call`）与必须原生渲染的视图（宿主组件） |
 
-宿主那一层，除 `host.call` 与宿主组件外，都是框架定义形状的标准接口：宿主只提供实现，不起名字、不定参数，所以不进宿主契约，也不影响 `hostVersion`。
+宿主那一层，除 `host.call` 与宿主组件外，都是框架定义形状的标准接口：宿主只提供实现，不起名字、不定参数。其中网络通道的名字与是否提供会话进宿主快照（§3.9），其余缺省时有可用的默认行为，不进快照、不影响 `hostVersion`。
 
 框架层的实现原则：**框架提供能力与默认实现，宿主可以接管执行，页面不感知**。网络通道与链接打开器是可接管的两处。
 
@@ -168,7 +168,7 @@ QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触�
 
 `HostServices` 删除：`navigator` 挪到 `TinyUIHost`，`locals` 改为 `TinyUIPage` 的可选参数（只给 `host.call` 的能力用）。
 
-宿主快照收录宿主组件、`host.call` 能力名，**新增网络通道名**；事件 topic、埋点事件名、框架标准接口不进快照。`hostVersion` 的口径随之收窄为这三类的集合及其参数与行为。事件改名后宿主静默收不到，快照拦不住，所以页面到宿主的事件要尽量少。跳原生页的路由名第一批不进快照：`Navigator` 认不出时返回失败，由页面处理。
+宿主快照收录宿主组件、`host.call` 能力名，**新增网络通道名**，以及是否提供会话（记作能力 `session.signIn`：会话缺省时 `signIn` 会失败，必须能在发布前核对）；事件 topic、埋点事件名、其余标准接口（缺省时有可用的默认行为）不进快照。`hostVersion` 的口径随之收窄为这几类的集合及其参数与行为。事件改名后宿主静默收不到，快照拦不住，所以页面到宿主的事件要尽量少。跳原生页的路由名第一批不进快照：`navigation.push` 是 J4，页面拿不到结果，`Navigator` 认不出时忽略并经 `PageSink` 上报；需要页面能降级时再议。
 
 ## 4. 决策
 
@@ -183,7 +183,7 @@ QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触�
 | UI 能力 | `ui.toast`、`ui.alert` / `ui.confirm`、`linking.openUrl`（宿主可接管） |
 | 组件 | `Icon`（path 数据，`tinyui-icons`）、`Loading`（`LoadingIndicator`）、公共 prop `role` / `selected` |
 | 埋点 | `analytics.track` + 宿主 `AnalyticsSink` |
-| 宿主契约 | 标准接口 > `events` > `host.call` 兜底 + 宿主组件；删 `HostServices`；快照加通道段 |
+| 宿主契约 | 标准接口 > `events` > `host.call` 兜底 + 宿主组件；删 `HostServices`；快照加通道段，是否提供会话记作能力 `session.signIn` |
 | 库的 I/O | core 库放开零 I/O，直接依赖 ktor 与 okio（ADR-006 §2.4 该句作废）；`tinyui-updates` 的边界不变（仍不做网络，`fetch` 由宿主给） |
 
 ## 5. 后果与遗留
