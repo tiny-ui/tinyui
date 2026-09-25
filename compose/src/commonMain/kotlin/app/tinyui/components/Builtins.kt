@@ -133,20 +133,20 @@ private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)
 private fun verticalArrangement(justify: String?, gap: Dp?): Arrangement.Vertical {
     val spaced = gap != null && gap > 0.dp
     return when (justify) {
-        "center" -> if (spaced) Arrangement.spacedBy(gap!!, Alignment.CenterVertically) else Arrangement.Center
-        "end" -> if (spaced) Arrangement.spacedBy(gap!!, Alignment.Bottom) else Arrangement.Bottom
+        "center" -> if (spaced) Arrangement.spacedBy(gap, Alignment.CenterVertically) else Arrangement.Center
+        "end" -> if (spaced) Arrangement.spacedBy(gap, Alignment.Bottom) else Arrangement.Bottom
         "spaceBetween" -> Arrangement.SpaceBetween
-        else -> if (spaced) Arrangement.spacedBy(gap!!) else Arrangement.Top
+        else -> if (spaced) Arrangement.spacedBy(gap) else Arrangement.Top
     }
 }
 
 private fun horizontalArrangement(justify: String?, gap: Dp?): Arrangement.Horizontal {
     val spaced = gap != null && gap > 0.dp
     return when (justify) {
-        "center" -> if (spaced) Arrangement.spacedBy(gap!!, Alignment.CenterHorizontally) else Arrangement.Center
-        "end" -> if (spaced) Arrangement.spacedBy(gap!!, Alignment.End) else Arrangement.End
+        "center" -> if (spaced) Arrangement.spacedBy(gap, Alignment.CenterHorizontally) else Arrangement.Center
+        "end" -> if (spaced) Arrangement.spacedBy(gap, Alignment.End) else Arrangement.End
         "spaceBetween" -> Arrangement.SpaceBetween
-        else -> if (spaced) Arrangement.spacedBy(gap!!) else Arrangement.Start
+        else -> if (spaced) Arrangement.spacedBy(gap) else Arrangement.Start
     }
 }
 

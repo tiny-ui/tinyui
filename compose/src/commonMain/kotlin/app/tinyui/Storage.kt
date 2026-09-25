@@ -11,7 +11,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import okio.FileSystem
@@ -88,7 +87,7 @@ internal class PackageStorage(private val fs: FileSystem, private val file: Path
         try {
             file.parent?.let { fs.createDirectories(it) }
             val tmp = file.parent!! / "${file.name}.tmp"
-            val json = JsonObject(map.mapValues { Json.parseToJsonElement(it.value) as JsonElement }).toString()
+            val json = JsonObject(map.mapValues { Json.parseToJsonElement(it.value) }).toString()
             fs.write(tmp) { writeUtf8(json) }
             fs.atomicMove(tmp, file)
         } catch (e: Exception) {
