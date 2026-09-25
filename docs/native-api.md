@@ -23,7 +23,7 @@ val host = TinyUIHost(
 TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 ```
 
-除 `components`、`sink`、`dataDir` 外都可缺省，缺省行为见各节。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
+除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
 
 `locals` 是这一次挂载交给 `host.call` 能力的对象（§13），只有兜底能力用得到。
 
@@ -64,7 +64,7 @@ const cart = store.watch(key) // 渲染期调用，返回 accessor；K5 topic st
 App 级内存键值，真值在框架的 `host.store`，全 App 一份、跨包共享、进程结束即失。宿主写入用带类型的方法：
 
 ```kotlin
-host.store.set("trendingai.flag", true)            // 按 kotlinx.serialization 编码
+host.store.set("trendingai.flag", true)            // 按 kotlinx.serialization 编码；原始 JSON 用 setJson / getJson
 host.store.bind("trendingai.flag", flow, scope)    // 把一个 Flow 持续写入
 ```
 
@@ -143,7 +143,8 @@ i18n.locale()   // accessor，如 "zh"
 ```
 
 - 字典在包里：`i18n/<locale>.json`，扁平的 key → 字符串，包的默认语言写在 `tinyui.config.json`（build-chain.md §8）
-- 当前语言：`TinyUIHost.locale` 的值，缺省为系统语言；变化时框架加载新字典，经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
+- 包第一次挂页面时，各语言的字典全部读进内存（manifest 的 `i18n`，与字节码同一来源）
+- 当前语言：`TinyUIHost.locale` 的值，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 查找回退：`zh-Hant-TW → zh-Hant → zh → 默认语言`；全部缺失返回 key 本身，并经 `PageSink` 每个 key 上报一次
 - 插值只有 `{name}`，值按字符串替换；没有复数与数字 / 日期格式化（引擎无 `Intl`）
 - key 的 TS 类型由 CLI 生成（build-chain.md §8），写错的 key 编译期报

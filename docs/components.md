@@ -80,14 +80,16 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
 
-`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串 `"<viewBox>|<d>"`：`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，单色，多个 path 合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是新的 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。页面从 npm 包 `tinyui-icons` 按名 import（由 Material Symbols 生成，一个图标一个具名导出的字符串常量，esbuild 只打进用到的），或自己写品牌图标的字符串。多色图标与位图归 `Image`。
+`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
 
 ```tsx
-import { bolt, checkCircle } from "tinyui-icons/material/outlined";
+import bolt from "@material-symbols/svg-400/outlined/bolt.svg";
+import checkCircle from "@material-symbols/svg-400/outlined/check_circle.svg";
+const ICONS: Record<string, string> = { quota: bolt };
 <Icon icon={ICONS[key] ?? checkCircle} tint="primary" />
 ```
 
-`Loading` 是 M3 Expressive 的 `LoadingIndicator`，不定进度；有进度的进度条等需求。
+`Loading` 是 M3 Expressive 的 `LoadingIndicator`，不定进度；有进度的进度条等需求。`LoadingIndicator` 只在 CMP material3 的 alpha 线上有，库因此依赖与 CMP 同代的 material3 alpha（catalog `composeMaterial3`）。
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 
