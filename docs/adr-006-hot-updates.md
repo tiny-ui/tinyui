@@ -1,6 +1,6 @@
 # ADR-006 · 热下发：整包原子、宿主 hostVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新；同日新增 §2.11：运行时随宿主、包只含页面，包与宿主的 tinyui 版本从"相等"放宽为"宿主不低于包"，升 tinyui 不再加 `hostVersion`，§2.10"运行时仍放包里"作废）；实现进度见 updates-plan.md
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新；同日新增 §2.11：运行时随宿主、包只含页面，包与宿主的 tinyui 版本从"相等"放宽为"宿主不低于包"，升 tinyui 不再加 `hostVersion`，§2.10"运行时仍放包里"作废；2026-09-25 §2.4 "core 库零 I/O"被 ADR-007 推翻，core 自带 ktor 与 okio，`tinyui-updates` 的边界不变）；实现进度见 updates-plan.md
 - 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的页面产物（运行时随宿主，§2.11），整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `hostVersion`，引擎 commit 要求相等、包的 tinyui 版本要求与宿主兼容（同 major 且宿主不低于包），两者只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 用旧内容发一个新版本（指针只往前走）；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
 - 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
 - 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则。§2.11 另影响：updates.md §1.1（manifest 去 `runtime`，`tinyui` 改义）、§1.3（publish 判下限）、§4.1（加 1 口径）、§4.3（客户端核对）、§6.4（快照 `tinyui` 行改义）；patch-protocol.md §6（K0 版本核对删去）；build-chain.md §2（build 不产出 `runtime/`，运行时由库构建）；runtime-api.md 写入公开面铁律；roadmap D 组"运行时 ABI 版本"一行删去
@@ -76,7 +76,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 ### 2.4 库的边界
 
-库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `app.tinyui:tinyui-updates`：core 库保持零 I/O、零文件依赖；不需要热下发的宿主直接不依赖它。
+库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `app.tinyui:tinyui-updates`：core 库保持零 I/O、零文件依赖（2026-09-25 起 core 放开 I/O，见 ADR-007；热下发仍独立成 artifact）；不需要热下发的宿主直接不依赖它。
 
 ### 2.5 服务端形态
 

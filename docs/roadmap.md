@@ -59,9 +59,17 @@
 | 手势组合内置组件 | ADR-004 | 业务需求出现 |
 | 公钥轮换不中断旧 App：预置备用钥（`publicKeys` 为一组，客户端任一内置钥验过即可，服务端登记一组并可吊销单把，manifest 记签名用的钥） | updates.md §7 | 出现第一次真实的轮换诉求，或托管实例接入外部租户 |
 | 服务端在 `PUT current.json` 时核对宿主快照：核对逻辑只在服务端一份，另开只读核对端点，CLI 删自己的 `checkHost` 改调它预检 | updates.md §6.1 | 出现 CLI 以外的发布路径（控制台、租户自写工具），或托管实例接入外部租户 |
-| 宿主契约 schema 化 + 代码生成：能力参数 / 返回、页面 props 与页面名、store key 用 schema DSL 声明进快照（形状变即快照变、逼 `hostVersion` 加 1），CLI 按目标宿主版本的快照生成 TS 类型，页面编译期核对 | updates.md §4.1 | 宿主与页面由不同的人或团队维护（外部租户、第二个宿主），或首次因快照盲区出线上问题 |
+| 宿主契约 schema 化 + 代码生成：`host.call` 能力的参数 / 返回用 schema DSL 声明进快照（形状变即快照变、逼 `hostVersion` 加 1），CLI 按目标宿主版本的快照生成 TS 类型，页面编译期核对。ADR-007 后页面 props 与 store key 不再是宿主契约，盲区只剩少数兜底能力 | updates.md §4.1 | 宿主与页面由不同的人或团队维护（外部租户、第二个宿主），或首次因快照盲区出线上问题 |
 | 以客户端能力探测替代 `hostVersion`：指针列出多个候选版本及其 `requires`，客户端挑能跑的最新一版，配"能力改参数或语义即换名"约定（运行时 ABI 版本一项已由 ADR-006 §2.11 运行时随宿主取代，2026-09-24） | ADR-006 §2.11 | `hostVersion` 加 1 的频率重新成为负担 |
-| `Image` 与图片加载管线（coil3 vs 宿主 loader） | components.md §3 | 出现需要图片的页面 |
+| `Image` 与图片加载管线（coil3 vs 宿主 loader）；多色 / 位图图标并入这里 | components.md §3 | 出现需要图片的页面 |
+| i18n 的复数与本地化数字 / 日期（J2 `i18n.format`，原生侧实现） | ADR-007 §3.2 | 第一个需要复数或本地日期的页面 |
+| 框架远程配置 / 功能开关服务（可能是托管实例的付费功能） | ADR-007 §3.3 | 第二个 App 没有自己的配置后端又需要功能开关 |
+| 大数据存储（SQLite / 文件 API） | ADR-007 §3.4 | 第一个要缓存大量数据的页面 |
+| 声明式 `Dialog` / `BottomSheet` | ADR-007 §3.6 | 第一个需要自定义内容对话框的页面 |
+| 剪贴板、分享、震动、选图等通用能力（均按"框架默认实现、宿主可接管"） | ADR-007 §3.6 | 第一个需要的页面 |
+| `openUrl` 的打开方式提示（`mode`） | ADR-007 §3.6 | 页面确实要求应用内或外部打开 |
+| 流式响应 / SSE、上传下载、请求缓存 | ADR-007 §3.1 | 第一个需要的页面 |
+| 会话之外的身份模型（多账号等） | ADR-007 §3.5 | 出现这类宿主 |
 | ~~`weight`~~ / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `weight`、`border`、`Column` / `Row` 的 `scroll` 已加（2026-09-17，TrendingAI 订阅页触发）；`alignSelf` 等需求 |
 
 ## 建议顺序与里程碑
@@ -73,4 +81,4 @@
 5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`tinyui-native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
 6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提——tinyui 0.1.0（Maven + npm 三包 `tinyui-core` / `tinyui-native` / `tinyui-cli`）与 quickjs-kmp 0.1.1——已于 2026-09-18 发出（PR #11）；iOS 模拟器 smoke 通过，三条状态验证（结账失败 / 未登录 / 已是 Pro）不做
 7. **热下发实现**（ADR-006 定稿后；里程碑与进度见 [updates-plan.md](./updates-plan.md)）：CLI（`tinyui.config.json`、模块名加包名、manifest 扩展、`bundle` + 签名、`keys`）→ core 库 `Bundle` → `updates/` 模块（多包 `Updates`）→ `tinyui-updates-server` 仓 MVP（投递 + 发布 + 管理端点，部署 `updates.tinyui.app`）→ CLI `publish` / `apps` / `packages` / `tokens` / `releases` → TrendingAI 接入 → 第二个 App 接入。前置：`qjsc-kmp` npm 平台包
-
+8. **框架职责边界**（[ADR-007](./adr-007-host-boundary.md)，2026-09-25 定）：tinyui 一个 PR——`TinyUIHost` 重组、删 `HostServices`、App 级 store 与 `pageVisible()` 驱动、`http` 通道、`storage` 与 `cached`、包内 i18n（CLI 校验与类型）、`ui` / `linking` / `analytics` / `session`、`Icon` 与 `tinyui-icons`、`Loading`、`role` / `selected`、快照通道段，sample 同步改写 → 发 minor → TrendingAI 订阅页按新形态重写（trendingai-tinyui 删 `schema/` 与宿主封装；TrendingAI 删五个能力、props、宿主组件，`hostVersion` 加 1）。验收见 ADR-007 §5.4
