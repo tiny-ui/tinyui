@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promis
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
 import { isPackageName } from "./config.ts";
+import { payload, requirePackagePath } from "./payload.ts";
 import { isPublicKey, publicKeyOf, sign } from "./keys.ts";
 
 export interface BundleOptions {
@@ -63,15 +64,15 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
 
     // everything is checked before anything is written
     const files: { source: string; target: string }[] = [];
-    for (const [module, path] of Object.entries(manifest.files)) {
-        const source = resolve(dist, path + ".bin");
-        if (!within(dist, source)) throw new Error(`manifest.files["${module}"] points outside ${dist}: ${path}`);
-        // an output path is a URL path once the package is served; tinyui build refuses these at the source
-        if (!path.split("/").every(isPathSegment)) throw new Error(`manifest.files["${module}"] = "${path}": every segment must match [A-Za-z0-9._-]+ to survive the delivery URL`);
-        const expected = manifest.hashes[module];
+    // an output path is a URL path once the package is served; payload() refuses the rest, as tinyui build does at the source
+    for (const { path, hashKey } of payload(manifest)) {
+        const source = resolve(dist, path);
+        if (!within(dist, source)) throw new Error(`${path} points outside ${dist}`);
+        requirePackagePath(path);
+        const expected = manifest.hashes[hashKey];
         const actual = createHash("sha256").update(await readFile(source)).digest("hex");
         if (actual !== expected) throw new Error(`${source} does not match manifest.hashes (${actual} vs ${expected}); rerun tinyui build`);
-        files.push({ source, target: path + ".bin" });
+        files.push({ source, target: path });
     }
 
     // written once, signed as written: every side verifies these exact bytes (docs/updates.md §7)
@@ -138,9 +139,11 @@ async function readManifest(dist: string): Promise<Manifest> {
     };
     const modules = names("pages");
     if (new Set(modules).size !== modules.length) throw new Error(`${file}: a module is listed twice`);
+    const i18nFiles = Object.values((raw.i18n as { files?: Record<string, string> } | undefined)?.files ?? {});
     for (const key of ["files", "hashes", "buildIds"] as const) {
         const keys = Object.keys(table(key)).sort();
-        if (keys.join("\n") !== [...modules].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "pages"`);
+        const expected = key === "hashes" ? [...modules, ...i18nFiles] : modules;
+        if (keys.join("\n") !== [...expected].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "pages"${key === "hashes" ? " and the i18n files" : ""}`);
     }
     return raw as Manifest;
 }

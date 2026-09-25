@@ -7,6 +7,7 @@ import { build } from "./build.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
+import { i18nTypes, loadI18n } from "./i18n.ts";
 import { generateKeyPair } from "./keys.ts";
 import { publish } from "./publish.ts";
 import { pull } from "./pull.ts";
@@ -16,6 +17,7 @@ import { loadSchema } from "./schema/load.ts";
 
 const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] [--js-only] [--version <v>]
        tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
+       tinyui i18n --ts <file> [--root <dir>] [--check]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -38,6 +40,7 @@ build      compile the pages of the package described by <root>/tinyui.config.js
   --qjsc     path to qjsc-kmp (default: $TINYUI_QJSC, then the qjsc-kmp npm package, then PATH)
   --js-only  emit ESM sources and source maps only, skip bytecode
   --version  package version to record (default: <createdAt>-<git sha>)
+  pages import icons as .svg files: single-colour shapes become the string Icon takes (docs/components.md §3)
 
 bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersion>/ (docs/updates.md)
   --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1)
@@ -45,6 +48,11 @@ bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersio
   --dist             tinyui build output (default: ./dist)
   --rollout          percentage written to current.json (default: 100)
   --out              output root (default: <dist>/ota)
+
+i18n       type i18n.t from the package's strings (docs/build-chain.md §8); build checks them either way
+  --root     project root (default: cwd)
+  --ts       write the tinyui-native I18nKeys augmentation here
+  --check    exit 1 if --ts is not already up to date, write nothing
 
 keys generate
   --out      where to write the private key (default: ./tinyui-signing-key.pem); the public key is printed
@@ -113,6 +121,26 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 ...(v["out"] !== undefined && { out: v["out"] as string }),
             });
             process.stdout.write(`${result.version} -> ${result.dir}\n`);
+            return 0;
+        },
+    },
+    i18n: {
+        options: { root: { type: "string" }, ts: { type: "string" }, check: { type: "boolean", default: false } },
+        run: async (v) => {
+            const root = (v["root"] as string | undefined) ?? process.cwd();
+            const out = v["ts"] as string | undefined;
+            if (!out) throw new Error("i18n: --ts is required");
+            const strings = await loadI18n(root, await loadConfig(root));
+            if (!strings) throw new Error(`i18n: ${root} has no strings (tinyui.config.json "i18n" directory)`);
+            const text = i18nTypes(strings);
+            if (v["check"]) {
+                const current = await readFile(out, "utf8").catch(() => "");
+                if (current !== text) throw new Error(`${out} is out of date; run tinyui i18n --ts ${out}`);
+                return 0;
+            }
+            await mkdir(dirname(out), { recursive: true });
+            await writeFile(out, text);
+            process.stdout.write(`${out}\n`);
             return 0;
         },
     },

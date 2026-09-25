@@ -1,14 +1,16 @@
 import { build as esbuild, type Plugin } from "esbuild";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
+import { loadI18n } from "./i18n.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { analyzePage, RequiresError, type PageRequires } from "./requires.ts";
+import { SvgError, svgToIcon } from "./svg.ts";
 import { TransformError, transformJsx } from "./transform.ts";
 
 const execFileAsync = promisify(execFile);
@@ -60,8 +62,10 @@ export interface Manifest {
     tinyui: string;
     /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
-    /** Page module name → the host capabilities and host components it uses (docs/updates.md §1.3). */
+    /** Page module name → the host capabilities, http channels and host components it uses (docs/updates.md §1.3). */
     requires: Record<string, PageRequires>;
+    /** The package's strings: the default language and each language's file (docs/build-chain.md §8); absent without strings. */
+    i18n?: { default: string; files: Record<string, string> };
 }
 
 export async function build(options: BuildOptions): Promise<BuildResult> {
@@ -72,6 +76,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     const pagesDir = join(root, config.pages);
     const pageNames = await discoverPages(config.name, pagesDir);
     if (pageNames.size === 0) throw new Error(`no pages found under ${pagesDir}`);
+    const i18n = await loadI18n(root, config);
 
     const qjsc = options.jsOnly ? undefined : await findQjsc(options.qjsc);
     if (!options.jsOnly && !qjsc) {
@@ -80,11 +85,20 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
 
     // stale outputs would otherwise be packaged along with the current pages
     await rm(join(out, "pages"), { recursive: true, force: true });
+    await rm(join(out, "i18n"), { recursive: true, force: true });
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
     const requires = await pageRequires(pages);
     await finish(root, pages, qjsc);
     const hashes: Record<string, string> = {};
     for (const m of pages) if (m.bin) hashes[m.name] = createHash("sha256").update(await readFile(m.bin)).digest("hex");
+    if (i18n) {
+        for (const [locale, path] of i18n.paths) {
+            const target = join(out, ...path.split("/"));
+            await mkdir(dirname(target), { recursive: true });
+            await copyFile(i18n.sources.get(locale)!, target);
+            hashes[path] = createHash("sha256").update(await readFile(target)).digest("hex");
+        }
+    }
 
     const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const manifest = join(out, "manifest.json");
@@ -100,6 +114,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         tinyui: await tinyuiVersion(root),
         hashes,
         requires,
+        ...(i18n && { i18n: { default: i18n.defaultLocale, files: Object.fromEntries(i18n.paths) } }),
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
     return { pages, manifest };
@@ -259,6 +274,15 @@ const pagePlugin: Plugin = {
     name: "tinyui-pages",
     setup(api) {
         api.onResolve({ filter: /^tinyui:jsx-shim$/ }, (args) => ({ path: args.path, namespace: "tinyui" }));
+        // docs/components.md §3: an SVG file is the icon string Icon takes, checked here rather than on the device
+        api.onLoad({ filter: /\.svg$/ }, async (args) => {
+            try {
+                return { contents: `export default ${JSON.stringify(svgToIcon(await readFile(args.path, "utf8")))};`, loader: "js" };
+            } catch (e) {
+                if (e instanceof SvgError) return { errors: [{ text: `${e.message} (an icon is a single-colour SVG: docs/components.md §3)`, location: { file: args.path } }] };
+                throw e;
+            }
+        });
         // Runtime modules stay bare specifiers and are pure, so a page that never uses JSX keeps no import of h
         api.onResolve({ filter: /^tinyui-(core|native)$/ }, (args) => ({ path: args.path, external: true, sideEffects: false }));
         api.onLoad({ filter: /.*/, namespace: "tinyui" }, () => ({

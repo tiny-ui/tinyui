@@ -46,3 +46,8 @@ function compare(a: Version, b: Version): number {
     }
     return a.pre.length - b.pre.length;
 }
+
+/** Negative when [a] comes before [b] in semver precedence, positive after, zero when equal. */
+export function compareVersions(a: string, b: string): number {
+    return compare(parse(a), parse(b));
+}
