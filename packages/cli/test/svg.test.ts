@@ -31,6 +31,10 @@ describe("svg loader", () => {
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" fill="none"><path d="M0 0Z"/></svg>`), /without a stroke/);
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><line x1="0" y1="0" x2="1" y2="1"/></svg>`), /either filled or outlined/);
         assert.throws(() => svgToIcon(wrap(`<path stroke="currentColor" d="M0 0Z"/>`)), /stroke="…"> in a filled icon/);
+        const outlined = (inner: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${inner}</svg>`;
+        assert.throws(() => svgToIcon(outlined(`<path stroke="none" d="M0 0Z"/>`)), /overrides the stroke/);
+        assert.throws(() => svgToIcon(outlined(`<path stroke-width="3" d="M0 0Z"/>`)), /overrides the stroke/);
+        assert.doesNotThrow(() => svgToIcon(outlined(`<path stroke-width="2" d="M0 0Z"/>`)));
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" transform="scale(2)"><path d="M0 0Z"/></svg>`), /only plain single-colour shapes/);
     });
 });
