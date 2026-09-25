@@ -20,4 +20,7 @@ declare global {
         /** `tinyui:<module name>`, e.g. `tinyui:sample/home`. */
         readonly url: string;
     }
+    /** Runs [fn] once after [ms], in a transaction of its own; gone with the page (docs/runtime-api.md §7). */
+    function setTimeout(fn: () => void, ms?: number): number;
+    function clearTimeout(id: number | undefined): void;
 }

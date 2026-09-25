@@ -38,18 +38,28 @@ export function cached<T>(key: string, fetcher: () => Promise<T>): [data: () => 
     const [loading, setLoading] = signal(false);
     const [error, setError] = signal<unknown>(undefined);
     let disposed = false;
+    let latest = 0;
     onCleanup(() => { disposed = true; });
     const run = () => {
+        // only the newest run may settle: an older fetch finishing late must not overwrite it
+        const run = ++latest;
+        const current = () => !disposed && run === latest;
         setLoading(true);
         setError(undefined);
-        fetcher().then(
+        let pending: Promise<T>;
+        try {
+            pending = fetcher();
+        } catch (e) {
+            pending = Promise.reject(e);
+        }
+        pending.then(
             (v) => {
-                if (disposed) return;
+                if (!current()) return;
                 setData(() => v);
                 setLoading(false);
                 try { set(key, v); } catch (e) { setError(e); }
             },
-            (e: unknown) => { if (disposed) return; setError(e); setLoading(false); },
+            (e: unknown) => { if (!current()) return; setError(e); setLoading(false); },
         );
     };
     run();

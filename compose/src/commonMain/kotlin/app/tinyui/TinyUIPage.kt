@@ -39,11 +39,15 @@ fun TinyUIPage(
     error: @Composable (PageFailure) -> Unit = { PageFailureScreen(it) },
     onHost: (PageHost) -> Unit = {},
 ) {
-    val pageHost = remember(page, host, propsJson, locals, sourceMaps) {
+    val pageHost = remember(page, host, propsJson, sourceMaps) {
         PageHost(page, host, propsJson, locals, sourceMaps = sourceMaps)
     }
     val uriHandler = LocalUriHandler.current
-    SideEffect { pageHost.context.uriHandler = uriHandler }
+    // a new list of the same objects each recomposition must not remount the page: the context just follows it
+    SideEffect {
+        pageHost.context.uriHandler = uriHandler
+        pageHost.context.locals = locals.associate { it.local to it.value }
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(pageHost) {
         onHost(pageHost)
@@ -58,6 +62,8 @@ fun TinyUIPage(
                 else -> {}
             }
         }
+        // addObserver replays ON_START only when already started; below that the page starts hidden
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) pageHost.visible(false)
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }

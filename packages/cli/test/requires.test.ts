@@ -55,7 +55,7 @@ describe("host requirements of a page", () => {
 
     it("lists http.client channels and a session.signIn, and nothing it cannot follow", () => {
         const HTTP = `import { http, session } from "tinyui-native";\n`;
-        const page = analyzePage("shop/home", `${HTTP}http.get("https://x");\nconst api = http.client("app");\nhttp["client"]("pay").post("/p");\nsession.state();\nsession.signIn("paywall");\n`);
+        const page = analyzePage("shop/home", `${HTTP}http.get("https://x");\nconst api = http.client("app");\nhttp["client"]("pay").post("/p");\nhttp.client("default").get("/d");\nsession.state();\nsession.signIn("paywall");\n`);
         assert.deepEqual(page.channels, ["app", "pay"]);
         assert.deepEqual(page.capabilities, ["session.signIn"]);
         assert.deepEqual(analyzePage("shop/home", `${HTTP}session.state();\n`).capabilities, [], "reading the session is not a use of signIn");

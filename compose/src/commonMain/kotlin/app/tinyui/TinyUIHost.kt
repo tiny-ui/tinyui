@@ -2,6 +2,7 @@ package app.tinyui
 
 import androidx.compose.ui.platform.UriHandler
 import app.tinyui.schema.ComponentRegistry
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -87,7 +88,7 @@ fun interface HostCapability {
 }
 
 /** The mount a call came from: the page's module name and the objects its `locals` provide. */
-class PageContext internal constructor(val name: String, private val locals: Map<PageLocal<*>, Any>) {
+class PageContext internal constructor(val name: String, @Volatile internal var locals: Map<PageLocal<*>, Any>) {
     internal var uriHandler: UriHandler? = null
 
     @Suppress("UNCHECKED_CAST")

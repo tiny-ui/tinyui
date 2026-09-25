@@ -10,8 +10,14 @@ export function svgToIcon(source: string): string {
     if (!root) throw new SvgError("no <svg> element");
     const rootAttrs = attributes(root[3]!);
     const viewBox = rootAttrs["viewBox"] ?? (rootAttrs["width"] && rootAttrs["height"] ? `0 0 ${num(rootAttrs["width"])} ${num(rootAttrs["height"])}` : undefined);
-    if (!viewBox || viewBox.trim().split(/[\s,]+/).length !== 4) throw new SvgError("the <svg> needs a viewBox of four numbers");
+    const box = viewBox?.trim().split(/[\s,]+/).map(Number);
+    if (!box || box.length !== 4 || !box.every(Number.isFinite) || box[2]! <= 0 || box[3]! <= 0) throw new SvgError("the <svg> needs a viewBox of four numbers with a positive width and height");
+    for (const bad of ["transform", "style", "opacity", "fill-opacity", "clip-path", "mask", "filter"]) {
+        if (rootAttrs[bad] !== undefined) throw new SvgError(`<svg ${bad}="…">: only plain single-colour shapes can be an icon`);
+    }
     const stroked = rootAttrs["fill"] === "none" && rootAttrs["stroke"] !== undefined && rootAttrs["stroke"] !== "none";
+    if (rootAttrs["fill"] === "none" && !stroked) throw new SvgError(`<svg fill="none"> without a stroke draws nothing; an outlined icon sets both`);
+    if (rootAttrs["fill"] !== undefined && rootAttrs["fill"] !== "none" && rootAttrs["fill"] !== "currentColor") throw new SvgError(`<svg fill="${rootAttrs["fill"]}">: an icon takes one colour from its tint; remove the fill`);
     const strokeWidth = stroked ? num(rootAttrs["stroke-width"] ?? "1") : undefined;
 
     const parts: string[] = [];
@@ -47,8 +53,8 @@ export function svgToIcon(source: string): string {
     }
     if (depth !== 0) throw new SvgError("unbalanced <g>");
     if (!parts.length) throw new SvgError("no shapes");
-    const box = viewBox.trim().split(/[\s,]+/).join(" ");
-    return strokeWidth === undefined ? `${box}|${parts.join("")}` : `${box}|${parts.join("")}|${strokeWidth}`;
+    const boxText = box.join(" ");
+    return strokeWidth === undefined ? `${boxText}|${parts.join("")}` : `${boxText}|${parts.join("")}|${strokeWidth}`;
 }
 
 function attributes(text: string): Record<string, string> {

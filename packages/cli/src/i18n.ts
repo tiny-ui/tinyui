@@ -48,24 +48,27 @@ export async function loadI18n(root: string, config: TinyUIConfig): Promise<Pack
             continue;
         }
         if (typeof raw !== "object" || raw === null || Array.isArray(raw)) { problems.push(`${name}: expected a flat object of strings`); continue; }
+        let valid = true;
         for (const [key, value] of Object.entries(raw)) {
-            if (!KEY.test(key)) problems.push(`${name}: key "${key}" must match [A-Za-z0-9._-]+`);
-            if (typeof value !== "string") problems.push(`${name}: "${key}" must be a string`);
+            if (!KEY.test(key)) { problems.push(`${name}: key "${key}" must match [A-Za-z0-9._-]+`); valid = false; }
+            if (typeof value !== "string") { problems.push(`${name}: "${key}" must be a string`); valid = false; }
         }
+        // a broken file is reported as such; comparing it against the others would only add noise or throw
+        if (!valid) continue;
         dictionaries.set(locale, raw as Record<string, string>);
         sources.set(locale, file);
     }
     const base = dictionaries.get(defaultLocale);
-    if (!base && !problems.length) problems.push(`there is no ${defaultLocale}.json for the default language`);
+    if (!base && !sources.has(defaultLocale) && !problems.length) problems.push(`there is no ${defaultLocale}.json for the default language`);
     if (base) {
         for (const [locale, dict] of dictionaries) {
             if (locale === defaultLocale) continue;
-            const missing = Object.keys(base).filter((k) => !(k in dict));
-            const extra = Object.keys(dict).filter((k) => !(k in base));
+            const missing = Object.keys(base).filter((k) => !Object.hasOwn(dict, k));
+            const extra = Object.keys(dict).filter((k) => !Object.hasOwn(base, k));
             if (missing.length) problems.push(`${locale}.json lacks ${missing.map((k) => `"${k}"`).join(", ")}`);
             if (extra.length) problems.push(`${locale}.json has ${extra.map((k) => `"${k}"`).join(", ")}, which ${defaultLocale}.json does not`);
             for (const key of Object.keys(base)) {
-                if (!(key in dict)) continue;
+                if (!Object.hasOwn(dict, key)) continue;
                 const want = placeholders(base[key]!).join(", ");
                 const have = placeholders(dict[key]!).join(", ");
                 if (want !== have) problems.push(`${locale}.json "${key}" has placeholders {${have}}, ${defaultLocale}.json has {${want}}`);

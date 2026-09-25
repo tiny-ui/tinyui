@@ -122,7 +122,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
     register(BuiltinSchemas.Icon) { scope ->
         val icon = scope.get<IconValue>("icon") ?: return@register
-        Icon(icon.vector, contentDescription = null, tint = scope.color("tint") ?: LocalContentColor.current, modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp))
+        Icon(icon.vector, contentDescription = scope.get<String>("label"), tint = scope.color("tint") ?: LocalContentColor.current, modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp))
     }
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
 }

@@ -12,7 +12,7 @@ object PackageCheck {
         for ((page, uses) in manifest.requires.entries.sortedBy { it.key }) {
             uses.components.filter { host.components.schema(it) == null }.forEach { add("$page uses component $it, which the host does not register") }
             uses.capabilities.filter { it !in capabilities }.forEach { add("$page calls $it, which the host does not provide") }
-            uses.channels.filter { it !in host.channels }.forEach { add("$page sends through http channel $it, which the host does not register") }
+            uses.channels.filter { it != TinyUIHost.DEFAULT_CHANNEL && it !in host.channels }.forEach { add("$page sends through http channel $it, which the host does not register") }
         }
     }
 }

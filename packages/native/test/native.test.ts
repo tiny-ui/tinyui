@@ -52,6 +52,30 @@ describe("tinyui-native", () => {
         assert.equal(data(), "new");
     });
 
+    it("cached keeps only the newest run and turns a throwing fetcher into its error", async () => {
+        bridge.queries["storage.get"] = null;
+        bridge.queries["storage.set"] = null;
+        const resolvers: ((v: string) => void)[] = [];
+        let first = true;
+        let data: () => string | undefined = () => undefined;
+        let actions: { error: () => unknown; refetch: () => void } | undefined;
+        tinyui().mount(() => {
+            [data, actions] = cached<string>("r", () => {
+                if (first) { first = false; throw new Error("sync"); }
+                return new Promise<string>((r) => resolvers.push(r));
+            });
+            return h(Text, { text: "x" });
+        }, "{}", HOST);
+        await drain();
+        assert.equal((actions!.error() as Error).message, "sync");
+        actions!.refetch();
+        actions!.refetch();
+        resolvers[1]!("newer");
+        resolvers[0]!("older");
+        await drain();
+        assert.equal(data(), "newer");
+    });
+
     it("i18n.t fills placeholders and re-runs bindings when the locale changes", () => {
         bridge.queries["i18n.locale"] = "zh";
         bridge.queries["i18n.t"] = "省 {percent}";

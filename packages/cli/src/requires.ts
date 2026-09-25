@@ -56,7 +56,8 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (call?.type !== "CallExpression" || call["callee"] !== member.node) return problem(member.node, "http.client may only be called, not passed around (docs/build-chain.md §5.1)");
         const name = literal((call["arguments"] as AnyNode[])[0]);
         if (name === undefined) return problem(call, "the argument of http.client must be a string literal (docs/build-chain.md §5.1)");
-        channels.add(name);
+        // the built-in channel is every host's, nothing to check it against
+        if (name !== "default") channels.add(name);
     };
     /** [ref] is `session` (or `native.session`): only its members; reaching signIn is a use of the session. */
     const useSession = (ref: AnyNode) => {

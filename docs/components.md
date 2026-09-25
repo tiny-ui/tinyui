@@ -75,7 +75,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard` | `onChange{text}`、`onCommit{text}`（IME Done 或失焦） | `setText{text}`、`focus`、`blur` | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
-| `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色） | `onClick` | | |
+| `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。

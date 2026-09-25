@@ -73,7 +73,7 @@ fun interface HttpChannel {
 /** An E3 failure with one of the codes in docs/native-api.md §14. */
 class HostException(val code: String, message: String) : Exception(message)
 
-/** The login session a host provides (docs/native-api.md §9); [userId] is a stable, non-secret id, never a token. */
+/** The login session a host provides (docs/native-api.md §9); [userId] is a stable, non-secret id, never a token; null when logged out or not yet known. */
 data class Session(val loggedIn: Boolean, val userId: String?) {
     companion object {
         val LoggedOut = Session(false, null)

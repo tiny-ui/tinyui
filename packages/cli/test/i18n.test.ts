@@ -38,6 +38,8 @@ describe("package i18n", () => {
             return true;
         });
         await assert.rejects(loadI18n(root, config("fr")), /no fr\.json/);
+        await strings({ "en.json": { a: "A" }, "zh.json": { a: { nested: true } } });
+        await assert.rejects(loadI18n(root, config("en")), /zh\.json: "a" must be a string/);
         await assert.rejects(loadI18n(root, config()), /no "defaultLocale"/);
     });
 

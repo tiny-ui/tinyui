@@ -176,6 +176,8 @@ export interface IconProps extends LayoutProps {
     size?: number;
     /** defaults to the content colour */
     tint?: ColorValue;
+    /** what a screen reader says; leave unset for a decorative icon next to its text */
+    label?: string;
     onClick?: (e: IconClickPayload) => void;
 }
 

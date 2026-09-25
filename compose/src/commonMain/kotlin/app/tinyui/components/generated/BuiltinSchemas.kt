@@ -160,6 +160,7 @@ object BuiltinSchemas {
             "icon" to PropSpec.IconSpec(required = true, initial = false),
             "size" to PropSpec.Dp(default = 24.0, required = false, initial = false),
             "tint" to PropSpec.ColorSpec(default = null, required = false, initial = false),
+            "label" to PropSpec.Str(default = null, required = false, initial = false),
         ),
         events = mapOf(
             "onClick" to emptyMap(),

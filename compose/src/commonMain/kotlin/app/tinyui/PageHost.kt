@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +134,8 @@ class PageHost internal constructor(
         jsThread,
     )
     private var entries: Entries? = null
+    /** The last [visible]; one that arrives before the mount is applied right after it. */
+    @Volatile private var wantVisible = true
 
     private class Entries(val self: JsRef, val fns: Map<String, JsRef>) {
         fun call(name: String, vararg args: JsValue) = fns.getValue(name).invoke(self, args.toList())
@@ -160,6 +163,7 @@ class PageHost internal constructor(
                             e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest((FrameworkCapabilities + host.capabilityNames).toList())))
                         }
                     }
+                    if (!wantVisible) e.call("visible", JsValue.Bool(false))
                     e.call("flush")
                 } }
             } catch (t: TimeoutCancellationException) {
@@ -171,7 +175,10 @@ class PageHost internal constructor(
     }
 
     fun dispatch(nodeId: Int, event: String, payload: String) = entry("dispatch", JsValue.Num(nodeId), JsValue.Str(event), JsValue.Str(payload))
-    fun visible(visible: Boolean) = entry("visible", JsValue.Bool(visible))
+    fun visible(visible: Boolean) {
+        wantVisible = visible
+        entry("visible", JsValue.Bool(visible))
+    }
     fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
     fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
 

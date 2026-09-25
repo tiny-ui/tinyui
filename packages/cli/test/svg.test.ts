@@ -25,6 +25,10 @@ describe("svg loader", () => {
         assert.throws(() => svgToIcon(wrap(`<linearGradient id="g"/><path d="M0 0Z"/>`)), /cannot be part of an icon/);
         assert.throws(() => svgToIcon(wrap(`<path transform="scale(2)" d="M0 0Z"/>`)), /only plain single-colour shapes/);
         assert.throws(() => svgToIcon(`<svg><path d="M0 0Z"/></svg>`), /viewBox/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 nope"><path d="M0 0Z"/></svg>`), /viewBox/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 0 24"><path d="M0 0Z"/></svg>`), /positive width/);
         assert.throws(() => svgToIcon(wrap("")), /no shapes/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" fill="none"><path d="M0 0Z"/></svg>`), /without a stroke/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" transform="scale(2)"><path d="M0 0Z"/></svg>`), /only plain single-colour shapes/);
     });
 });
