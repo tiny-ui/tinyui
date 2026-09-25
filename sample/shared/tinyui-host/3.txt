@@ -1,0 +1,10 @@
+hostVersion 3
+tinyui 0.7.0
+
+components
+
+capabilities
+  session.signIn
+
+channels
+  todos

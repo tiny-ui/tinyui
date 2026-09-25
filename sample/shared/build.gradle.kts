@@ -25,7 +25,7 @@ kotlin {
             implementation(libs.okio)
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material3)
+            implementation(libs.compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(libs.kotlinx.coroutines.core)
@@ -71,6 +71,7 @@ val packageBuilds = jsPackages.map { (pkg, jsRoot) ->
         workingDir = jsRoot
         inputs.dir(jsRoot.resolve("src"))
         inputs.file(jsRoot.resolve("tinyui.config.json"))
+        inputs.files(fileTree(jsRoot.resolve("i18n"))).withPropertyName("i18n")
         inputs.files(buildJsPackages.map { it.outputs.files })
         inputs.property("qjsc", qjsc.orElse(""))
         val out = cliOut.map { it.dir(pkg) }
@@ -88,7 +89,7 @@ val collectTinyUIResources by tasks.registering(Sync::class) {
     jsPackages.keys.forEachIndexed { i, pkg ->
         from(packageBuilds[i]) {
             into("files/tinyui/$pkg")
-            include("pages/**/*.bin", "manifest.json")
+            include("pages/**/*.bin", "i18n/*.json", "manifest.json")
             if (providers.gradleProperty("tinyui.maps").orNull != "false") include("pages/**/*.js.map")
         }
     }

@@ -4,9 +4,12 @@ import { http } from "tinyui-native";
 interface Todo { id: number; title: string; done: boolean }
 interface Page { items: Todo[]; next: number | null }
 
+/** The host's `todos` channel; the sample's fake backend stands behind it. */
+const todos = http.client("todos");
+
 export default function Todos() {
     const state = observable({ todos: [] as Todo[], next: 1 as number | null, loading: false });
-    const [first, firstMeta] = resource(() => http.get<Page>("/todos?page=1"));
+    const [first, firstMeta] = resource(() => todos.get<Page>("/todos?page=1"));
     effect(() => {
         const r = first();
         if (r) untrack(() => { state.todos = r.body.items; state.next = r.body.next; });
@@ -19,7 +22,7 @@ export default function Todos() {
         if (page === null || state.loading) return;
         state.loading = true;
         try {
-            const { body } = await http.get<Page>(`/todos?page=${page}`);
+            const { body } = await todos.get<Page>(`/todos?page=${page}`);
             state.todos.push(...body.items);
             state.next = body.next;
         } finally {

@@ -1,0 +1,18 @@
+{
+  "features.title": "What the framework gives a page",
+  "features.locale": "Language: {locale}",
+  "features.count": "Taps kept across restarts: {count}",
+  "features.tap": "Tap",
+  "features.toast": "Show a toast",
+  "features.toast.message": "Saved",
+  "features.toast.undo": "Undo",
+  "features.confirm": "Ask to confirm",
+  "features.confirm.message": "Clear the counter?",
+  "features.open": "Open tinyui.app",
+  "features.plan.annual": "Annual",
+  "features.plan.monthly": "Monthly",
+  "features.session.in": "Signed in as {user}",
+  "features.session.out": "Signed out",
+  "features.signin": "Sign in",
+  "features.zen": "GitHub says: {text}"
+}
