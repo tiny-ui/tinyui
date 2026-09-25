@@ -44,12 +44,11 @@ class BundleSmokeTest {
             override fun error(error: PageError) { errors += error }
             override fun log(line: String) {}
         }
-        val http = object : HttpClient {
-            override suspend fun request(request: HttpRequest): HttpResponse =
-                if (request.url.endsWith("page=1")) HttpResponse(200, """{"items":[{"id":1,"title":"a","done":false}],"next":2}""")
-                else throw HostException("E_HTTP", "500")
+        val api = HttpChannel { request ->
+            if (request.url.endsWith("page=1")) HttpResponse(200, emptyMap(), """{"items":[{"id":1,"title":"a","done":false}],"next":2}""")
+            else HttpResponse(500, emptyMap(), "")
         }
-        val host = PageHost(loaded.module, TinyUIHost(ComponentRegistry().registerBuiltins(), sink), HostServices(http = http), sourceMaps = loaded.sourceMaps)
+        val host = PageHost(loaded.module, TinyUIHost(ComponentRegistry().registerBuiltins(), sink, channels = mapOf("todos" to api)), sourceMaps = loaded.sourceMaps)
         host.start()
         try {
             // the list only exists once the first page has loaded; node ids are dense, so scan them
@@ -63,7 +62,7 @@ class BundleSmokeTest {
             assertEquals(bundle.manifest.buildId("sample/todos"), e.buildId)
             val own = e.frames.firstOrNull { it.mapped && it.file == "src/pages/todos.tsx" } ?: error("no mapped frame in ${e.frames}; stack=${e.jsStack}")
             val source = File("../sample/js/src/pages/todos.tsx").readLines()
-            assertTrue("await http.get" in source[own.line - 1], "frame $own points at the await; stack=${e.jsStack}")
+            assertTrue("await todos.get" in source[own.line - 1], "frame $own points at the await; stack=${e.jsStack}")
         } finally {
             host.close()
         }

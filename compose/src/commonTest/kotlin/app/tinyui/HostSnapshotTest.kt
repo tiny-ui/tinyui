@@ -6,6 +6,7 @@ import app.tinyui.schema.ComponentSchema
 import app.tinyui.schema.FieldSpec
 import app.tinyui.schema.PropSpec
 import kotlin.test.Test
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -38,13 +39,15 @@ class HostSnapshotTest {
         children = true, layout = false,
     )
 
-    private fun host(capabilities: CapabilityRegistry = CapabilityRegistry()) = TinyUIHost(
+    private fun host(capabilities: CapabilityRegistry = CapabilityRegistry(), channels: Map<String, HttpChannel> = emptyMap(), session: SessionSource? = null) = TinyUIHost(
         ComponentRegistry().registerBuiltins().apply {
             register(rating) {}
             register(icon) {}
         },
         sink,
         capabilities,
+        channels = channels,
+        session = session,
     )
 
     @Test
@@ -65,9 +68,21 @@ class HostSnapshotTest {
             capabilities
               checkout.start
               coupon.apply
+              session.signIn
+
+            channels
+              app
+              pay
 
             """.trimIndent(),
-            HostSnapshot.render(host(capabilities), "3"),
+            HostSnapshot.render(
+                host(
+                    capabilities,
+                    channels = mapOf("pay" to HttpChannel { error("unused") }, "app" to HttpChannel { error("unused") }),
+                    session = SessionSource(MutableStateFlow(Session.LoggedOut)) {},
+                ),
+                "3",
+            ),
         )
     }
 
@@ -87,13 +102,22 @@ class HostSnapshotTest {
         assertEquals(1, HostSnapshot.problems(snapshot, host, "4").size)
         val newer = HostSnapshot.problems(snapshot.replace("tinyui ${TinyUI.version}", "tinyui 99.0.0"), host, "3")
         assertEquals(listOf("tinyui ${TinyUI.version} is not compatible with this host version's lower bound 99.0.0 (same major, not older)"), newer)
-        assertEquals(listOf("components or capabilities differ from the snapshot"), HostSnapshot.problems(snapshot.replace("  ta.Icon", "  ta.Icon2"), host, "3"))
+        assertEquals(listOf("components, capabilities or channels differ from the snapshot"), HostSnapshot.problems(snapshot.replace("  ta.Icon", "  ta.Icon2"), host, "3"))
     }
 
     @Test
-    fun writesBothSectionsEvenWhenEmpty() {
+    fun writesEverySectionEvenWhenEmpty() {
         val bare = TinyUIHost(ComponentRegistry().registerBuiltins(), sink)
-        assertEquals("hostVersion 1\ntinyui ${TinyUI.version}\n\ncomponents\n\ncapabilities\n", HostSnapshot.render(bare, "1"))
+        assertEquals("hostVersion 1\ntinyui ${TinyUI.version}\n\ncomponents\n\ncapabilities\n\nchannels\n", HostSnapshot.render(bare, "1"))
+    }
+
+    @Test
+    fun aSnapshotFrozenBeforeChannelsMatchesAHostWithout() {
+        val bare = TinyUIHost(ComponentRegistry().registerBuiltins(), sink)
+        val old = "hostVersion 1\ntinyui ${TinyUI.version}\n\ncomponents\n\ncapabilities\n"
+        assertEquals(emptyList(), HostSnapshot.problems(old, bare, "1"))
+        val withChannel = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, channels = mapOf("app" to HttpChannel { error("unused") }))
+        assertEquals(1, HostSnapshot.problems(old, withChannel, "1").size)
     }
 
     @Test

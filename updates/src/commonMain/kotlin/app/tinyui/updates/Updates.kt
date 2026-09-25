@@ -171,10 +171,9 @@ class Updates internal constructor(
             if (manifest.engine != engine || !TinyUI.isCompatible(tinyui, manifest.tinyui)) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
             val files = HashMap<String, ByteArray>()
-            for (module in manifest.pages) {
-                val path = manifest.file(module) + ".bin"
+            for ((path, hashKey) in manifest.payload) {
                 val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
-                if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
+                if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
                     failed += manifest.version
                     onEvent(UpdateEvent.Failed(name, manifest.version, FailStage.INTEGRITY, "$path is missing or does not match manifest.hashes"))
                     return null
@@ -261,8 +260,7 @@ class Updates internal constructor(
         /** Every file of [manifest] into [staging], each checked against `hashes`; null once all are there. */
         private suspend fun downloadInto(staging: Path, manifest: BuildManifest, manifestBytes: ByteArray): CheckResult.Failed? {
             val version = manifest.version
-            for (module in manifest.pages) {
-                val path = manifest.file(module) + ".bin"
+            for ((path, hashKey) in manifest.payload) {
                 val bytes = try {
                     fetch("$name/$hostVersion/$version/$path")
                 } catch (e: CancellationException) {
@@ -271,7 +269,7 @@ class Updates internal constructor(
                     currentCoroutineContext().ensureActive()
                     return CheckResult.Failed(version, FailStage.DOWNLOAD, "$path: ${e.message ?: e}")
                 }
-                if (bytes.toByteString().sha256().hex() != manifest.hashes[module]) {
+                if (bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
                     return CheckResult.Failed(version, FailStage.INTEGRITY, "$path does not match manifest.hashes")
                 }
                 val file = staging / path

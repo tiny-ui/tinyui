@@ -2,6 +2,8 @@
 agp = "9.4.0"
 kotlin = "2.4.20"
 composeMultiplatform = "1.12.0"
+# 独立版本线，只发 alpha；须与 composeMultiplatform 同代，LoadingIndicator 也只在这里有
+composeMaterial3 = "1.12.0-alpha03"
 android-minSdk = "24"
 android-compileSdk = "37"
 android-targetSdk = "37"
@@ -12,6 +14,7 @@ quickjsKmp = "0.1.2"
 vanniktechMavenPublish = "0.37.0"
 binaryCompatibilityValidator = "0.18.2"
 okio = "3.18.2"
+ktor = "3.5.2"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -20,6 +23,12 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 quickjs-kmp = { module = "wang.harlon:quickjs-kmp", version.ref = "quickjsKmp" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
+okio-fakefilesystem = { module = "com.squareup.okio:okio-fakefilesystem", version.ref = "okio" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
 # build-logic 用：把插件当普通依赖引进 convention plugin 的 classpath
 plugin-android = { module = "com.android.tools.build:gradle", version.ref = "agp" }

@@ -8,7 +8,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import app.tinyui.HostServices
+import app.tinyui.PageLocalValue
 import app.tinyui.LoadedPage
 import app.tinyui.PageError
 import app.tinyui.PageFailure
@@ -28,8 +28,8 @@ fun UpdatesPage(
     updates: Updates,
     name: String,
     host: TinyUIHost,
-    services: HostServices = HostServices.Default,
     propsJson: String = "{}",
+    locals: List<PageLocalValue<*>> = emptyList(),
     modifier: Modifier = Modifier,
     error: @Composable (PageFailure) -> Unit = { PageFailureScreen(it) },
     onHost: (PageHost) -> Unit = {},
@@ -55,7 +55,7 @@ fun UpdatesPage(
         return
     }
     TinyUIPage(
-        page.module, host, services, propsJson, modifier, page.sourceMaps,
+        page.module, host, propsJson, locals, modifier, page.sourceMaps,
         error = { failure ->
             // only the failures that mean the package cannot run here (docs/updates.md §4.5)
             if ((failure.kind == "E2" || failure.kind == "E6") && page.bundle !== updates.embedded(pkg)) {
