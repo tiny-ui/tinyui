@@ -1,5 +1,5 @@
 hostVersion 3
-tinyui 0.7.0
+tinyui 0.8.0
 
 components
 
