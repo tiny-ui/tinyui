@@ -163,7 +163,7 @@ class SessionSource(val state: StateFlow<Session>, val signIn: suspend (source: 
 - J2 `session.get` 取初值，K5 topic `session` 推送变化；框架订阅 `state`，推给所有活页面，页面不重建
 - `userId` 是稳定、非敏感的用户标识，不是 token
 - 宿主没提供 `session` 时：`state()` 恒为 `{ loggedIn: false, userId: null }`，`signIn` 以 `E_UNSUPPORTED` reject
-- 提供了 `session` 的宿主，快照的能力段多一行 `session.signIn`；调用了 `session.signIn` 的页面把它记进 `requires`，发布前照能力名核对（updates.md §1.3）。提供或撤掉会话都是宿主契约变化，`hostVersion` 加 1
+- 提供了 `session` 的宿主，快照的能力段多一行 `session.signIn`；调用了 `session.signIn` 的页面把它记进 `requires`，发布前照能力名核对（updates.md §1.3）。提供或撤掉会话都是宿主契约变化，`hostVersion` 加 1。`session.signIn` 是框架名，`host.call` 注册同名能力在 `register` 时报错（§13），所以快照里的这一行只可能来自会话
 
 ## 10. `ui`
 
