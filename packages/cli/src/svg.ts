@@ -16,6 +16,7 @@ export function svgToIcon(source: string): string {
         if (rootAttrs[bad] !== undefined) throw new SvgError(`<svg ${bad}="…">: only plain single-colour shapes can be an icon`);
     }
     const stroked = rootAttrs["fill"] === "none" && rootAttrs["stroke"] !== undefined && rootAttrs["stroke"] !== "none";
+    if (!stroked && rootAttrs["stroke"] !== undefined && rootAttrs["stroke"] !== "none") throw new SvgError(`<svg stroke="…"> on a filled icon: one icon is either filled or outlined (fill="none" and a stroke)`);
     if (rootAttrs["fill"] === "none" && !stroked) throw new SvgError(`<svg fill="none"> without a stroke draws nothing; an outlined icon sets both`);
     if (rootAttrs["fill"] !== undefined && rootAttrs["fill"] !== "none" && rootAttrs["fill"] !== "currentColor") throw new SvgError(`<svg fill="${rootAttrs["fill"]}">: an icon takes one colour from its tint; remove the fill`);
     const strokeWidth = stroked ? num(rootAttrs["stroke-width"] ?? "1") : undefined;
@@ -31,6 +32,7 @@ export function svgToIcon(source: string): string {
             if (a[bad] !== undefined && !(bad === "fill-rule" && a[bad] === "nonzero")) throw new SvgError(`<${tag} ${bad}="…">: only plain single-colour shapes can be an icon`);
         }
         if (a["fill"] !== undefined && a["fill"] !== "currentColor" && a["fill"] !== "none" && !stroked) throw new SvgError(`<${tag} fill="${a["fill"]}">: an icon takes one colour from its tint; remove the fill`);
+        if (!stroked && a["stroke"] !== undefined && a["stroke"] !== "none") throw new SvgError(`<${tag} stroke="…"> in a filled icon; outlined icons set fill="none" and a stroke on the <svg>`);
         if (!stroked && a["fill"] === "none") throw new SvgError(`<${tag} fill="none"> in a filled icon; outlined icons set fill="none" and a stroke on the <svg>`);
         switch (tag) {
             case "g": if (!(rest ?? "").trimEnd().endsWith("/")) depth++; break;

@@ -29,6 +29,8 @@ describe("svg loader", () => {
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 0 24"><path d="M0 0Z"/></svg>`), /positive width/);
         assert.throws(() => svgToIcon(wrap("")), /no shapes/);
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" fill="none"><path d="M0 0Z"/></svg>`), /without a stroke/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><line x1="0" y1="0" x2="1" y2="1"/></svg>`), /either filled or outlined/);
+        assert.throws(() => svgToIcon(wrap(`<path stroke="currentColor" d="M0 0Z"/>`)), /stroke="…"> in a filled icon/);
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" transform="scale(2)"><path d="M0 0Z"/></svg>`), /only plain single-colour shapes/);
     });
 });
