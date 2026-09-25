@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -30,7 +30,7 @@ defineComponent("TextField", {
 });
 ```
 
-prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB` / `#AARRGGBB`，或 §6 的主题 token 名）/ `enumOf([...])` / `size`（数字 dp，或 `"fill"` / `"wrap"`）。选项：`required`、`default`、`initial`（只认创建时的值，之后的写入按 E5 跳过并上报）、`doc`。事件 payload 与命令参数的字段只有 `field.string / number / boolean`，扁平。
+prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB` / `#AARRGGBB`，或 §6 的主题 token 名）/ `enumOf([...])` / `size`（数字 dp，或 `"fill"` / `"wrap"`）/ `icon`（`"<viewBox>|<d>"` 字符串，§3）。选项：`required`、`default`、`initial`（只认创建时的值，之后的写入按 E5 跳过并上报）、`doc`。事件 payload 与命令参数的字段只有 `field.string / number / boolean`，扁平。
 
 ## 2. 公共布局 prop 与 Modifier 顺序
 
@@ -43,8 +43,17 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)` |
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
-| 4 | （有 `onClick` handler 时） | | `clickable { dispatch("onClick") }` |
+| 4 | （有 `onClick` handler 时）`role` / `selected` | enum / boolean | 设了 `selected` 为 `selectable(selected, role)`，否则 `clickable(role)`，都 `dispatch("onClick")`（2026-09-25 加 `role` / `selected`） |
 | 5 | `padding` / `paddingHorizontal` / `paddingVertical` | dp | 一个 `padding(start, top, end, bottom)`：轴向值覆盖该轴，缺的轴用 `padding`（React Native 式级联；2026-09-18 加轴向） |
+
+`role` 取 `button` / `checkbox` / `switch` / `radio` / `tab`，对应 Compose 的 `Role`，只给读屏用；`selected` 让容器成为一个可选中节点，读屏报"已选中 / 未选中"。可点击容器会合并子节点的语义，所以放在它里面的 `RadioButton` 不要再给 `onClick`（给了就是第二个焦点）：
+
+```tsx
+<Row role="radio" selected={p.selected} onClick={p.onClick}>
+    <RadioButton selected={p.selected} />
+    <Text text={p.title} />
+</Row>
+```
 
 顺序固定：以后加 prop 只能插进这个序列，不能重排（重排会改变已有页面的视觉）。`padding` 在最里面，所以它是内容内边距；背景、边框和点击区域包含它。
 
@@ -66,8 +75,19 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard` | `onChange{text}`、`onCommit{text}`（IME Done 或失焦） | `setText{text}`、`focus`、`blur` | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
+| `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色） | `onClick` | | |
+| `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
+
+`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串 `"<viewBox>|<d>"`：`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，单色，多个 path 合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是新的 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。页面从 npm 包 `tinyui-icons` 按名 import（由 Material Symbols 生成，一个图标一个具名导出的字符串常量，esbuild 只打进用到的），或自己写品牌图标的字符串。多色图标与位图归 `Image`。
+
+```tsx
+import { bolt, checkCircle } from "tinyui-icons/material/outlined";
+<Icon icon={ICONS[key] ?? checkCircle} tint="primary" />
+```
+
+`Loading` 是 M3 Expressive 的 `LoadingIndicator`，不定进度；有进度的进度条等需求。
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 

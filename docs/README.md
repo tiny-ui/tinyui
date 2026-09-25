@@ -45,6 +45,7 @@ JS                                   桥                          Kotlin
 | [ADR-004](./adr-004-events-and-input-ownership.md) | 事件与输入状态归属 | 已定（2026-09-15） | 事件三分（离散 / 流式输入 / 连续），60 fps 状态留 Kotlin；新增 `x` 命令 op（ref + cmd）；文本框 initial prop + 命令 + 事件，不受控回写 |
 | [ADR-005](./adr-005-engine.md) | JS 引擎选型 | 已定（2026-09-15） | MicroQuickJS → QuickJS（ES2025，经 quickjs-kmp）；原生 ESM 必选；不降级 ES5；热下发不在本期（2026-09-18 起见 ADR-006） |
 | [ADR-006](./adr-006-hot-updates.md) | 热下发 | 已定（2026-09-18，2026-09-19 补服务端与签名、改多包模型，2026-09-24 运行时随宿主） | App 由 N≥1 个包组成，包名进模块名与 URL，各包独立发布回退；整包原子、下次启动生效；运行时随宿主、包只含页面，包的 tinyui 与宿主同 major 且不高于宿主即可跑；宿主 `hostVersion`（宿主对页面承诺的版本，不是 tinyui 版本）为兼容键；内置包是地板，下发页失败即回退并拉黑；`tinyui-updates` 独立 artifact 不做网络 / 调度 / UI；投递两次 GET、发布 PUT；manifest 签名 ECDSA P-256，密钥按包、公钥随包进 manifest；服务端 `tinyui-updates-server` 独立开源仓、CF 为主可私有化，托管 `updates.tinyui.app`；契约见 [updates.md](./updates.md)，实施计划见 [updates-plan.md](./updates-plan.md) |
+| [ADR-007](./adr-007-host-boundary.md) | 框架职责边界 | 已定（2026-09-25） | 判据"改它要不要宿主发版"：能随包变的都进包；框架自己实现网络、存储、包内 i18n、toast / 对话框、打开链接、`Icon` / `Loading`、埋点门面与会话；宿主只提供标准接口的实现（网络通道、语言、会话、埋点出口、链接打开器），`host.call` 与宿主组件兜底；页面按请求选网络通道；删 `HostServices`；core 库放开零 I/O |
 
 ## 命名
 
@@ -111,7 +112,7 @@ tinyui/
 | [jsx-transform.md](./jsx-transform.md) | CLI 的 JSX 变换：thunk 包裹规则、编译期报错、source map | 已定（2026-09-16） |
 | [patch-protocol.md](./patch-protocol.md) | patch 协议 v1：六种 op、id、值、顺序保证、版本、E5 | 已定（2026-09-16） |
 | [components.md](./components.md) | 内置组件：schema 真值与生成链、公共布局 prop 与 Modifier 顺序、首批八个组件、命令消费、Placeholder | 已定（2026-09-16） |
-| [native-api.md](./native-api.md) | `tinyui-native` 与 `HostServices`：J2 白名单、navigation / store / events / http、E3 错误码与阈值 | 已定（2026-09-16） |
+| [native-api.md](./native-api.md) | `tinyui-native` 与 `TinyUIHost`：J2 白名单、navigation / store / events / http / storage / i18n / session / ui / linking / analytics、`host.call` 兜底、E3 错误码与阈值 | 已定（2026-09-16；2026-09-25 按 ADR-007 重写） |
 
 ## 下一阶段
 

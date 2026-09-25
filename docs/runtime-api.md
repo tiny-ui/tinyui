@@ -230,7 +230,7 @@ export default function Home(props: HomeProps): Node { … }
 - `default` 导出是一个组件函数，K1 `mount` 时在根 owner 里调用一次；返回的节点作为页面根挂到 Kotlin 侧的根容器（id 0）
 - `props` 是 `navigation.push` 传来的 JSON 对象，静态，不响应式
 - 顶层 `await` 只允许等同步就绪的东西（ADR-005），模块求值时仍 pending 由 K0 拒绝
-- `pageVisible()` 是一个 accessor，K1 `visible(bool)` 更新它，可在 effect 里订阅
+- `pageVisible()` 是一个 accessor，K1 `visible(bool)` 更新它，可在 effect 里订阅；Kotlin 侧由 `TinyUIPage` 跟随 Lifecycle 的 START / STOP 发 `visible`（前后台切换、被其他页面覆盖都算，app-model.md §2）
 - 卸载：根 owner dispose（跑业务的 `onCleanup`），不产出 patch，随后引擎关闭
 
 ## 9. 桥入口（运行时 ↔ Kotlin 的内部契约）
