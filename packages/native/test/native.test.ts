@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { Column, h, Text, thunk } from "tinyui-core";
-import { events, host, http, navigation, store } from "../src/index.ts";
+import { analytics, cached, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
 const tinyui = (): Entries => (globalThis as Record<string, unknown>)["__tinyui"] as Entries;
@@ -15,10 +15,77 @@ describe("tinyui-native", () => {
         const p = http.get<{ ok: boolean }>("/me", { timeout: 100 });
         const call = bridge.calls.at(-1)!;
         assert.equal(call.name, "http.request");
-        assert.deepEqual(call.args, { method: "GET", url: "/me", timeout: 100 });
-        tinyui().resolve(call.cbId, JSON.stringify({ status: 200, body: { ok: true } }));
+        assert.deepEqual(call.args, { channel: "default", method: "GET", url: "/me", timeout: 100 });
+        tinyui().resolve(call.cbId, JSON.stringify({ status: 200, headers: {}, body: { ok: true } }));
         await drain();
-        assert.deepEqual(await p, { status: 200, body: { ok: true } });
+        assert.deepEqual(await p, { status: 200, headers: {}, body: { ok: true } });
+    });
+
+    it("http.client names its channel, and E_HTTP carries status and body", async () => {
+        const p = http.client("app").post("https://api/x", { plan: "annual" });
+        const call = bridge.calls.at(-1)!;
+        assert.deepEqual(call.args, { channel: "app", method: "POST", url: "https://api/x", body: { plan: "annual" } });
+        const rejected = assert.rejects(p, (e: HostError) => e.code === "E_HTTP" && e.status === 409 && (e.body as { error: string }).error === "dup");
+        ((globalThis as Record<string, unknown>)["__tinyui"] as { reject(id: number, json: string): void })
+            .reject(call.cbId, JSON.stringify({ code: "E_HTTP", message: "409", status: 409, headers: { a: "b" }, body: { error: "dup" } }));
+        await rejected;
+    });
+
+    it("storage reads and writes through J2; a returned code throws", () => {
+        bridge.queries["storage.get"] = { v: 1 };
+        assert.deepEqual(storage.get("k"), { v: 1 });
+        bridge.queries["storage.set"] = null;
+        storage.set("k", { v: 2 });
+        bridge.queries["storage.set"] = "E_QUOTA";
+        assert.throws(() => storage.set("k", "x".repeat(10)), (e: HostError) => e.code === "E_QUOTA");
+        storage.remove("k");
+        assert.deepEqual(bridge.sent.at(-1), { name: "storage.remove", args: { key: "k" } });
+    });
+
+    it("cached starts from storage and replaces it with the fetched value", async () => {
+        bridge.queries["storage.get"] = "old";
+        bridge.queries["storage.set"] = null;
+        let data: () => string | undefined = () => undefined;
+        tinyui().mount(() => { [data] = cached<string>("c", () => Promise.resolve("new")); return h(Text, { text: "x" }); }, "{}", HOST);
+        assert.equal(data(), "old");
+        await drain();
+        assert.equal(data(), "new");
+    });
+
+    it("i18n.t fills placeholders and re-runs bindings when the locale changes", () => {
+        bridge.queries["i18n.locale"] = "zh";
+        bridge.queries["i18n.t"] = "省 {percent}";
+        tinyui().mount(() => h(Text, { text: thunk(() => `${i18n.locale()}:${i18n.t("savings", { percent: "43%" })}`) }), "{}", HOST);
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.at(-1)!.filter((o) => o[0] === "p"), [["p", 1, "text", "zh:省 43%"]]);
+        bridge.queries["i18n.t"] = "Save {percent}";
+        tinyui().emit("i18n.locale", JSON.stringify({ locale: "en" }));
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.at(-1), [["p", 1, "text", "en:Save 43%"]]);
+    });
+
+    it("session.state follows K5 and signIn is a J3", () => {
+        bridge.queries["session.get"] = { loggedIn: false, userId: null };
+        tinyui().mount(() => h(Text, { text: thunk(() => String(session.state().loggedIn)) }), "{}", HOST);
+        tinyui().flush();
+        assert.deepEqual(bridge.sent.at(-1), { name: "session.subscribe", args: {} });
+        tinyui().emit("session", JSON.stringify({ loggedIn: true, userId: "u1" }));
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.at(-1), [["p", 1, "text", "true"]]);
+        void session.signIn("paywall");
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["session.signIn", { source: "paywall" }]);
+    });
+
+    it("ui, linking and analytics map to their bridge names", () => {
+        void ui.toast("hi", { action: "undo" });
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["ui.toast", { message: "hi", action: "undo" }]);
+        void ui.confirm({ message: "sure?" });
+        assert.equal(bridge.calls.at(-1)!.name, "ui.confirm");
+        void linking.openUrl("https://x");
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["linking.openUrl", { url: "https://x" }]);
+        analytics.track("checkout_step", { step: "plan_selected", plan: "annual" });
+        assert.deepEqual(bridge.sent.at(-1), { name: "analytics.track", args: { name: "checkout_step", props: { step: "plan_selected", plan: "annual" } } });
+        assert.throws(() => analytics.track("x", { nested: {} as unknown as string }), (e: HostError) => e.code === "E_INVALID");
     });
 
     it("host.call is a J3 under the host's own name", async () => {

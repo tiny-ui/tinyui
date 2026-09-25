@@ -1,4 +1,4 @@
-// docs/native-api.md §4: one bus for host events and business events.
+// docs/native-api.md §5: one bus for host events and business events.
 import { internal } from "tinyui-core";
 
 /** J4: delivered to every page subscribed to `topic`, including native listeners. */

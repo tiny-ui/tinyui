@@ -1,4 +1,4 @@
-// docs/native-api.md §7: J3 for capabilities the host App registers under its own names.
+// docs/native-api.md §13: J3 for capabilities the host App registers under its own names.
 import { internal } from "tinyui-core";
 
 /** Rejects with HostError E_UNSUPPORTED when the host did not register [name]. */

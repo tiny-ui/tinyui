@@ -31,6 +31,13 @@ export function onEmit(topic: string, fn: (payload: unknown) => void): void {
     onCleanup(() => { set.delete(fn); });
 }
 
+/** A K5 subscription for the life of the page, for runtime state that is not tied to a component (session, locale). */
+export function listen(topic: string, fn: (payload: unknown) => void): void {
+    let set = topics.get(topic);
+    if (!set) topics.set(topic, (set = new Set()));
+    set.add(fn);
+}
+
 function guarded(entry: string, fn: () => void): void {
     try {
         fn();

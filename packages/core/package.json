@@ -16,10 +16,14 @@
     "./jsx-dev-runtime": {
       "types": "./dist/jsx-runtime.d.ts",
       "default": "./dist/jsx-runtime.js"
+    },
+    "./assets": {
+      "types": "./assets.d.ts"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "assets.d.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
