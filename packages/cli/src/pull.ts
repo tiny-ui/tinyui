@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promise
 import { dirname, join, resolve } from "node:path";
 import { isPathSegment } from "./bundle.ts";
 import { requireSecureUrl, segments } from "./client.ts";
+import { payload, requirePackagePath } from "./payload.ts";
 import { verify } from "./keys.ts";
 
 export interface PullOptions {
@@ -38,6 +39,7 @@ interface Manifest {
     pages: string[];
     files: Record<string, string>;
     hashes: Record<string, string>;
+    i18n?: { default: string; files: Record<string, string> };
 }
 
 /**
@@ -88,11 +90,10 @@ export async function pull(options: PullOptions): Promise<PullResult> {
     if (current?.hostVersion === options.hostVersion && manifest.createdAt <= current.createdAt) return keep(`embedded ${current.version} is not older than ${version}`);
 
     const files = new Map<string, Uint8Array>();
-    for (const module of manifest.pages) {
-        const path = `${manifest.files[module]}.bin`;
-        if (!path.split("/").every(isPathSegment)) throw new Error(`manifest.files[${module}] is not a relative path: ${path}`);
+    for (const { path, hashKey } of payload(manifest)) {
+        requirePackagePath(path);
         const bytes = await get(`${version}/${path}`);
-        if (createHash("sha256").update(bytes).digest("hex") !== manifest.hashes[module]) throw new Error(`${path} does not match manifest.hashes`);
+        if (createHash("sha256").update(bytes).digest("hex") !== manifest.hashes[hashKey]) throw new Error(`${path} does not match manifest.hashes`);
         files.set(path, bytes);
     }
     files.set("manifest.json", manifestBytes);

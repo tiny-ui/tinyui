@@ -16,6 +16,8 @@ export interface LayoutProps {
     padding?: number;
     paddingHorizontal?: number;
     paddingVertical?: number;
+    role?: "button" | "checkbox" | "switch" | "radio" | "tab";
+    selected?: boolean;
 }
 
 export interface ColumnClickPayload {
@@ -165,6 +167,26 @@ export interface LazyColumnProps extends LayoutProps {
 export interface SpacerProps extends LayoutProps {
 }
 
+export interface IconClickPayload {
+}
+
+/** A single-colour icon whose data comes with the package (`import bolt from "….svg"`); tinted, never ships an icon set. */
+export interface IconProps extends LayoutProps {
+    icon: string;
+    size?: number;
+    /** defaults to the content colour */
+    tint?: ColorValue;
+    /** what a screen reader says; leave unset for a decorative icon next to its text */
+    label?: string;
+    onClick?: (e: IconClickPayload) => void;
+}
+
+/** Indeterminate M3 loading indicator. */
+export interface LoadingProps extends LayoutProps {
+    size?: number;
+    color?: ColorValue;
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -175,6 +197,8 @@ export interface IntrinsicElements {
     TextField: TextFieldProps;
     LazyColumn: LazyColumnProps;
     Spacer: SpacerProps;
+    Icon: IconProps;
+    Loading: LoadingProps;
 }
 
 export const Column = "Column";
@@ -186,3 +210,5 @@ export const RadioButton = "RadioButton";
 export const TextField = "TextField";
 export const LazyColumn = "LazyColumn";
 export const Spacer = "Spacer";
+export const Icon = "Icon";
+export const Loading = "Loading";

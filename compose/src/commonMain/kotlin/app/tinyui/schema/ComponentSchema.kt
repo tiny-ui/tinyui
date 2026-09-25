@@ -2,6 +2,14 @@ package app.tinyui.schema
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.update
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -84,7 +92,45 @@ sealed class PropSpec(val kind: String, val required: Boolean, val initial: Bool
             else -> text.toDoubleOrNull()?.let { SizeValue.Fixed(it.dp) }
         }
     }
+
+    /** `"<viewBox>|<d>"`, or `"<viewBox>|<d>|<strokeWidth>"` for an outlined icon (docs/components.md §3), parsed into an [ImageVector] once per distinct string. */
+    class IconSpec(required: Boolean = false, initial: Boolean = false) : PropSpec("icon", required, initial) {
+        override val default: IconValue? = null
+        override val declared: Any? = null
+        override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let(::parseIcon)
+    }
 }
+
+/** A converted `icon` prop. */
+class IconValue internal constructor(val vector: ImageVector)
+
+@OptIn(ExperimentalAtomicApi::class)
+private val icons = AtomicReference<Map<String, IconValue>>(emptyMap())
+
+@OptIn(ExperimentalAtomicApi::class)
+internal fun parseIcon(text: String): IconValue? {
+    icons.load()[text]?.let { return it }
+    val parts = text.split('|')
+    if (parts.size !in 2..3) return null
+    val box = parts[0].trim().split(Regex("[\\s,]+")).mapNotNull { it.toFloatOrNull() }
+    if (box.size != 4 || box[2] <= 0f || box[3] <= 0f) return null
+    val stroke = parts.getOrNull(2)?.let { it.toFloatOrNull() ?: return null }
+    val nodes = runCatching { PathParser().parsePathString(parts[1]).toNodes() }.getOrNull() ?: return null
+    val paint = SolidColor(Color.Black)
+    val vector = ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = box[2], viewportHeight = box[3])
+        .addGroup(translationX = -box[0], translationY = -box[1])
+        .apply {
+            if (stroke == null) addPath(nodes, fill = paint)
+            else addPath(nodes, fill = null, stroke = paint, strokeLineWidth = stroke, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+        }
+        .clearGroup()
+        .build()
+    val value = IconValue(vector)
+    icons.update { if (it.size >= ICON_CACHE) mapOf(text to value) else it + (text to value) }
+    return value
+}
+
+private const val ICON_CACHE = 512
 
 /** A field of an event payload or command args (flat, scalar). */
 enum class FieldSpec {
@@ -138,6 +184,8 @@ object LayoutProps {
         "padding" to PropSpec.Dp(default = null),
         "paddingHorizontal" to PropSpec.Dp(default = null),
         "paddingVertical" to PropSpec.Dp(default = null),
+        "role" to PropSpec.Enum(values = setOf("button", "checkbox", "switch", "radio", "tab"), default = null),
+        "selected" to PropSpec.Bool(default = null),
     )
 }
 

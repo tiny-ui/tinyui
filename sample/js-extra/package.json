@@ -10,6 +10,7 @@
     "tinyui-native": "workspace:*"
   },
   "devDependencies": {
+    "@material-symbols/svg-400": "0.47.5",
     "tinyui-cli": "workspace:*"
   }
 }

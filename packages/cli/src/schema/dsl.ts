@@ -1,7 +1,7 @@
 // Component schema DSL: the single source of truth for built-in and host components (docs/components.md).
 // `tinyui schema` turns definitions into JSX prop types (TS) and registration schemas (Kotlin).
 
-export type PropKind = "string" | "number" | "boolean" | "dp" | "sp" | "color" | "enum" | "size";
+export type PropKind = "string" | "number" | "boolean" | "dp" | "sp" | "color" | "enum" | "size" | "icon";
 export type FieldKind = "string" | "number" | "boolean";
 
 export interface PropDef {
@@ -52,6 +52,8 @@ export const sp = (o: PropOptions & { default?: number } = {}) => prop("sp", o);
 export const color = (o: PropOptions & { default?: string } = {}) => prop("color", o);
 /** A number in dp, or "fill" / "wrap". */
 export const size = (o: PropOptions & { default?: number | "fill" | "wrap" } = {}) => prop("size", o);
+/** `"<viewBox>|<d>"`: a single-colour icon, as the CLI's `.svg` loader produces it (docs/components.md §3). */
+export const icon = (o: PropOptions = {}) => prop("icon", o);
 export function enumOf<const T extends readonly string[]>(values: T, o: PropOptions & { default?: T[number] } = {}): PropDef {
     if (values.length === 0) throw new Error("enumOf() needs at least one value");
     return { ...prop("enum", o), values };
@@ -111,4 +113,6 @@ export const LAYOUT_PROPS: Record<string, PropDef> = {
     padding: dp({ doc: "all four sides" }),
     paddingHorizontal: dp({ doc: "start and end; overrides padding on that axis" }),
     paddingVertical: dp({ doc: "top and bottom; overrides padding on that axis" }),
+    role: enumOf(["button", "checkbox", "switch", "radio", "tab"], { doc: "what a screen reader announces the clickable container as" }),
+    selected: boolean({ doc: "makes the clickable container one selectable node (announced selected / not selected)" }),
 };

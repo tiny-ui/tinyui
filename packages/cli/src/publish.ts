@@ -5,6 +5,7 @@ import { isHostVersion, isPathSegment, type Pointer } from "./bundle.ts";
 import { readHostSnapshot } from "./admin.ts";
 import { segments, UpdatesError, type UpdatesClient, type UploadResult } from "./client.ts";
 import type { PageRequires } from "./requires.ts";
+import { payload, requirePackagePath } from "./payload.ts";
 import { parseHostSnapshot } from "./snapshot.ts";
 import { isCompatible } from "./version.ts";
 
@@ -53,7 +54,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     await checkHost(client, app, local.manifest);
     const prefix = segments(app, pkg, hostVersion, version);
 
-    const files = [...new Set(Object.values(manifest.files).map((path) => `${path}.bin`)), "manifest.json"];
+    const files = [...new Set(payload(manifest).map((f) => requirePackagePath(f.path))), "manifest.json"];
     const results: UploadResult[] = [];
     const versionDir = join(local.dir, version);
     await inParallel(files, concurrency, async (path) => {
@@ -89,7 +90,7 @@ async function checkHost(client: UpdatesClient, app: string, manifest: LocalBund
     const names = (v: unknown) => Array.isArray(v) && v.every((x) => typeof x === "string");
     for (const page of manifest.pages) {
         const needs = (manifest.requires as Record<string, unknown>)[page] as Partial<PageRequires> | undefined;
-        if (!needs || !names(needs.components) || !names(needs.capabilities)) {
+        if (!needs || !names(needs.components) || !names(needs.capabilities) || (needs.channels !== undefined && !names(needs.channels))) {
             throw new Error(`${manifest.name} ${manifest.version}: "requires" has no well-formed entry for page ${page}; rebuild it with a current tinyui-cli`);
         }
     }
@@ -106,8 +107,10 @@ async function checkHost(client: UpdatesClient, app: string, manifest: LocalBund
     for (const [page, needs] of Object.entries(manifest.requires as Record<string, PageRequires>).sort(([a], [b]) => (a < b ? -1 : 1))) {
         const components = needs.components.filter((c) => !host.components.has(c));
         const capabilities = needs.capabilities.filter((c) => !host.capabilities.has(c));
+        const channels = (needs.channels ?? []).filter((c) => !host.channels.has(c));
         if (components.length) problems.push(`  ${page} uses host component${components.length > 1 ? "s" : ""} ${components.join(", ")}`);
         if (capabilities.length) problems.push(`  ${page} calls ${capabilities.join(", ")}`);
+        if (channels.length) problems.push(`  ${page} sends through http channel${channels.length > 1 ? "s" : ""} ${channels.join(", ")}`);
     }
     if (problems.length) throw new Error(`${manifest.name} ${manifest.version} cannot go to ${target}, which does not provide what it uses:\n${problems.join("\n")}`);
 }

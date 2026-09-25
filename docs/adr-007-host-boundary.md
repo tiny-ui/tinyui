@@ -64,7 +64,7 @@ TrendingAI 订阅页（roadmap 第 6 条）是第一个真实页面。它对宿�
 | B. 框架只给语言 | 页面自选 i18n 库 | RN（i18next）、小程序 | 每包重复打库；缺键检查、key 类型各自做 |
 | C. 字典进包、框架加载 | 包级 `i18n/<locale>.json`，框架读当前语言进内存，`i18n.t` 仍走 J2 | Flutter ARB、Android 资源 | 框架多一件事 |
 
-选 C。字典经 `Bundle` 的加载器读取（与页面字节码同一来源、同一签名覆盖），只把当前语言放进 Kotlin 内存，J2 查询是纯内存操作（ADR-002 对 J2 的要求）。语言优先取宿主推来的用户语言（App 内语言开关只有宿主知道），缺省用系统语言；宿主推新语言时框架换字典、经 K5 通知活页面，`t()` 绑定重算，页面不重建。回退链 `zh-Hant-TW → zh-Hant → zh → 包的默认语言`，全部缺失显示 key 并经 `PageSink` 上报一次。只支持 `{name}` 插值；`tinyui build` 以默认语言为准校验各语言 key 齐全，并生成 key 的 TS 类型。
+选 C。字典经 `Bundle` 的加载器读取（与页面字节码同一来源、同一签名覆盖），各语言的字典在包第一次挂页面时全部读进 Kotlin 内存（几 KB，切语言不再读文件），J2 查询是纯内存操作（ADR-002 对 J2 的要求）。语言优先取宿主推来的用户语言（App 内语言开关只有宿主知道），缺省用系统语言；宿主推新语言时框架换字典、经 K5 通知活页面，`t()` 绑定重算，页面不重建。回退链 `zh-Hant-TW → zh-Hant → zh → 包的默认语言`，全部缺失显示 key 并经 `PageSink` 上报一次。只支持 `{name}` 插值；`tinyui build` 以默认语言为准校验各语言 key 齐全，并生成 key 的 TS 类型。
 
 QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触发时加 J2 `i18n.format`（原生侧实现）。
 
@@ -139,9 +139,9 @@ QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触�
 | B. 图标字体 | Material Symbols 字体 | 字体数 MB，裁剪又回到固定集合 |
 | C. 图标数据随包，框架只渲染 | 页面 import 图标数据，esbuild 只打进用到的；`Icon` 把 path 渲染成 ImageVector | 只支持单色 path |
 
-选 C。新 npm 包 `tinyui-icons` 从 Material Symbols（Apache 2.0）生成，一个图标一个具名导出；图标是字符串 `"<viewBox>|<d>"`（prop 不过桥对象，patch-protocol.md §4），页面可手写品牌图标。Kotlin 按字符串缓存解析结果。服务端 key 到图标的映射搬进页面，新 key 发包即可。多色与位图归 Image 管线。
+选 C，且不另建图标包：`tinyui build` 给 esbuild 加 `.svg` 加载器，页面直接 import SVG 文件（Material Symbols 用现成的 `@material-symbols/svg-400`，Apache 2.0；设计师给的 `.svg` 同样），构建期转成字符串 `"<viewBox>|<d>"`，描边图标（Lucide 这类 `fill="none"` + `stroke`）为 `"<viewBox>|<d>|<线宽>"`（prop 不过桥对象，patch-protocol.md §4）。渐变、位图、多色、`transform` 在构建期报错。少维护一个要跟上游、要发版的包，图标来源也不限一套。Kotlin 按字符串缓存解析结果。服务端 key 到图标的映射搬进页面，新 key 发包即可。多色与位图归 Image 管线。
 
-`Loading` 用 M3 Expressive 的 `LoadingIndicator`（实验 API，Compose 升级时框架跟进），只做不定进度。
+`Loading` 用 M3 Expressive 的 `LoadingIndicator`（实验 API，Compose 升级时框架跟进），只做不定进度。它只在 CMP material3 的 alpha 线上有（稳定版停在 1.9.x），所以 core 库依赖与 CMP 同代的 `material3` alpha（1.12.0-alpha03），宿主本来也须与 CMP 同代。
 
 同时为可点击容器补无障碍语义：公共 prop `role` 与 `selected`（components.md §2），订阅页的选档卡片由此成为读屏的一个"单选、已选中"节点，与原生版等价。
 
@@ -181,7 +181,7 @@ QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触�
 | 存储 | `storage`，按包隔离、预载同步读、合并写盘、约 1 MB 上限、`E_QUOTA` |
 | 会话与状态 | 框架标准会话 `{ loggedIn, userId }` + `signIn`；业务状态页面自取；store App 级单例；`pageVisible()` 由 `TinyUIPage` 驱动 |
 | UI 能力 | `ui.toast`、`ui.alert` / `ui.confirm`、`linking.openUrl`（宿主可接管） |
-| 组件 | `Icon`（path 数据，`tinyui-icons`）、`Loading`（`LoadingIndicator`）、公共 prop `role` / `selected` |
+| 组件 | `Icon`（path 数据，CLI 的 `.svg` 加载器产出）、`Loading`（`LoadingIndicator`）、公共 prop `role` / `selected` |
 | 埋点 | `analytics.track` + 宿主 `AnalyticsSink` |
 | 宿主契约 | 标准接口 > `events` > `host.call` 兜底 + 宿主组件；删 `HostServices`；快照加通道段，是否提供会话记作能力 `session.signIn` |
 | 库的 I/O | core 库放开零 I/O，直接依赖 ktor 与 okio（ADR-006 §2.4 该句作废）；`tinyui-updates` 的边界不变（仍不做网络，`fetch` 由宿主给） |

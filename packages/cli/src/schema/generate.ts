@@ -100,6 +100,7 @@ function tsPropType(p: PropDef): string {
         case "number": case "dp": case "sp": return "number";
         case "boolean": return "boolean";
         case "size": return 'number | "fill" | "wrap"';
+        case "icon": return "string";
         case "enum": return (p.values ?? []).map((v) => JSON.stringify(v)).join(" | ");
     }
 }
@@ -115,6 +116,7 @@ function ktPropSpec(p: PropDef): string {
         case "sp": return `PropSpec.Sp(default = ${ktDouble(d)}, ${flags})`;
         case "color": return `PropSpec.ColorSpec(default = ${d === undefined ? "null" : JSON.stringify(d)}, ${flags})`;
         case "size": return `PropSpec.Size(default = ${d === undefined ? "null" : JSON.stringify(String(d))}, ${flags})`;
+        case "icon": return `PropSpec.IconSpec(${flags})`;
         case "enum": return `PropSpec.Enum(values = setOf(${(p.values ?? []).map((v) => JSON.stringify(v)).join(", ")}), default = ${d === undefined ? "null" : JSON.stringify(d)}, ${flags})`;
     }
 }

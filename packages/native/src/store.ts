@@ -1,4 +1,4 @@
-// docs/native-api.md §3: the truth lives in Kotlin; pages read snapshots and subscribe to changes.
+// docs/native-api.md §4: the truth lives in Kotlin; pages read snapshots and subscribe to changes.
 import { internal, signal } from "tinyui-core";
 
 /** J2: the current value, or undefined. */

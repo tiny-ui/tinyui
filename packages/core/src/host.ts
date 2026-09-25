@@ -12,11 +12,24 @@ interface Pending {
     site?: string;
 }
 
+/** What an `E_HTTP` rejection carries besides its code (docs/native-api.md §6). */
+export interface HostErrorDetails {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: unknown;
+}
+
 export class HostError extends Error {
     readonly code: string;
-    constructor(code: string, message: string) {
+    readonly status: number | undefined;
+    readonly headers: Record<string, string> | undefined;
+    readonly body: unknown;
+    constructor(code: string, message: string, details: HostErrorDetails = {}) {
         super(message);
         this.code = code;
+        this.status = details.status;
+        this.headers = details.headers;
+        this.body = details.body;
     }
 }
 
@@ -69,13 +82,13 @@ export function rejectPending(cbId: number, errorJson: string): void {
     const p = pending.get(cbId);
     if (!p) return;
     pending.delete(cbId);
-    let e: { code?: string; message?: string } = {};
+    let e: { code?: string; message?: string } & HostErrorDetails = {};
     try {
-        e = JSON.parse(errorJson) as { code?: string; message?: string };
+        e = JSON.parse(errorJson) as typeof e;
     } catch {
         e = { code: "E_BAD_JSON", message: errorJson };
     }
-    const error = new HostError(e.code ?? "unknown", e.message ?? "host call failed");
+    const error = new HostError(e.code ?? "unknown", e.message ?? "host call failed", e);
     if (p.site !== undefined) error.stack = p.site;
     p.reject(error);
 }

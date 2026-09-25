@@ -10,6 +10,7 @@ export type { ForProps, ShowProps } from "./control.ts";
 export { resource } from "./resource.ts";
 export type { ResourceActions } from "./resource.ts";
 export { HostError } from "./host.ts";
+export type { HostErrorDetails } from "./host.ts";
 export * as internal from "./internal.ts";
 export * from "./components.ts";
 
@@ -19,4 +20,7 @@ declare global {
         /** `tinyui:<module name>`, e.g. `tinyui:sample/home`. */
         readonly url: string;
     }
+    /** Runs [fn] once after [ms], in a transaction of its own; gone with the page (docs/runtime-api.md §7). */
+    function setTimeout(fn: () => void, ms?: number): number;
+    function clearTimeout(id: number | undefined): void;
 }

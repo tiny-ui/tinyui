@@ -12,6 +12,10 @@ export interface TinyUIConfig {
     publicKey: string;
     /** Pages directory relative to the root; defaults to `src/pages`. */
     pages: string;
+    /** Directory of `<locale>.json` string files relative to the root; defaults to `i18n` (docs/build-chain.md §8). */
+    i18n: string;
+    /** The language the others are checked against and fall back to; required once there are strings. */
+    defaultLocale?: string;
 }
 
 /** Package name: module name prefix and a path segment on the server and on disk (docs/updates.md §0). */
@@ -46,7 +50,7 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
         throw new Error(`${file}: ${(e as Error).message}`);
     }
     if (typeof raw !== "object" || raw === null) throw new Error(`${file}: expected an object`);
-    const { name, publicKey, pages } = raw as Record<string, unknown>;
+    const { name, publicKey, pages, i18n, defaultLocale } = raw as Record<string, unknown>;
     if (typeof name !== "string" || !isPackageName(name)) throw new Error(`${file}: "name" must match [a-z0-9-]+`);
     if (typeof publicKey !== "string" || !isPublicKey(publicKey)) {
         throw new Error(`${file}: "publicKey" must be a P-256 uncompressed point in base64 (65 bytes, 04-prefixed); tinyui keys generate prints one`);
@@ -54,5 +58,11 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
     if (pages !== undefined && (typeof pages !== "string" || !insideRoot(root, pages))) {
         throw new Error(`${file}: "pages" must be a directory inside the project root`);
     }
-    return { name, publicKey, pages: pages ?? "src/pages" };
+    if (i18n !== undefined && (typeof i18n !== "string" || !insideRoot(root, i18n))) {
+        throw new Error(`${file}: "i18n" must be a directory inside the project root`);
+    }
+    if (defaultLocale !== undefined && (typeof defaultLocale !== "string" || !/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(defaultLocale))) {
+        throw new Error(`${file}: "defaultLocale" must be a BCP 47 tag such as "en"`);
+    }
+    return { name, publicKey, pages: pages ?? "src/pages", i18n: i18n ?? "i18n", ...(defaultLocale !== undefined && { defaultLocale }) };
 }

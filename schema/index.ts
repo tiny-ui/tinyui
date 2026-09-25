@@ -9,5 +9,7 @@ import RadioButton from "./components/radio-button.ts";
 import TextField from "./components/text-field.ts";
 import LazyColumn from "./components/lazy-column.ts";
 import Spacer from "./components/spacer.ts";
+import Icon from "./components/icon.ts";
+import Loading from "./components/loading.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading];

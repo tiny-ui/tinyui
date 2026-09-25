@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -14,6 +15,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LoadingIndicatorDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -52,6 +58,7 @@ import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
+import app.tinyui.schema.IconValue
 import app.tinyui.schema.ComponentRegistry
 import app.tinyui.schema.NodeScope
 import app.tinyui.schema.Theme
@@ -113,6 +120,11 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
+    register(BuiltinSchemas.Icon) { scope ->
+        val icon = scope.get<IconValue>("icon") ?: return@register
+        Icon(icon.vector, contentDescription = scope.get<String>("label"), tint = scope.color("tint") ?: LocalContentColor.current, modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp))
+    }
+    register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
 }
 
 // a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
@@ -212,3 +224,12 @@ private fun LazyColumnComponent(scope: NodeScope) {
 }
 
 private fun payload(key: String, value: String) = buildJsonObject { put(key, value) }.toString()
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun LoadingComponent(scope: NodeScope) {
+    LoadingIndicator(
+        modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp),
+        color = scope.color("color") ?: LoadingIndicatorDefaults.indicatorColor,
+    )
+}

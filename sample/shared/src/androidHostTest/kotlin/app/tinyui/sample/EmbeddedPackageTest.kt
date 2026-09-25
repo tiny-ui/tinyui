@@ -13,7 +13,7 @@ class EmbeddedPackageTest {
         val root = File(System.getProperty("tinyui.embedded"))
         for (pkg in listOf("sample", "sample-extra")) {
             val manifest = BuildManifest.parse(root.resolve("$pkg/manifest.json").readText())
-            assertEquals(emptyList(), PackageCheck.problems(manifest, tinyUIHost), "embedded package $pkg")
+            assertEquals(emptyList(), PackageCheck.problems(manifest, sampleHost()), "embedded package $pkg")
         }
     }
 }

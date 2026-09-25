@@ -1,4 +1,5 @@
 {
   "name": "sample-extra",
-  "publicKey": "BBr/m9og848M0EfcUx02/hzXh9DLGYIQ6VUxR4puXuQ7TVix4F6B6dnosPWX1yL/s1WNzGtphcvZi7zWi/YbYhM="
+  "publicKey": "BBr/m9og848M0EfcUx02/hzXh9DLGYIQ6VUxR4puXuQ7TVix4F6B6dnosPWX1yL/s1WNzGtphcvZi7zWi/YbYhM=",
+  "defaultLocale": "en"
 }

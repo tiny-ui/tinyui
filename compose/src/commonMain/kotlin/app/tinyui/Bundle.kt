@@ -20,12 +20,21 @@ class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
 
     private val lock = Mutex()
     private val maps = HashMap<String, String?>()
+    private var i18n: PackageI18n? = null
 
     suspend fun page(name: String): LoadedPage {
         require(name in manifest.pages) { "page $name is not in package ${manifest.name}: ${manifest.pages}" }
         val bytecode = read(manifest.file(name) + ".bin")
-        val module = PageModule(name, bytecode, manifest.buildId(name))
+        val module = PageModule(name, bytecode, manifest.buildId(name), i18n())
         return LoadedPage(module, sourceMaps(name), this)
+    }
+
+    /** The package's strings, every language read once (docs/native-api.md §8). */
+    private suspend fun i18n(): PackageI18n = lock.withLock {
+        i18n ?: run {
+            val spec = manifest.i18n ?: return@run PackageI18n.EMPTY
+            PackageI18n.parse(spec.defaultLocale, spec.files.mapValues { (_, path) -> read(path).decodeToString() })
+        }.also { i18n = it }
     }
 
     private suspend fun sourceMaps(module: String): SourceMaps {

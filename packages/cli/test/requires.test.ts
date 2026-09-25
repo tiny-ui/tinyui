@@ -30,10 +30,10 @@ describe("host requirements of a page", () => {
         const core = JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")) as { version: string };
         assert.equal(manifest.tinyui, core.version, "the tinyui-core the runtime modules came from");
         assert.deepEqual(manifest.requires, {
-            "shop/plain": { components: [], capabilities: [] },
+            "shop/plain": { components: [], capabilities: [], channels: [] },
             // ta.Badge through the local PlanCard, ta.Loading through a hand-written h() choosing between two;
             // ta.Unused is in the generated object but never rendered
-            "shop/shop": { components: ["ta.Badge", "ta.Icon", "ta.Loading"], capabilities: ["billing.prices", "checkout.start"] },
+            "shop/shop": { components: ["ta.Badge", "ta.Icon", "ta.Loading"], capabilities: ["billing.prices", "checkout.start"], channels: [] },
         });
     });
 
@@ -51,6 +51,20 @@ describe("host requirements of a page", () => {
             assert.match(e.message, /must be a string literal/);
             return true;
         });
+    });
+
+    it("lists http.client channels and a session.signIn, and nothing it cannot follow", () => {
+        const HTTP = `import { http, session } from "tinyui-native";\n`;
+        const page = analyzePage("shop/home", `${HTTP}http.get("https://x");\nconst api = http.client("app");\nhttp["client"]("pay").post("/p");\nhttp.client("default").get("/d");\nsession.state();\nsession.signIn("paywall");\n`);
+        assert.deepEqual(page.channels, ["app", "pay"]);
+        assert.deepEqual(page.capabilities, ["session.signIn"]);
+        assert.deepEqual(analyzePage("shop/home", `${HTTP}session.state();\n`).capabilities, [], "reading the session is not a use of signIn");
+        const ns = analyzePage("shop/home", `import * as native from "tinyui-native";\nnative.http.client("app");\nnative.session.signIn();\n`);
+        assert.deepEqual([ns.channels, ns.capabilities], [["app"], ["session.signIn"]]);
+        rejects(`${HTTP}const name = "app";\nhttp.client(name);\n`, /argument of http\.client must be a string literal/);
+        rejects(`${HTTP}const c = http.client;\n`, /http\.client may only be called/);
+        rejects(`${HTTP}const h2 = http;\n`, /http may only be used as/);
+        rejects(`${HTTP}const s = session;\n`, /session may only be used as/);
     });
 
     it("takes literal capability names, bracketed or backquoted, and only those", () => {

@@ -3,6 +3,10 @@ package app.tinyui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -33,9 +38,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -63,8 +73,14 @@ import app.tinyui.schema.SizeValue
 /** Bytecode of the runtime modules every page imports; [TinyUI.runtime] outside of tests. */
 internal class RuntimeBundle(val core: ByteArray, val native: ByteArray)
 
-/** One page's bytecode; [name] is the module name (`sample/todos`) and [buildId] comes from `manifest.json`. */
-class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "")
+/**
+ * One page's bytecode; [name] is the module name (`sample/todos`) and [buildId] comes from `manifest.json`.
+ * [i18n] is its package's strings (docs/native-api.md §8).
+ */
+class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "", val i18n: PackageI18n = PackageI18n.EMPTY) {
+    /** The package the page belongs to: the part of [name] before the first `/`. */
+    val pkg: String get() = name.substringBefore('/')
+}
 
 /** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */
 /** The page's failure (E2 / E6): engine gone, error page to be rendered by the host. */
@@ -83,24 +99,27 @@ class PageHost internal constructor(
     private val runtimeBundle: RuntimeBundle,
     private val page: PageModule,
     val host: TinyUIHost,
-    private val services: HostServices = HostServices.Default,
     private val propsJson: String = "{}",
-    /** K entries longer than this are interrupted and fail the page (docs/native-api.md §6). */
+    /** This mount's objects for `host.call` capabilities (docs/native-api.md §13). */
+    private val locals: List<PageLocalValue<*>> = emptyList(),
+    /** K entries longer than this are interrupted and fail the page (docs/native-api.md §14). */
     private val entryTimeoutMs: Long = 5_000,
     private val sourceMaps: SourceMaps = SourceMaps.EMPTY,
 ) {
     constructor(
         page: PageModule,
         host: TinyUIHost,
-        services: HostServices = HostServices.Default,
         propsJson: String = "{}",
+        locals: List<PageLocalValue<*>> = emptyList(),
         entryTimeoutMs: Long = 5_000,
         sourceMaps: SourceMaps = SourceMaps.EMPTY,
-    ) : this(TinyUI.runtime, page, host, services, propsJson, entryTimeoutMs, sourceMaps)
+    ) : this(TinyUI.runtime, page, host, propsJson, locals, entryTimeoutMs, sourceMaps)
 
     private val registry: ComponentRegistry get() = host.components
     private val sink: PageSink get() = host.sink
-    private val context by lazy { PageContext(page.name, services.locals.associate { it.local to it.value }) }
+    internal val context = PageContext(page.name, locals.associate { it.local to it.value })
+    private val storage by lazy { host.storages.of(page.pkg) }
+    internal val ui = PageUi()
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set
@@ -115,6 +134,8 @@ class PageHost internal constructor(
         jsThread,
     )
     private var entries: Entries? = null
+    /** The last [visible]; one that arrives before the mount is applied right after it. */
+    @Volatile private var wantVisible = true
 
     private class Entries(val self: JsRef, val fns: Map<String, JsRef>) {
         fun call(name: String, vararg args: JsValue) = fns.getValue(name).invoke(self, args.toList())
@@ -125,6 +146,7 @@ class PageHost internal constructor(
         scope.launch {
             try {
                 // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6
+                storage // the package's file is read before the first J2 can ask for it
                 withTimeout(entryTimeoutMs) { runtime.withEngine {
                     registerHost(this)
                     step("registering tinyui-core") { registerModule(runtimeBundle.core) }
@@ -138,9 +160,10 @@ class PageHost internal constructor(
                     val e = Entries(self, fns).also { entries = it }
                     namespace.use { ns ->
                         (ns.get("default", ObjectTransport.REF) as JsRef).use { default ->
-                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(FrameworkCapabilities + host.capabilities.names)))
+                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest((FrameworkCapabilities + host.capabilityNames).toList())))
                         }
                     }
+                    if (!wantVisible) e.call("visible", JsValue.Bool(false))
                     e.call("flush")
                 } }
             } catch (t: TimeoutCancellationException) {
@@ -152,10 +175,15 @@ class PageHost internal constructor(
     }
 
     fun dispatch(nodeId: Int, event: String, payload: String) = entry("dispatch", JsValue.Num(nodeId), JsValue.Str(event), JsValue.Str(payload))
-    fun visible(visible: Boolean) = entry("visible", JsValue.Bool(visible))
+    fun visible(visible: Boolean) {
+        wantVisible = visible
+        entry("visible", JsValue.Bool(visible))
+    }
     fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
-    fun reject(cbId: Int, code: String, message: String) =
-        entry("reject", JsValue.Num(cbId), JsValue.Str(buildJsonObject { put("code", code); put("message", message) }.toString()))
+    fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
+
+    private fun reject(cbId: Int, code: String, message: String, details: JsonObject?) =
+        entry("reject", JsValue.Num(cbId), JsValue.Str(JsonObject((details ?: JsonObject(emptyMap())) + mapOf("code" to JsonPrimitive(code), "message" to JsonPrimitive(message))).toString()))
     /** K5. The host calls this for `navigation.result`; bus topics arrive through the page's own subscriptions. */
     fun emit(topic: String, payloadJson: String) = entry("emit", JsValue.Str(topic), JsValue.Str(payloadJson))
 
@@ -245,33 +273,65 @@ class PageHost internal constructor(
         }
     }
 
-    /** J2 whitelist (docs/native-api.md §1); anything else answers null. */
+    /** J2 whitelist (docs/native-api.md §2); anything else answers null. */
     private fun query(name: String, argsJson: String): String {
         val a = args(argsJson)
         return when (name) {
-            "device.info" -> JsonObject((platformInfo() + services.deviceInfo).mapValues { JsonPrimitive(it.value) }).toString()
-            "i18n.t" -> services.i18n.translate(a.str("key") ?: return "null", a["args"]?.toString() ?: "{}")?.let { JsonPrimitive(it).toString() } ?: "null"
-            "config.get" -> a.str("key")?.let(services.config::get) ?: "null"
-            "store.get" -> a.str("key")?.let(services.store::get) ?: "null"
+            "device.info" -> JsonObject(platformInfo().mapValues { JsonPrimitive(it.value) }).toString()
+            "store.get" -> a.str("key")?.let(host.store::getJson) ?: "null"
+            "storage.get" -> a.str("key")?.let { storage?.get(it) } ?: "null"
+            "storage.set" -> {
+                val key = a.str("key") ?: return JsonPrimitive("E_INVALID").toString()
+                val target = storage ?: return JsonPrimitive("E_UNSUPPORTED").toString()
+                target.set(key, a.str("value") ?: "null")?.let { JsonPrimitive(it).toString() } ?: "null"
+            }
+            "i18n.t" -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
+            "i18n.locale" -> JsonPrimitive(host.currentLocale()).toString()
+            "session.get" -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
             else -> "null"
         }
     }
 
-    /** J3 (docs/native-api.md §5); results come back through [resolve] / [reject] as one transaction each. */
+    private fun translate(key: String): String =
+        page.i18n.lookup(key, host.currentLocale()) ?: key.also { if (host.missingKeys.firstTime("${page.pkg}:$it")) sink.log("i18n: ${page.pkg} has no \"$it\" in any language") }
+
+    private fun sessionJson(s: Session): String = buildJsonObject { put("loggedIn", s.loggedIn); put("userId", s.userId) }.toString()
+
+    /** J3 (docs/native-api.md §6–§13); results come back through [resolve] / [reject] as one transaction each. */
     private fun call(name: String, cbId: Int, argsJson: String) {
         val a = args(argsJson)
         when (name) {
             "timer.schedule" -> schedule(cbId, a)
-            "http.request" -> settle(cbId) {
-                val request = HttpRequest(
-                    method = a.str("method") ?: "GET",
-                    url = a.str("url") ?: throw HostException("E_INVALID", "http.request needs url"),
-                    headers = (a["headers"] as? JsonObject)?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap(),
-                    bodyJson = a["body"]?.toString(),
-                    timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
+            "http.request" -> settle(cbId) { http(a) }
+            "session.signIn" -> settle(cbId) {
+                val session = host.session ?: throw HostException("E_UNSUPPORTED", "the host provides no session")
+                withContext(Dispatchers.Main) { session.signIn(a.str("source") ?: "") }
+                ""
+            }
+            "ui.toast" -> settle(cbId) {
+                val message = a.str("message") ?: throw HostException("E_INVALID", "ui.toast needs a message")
+                val long = a.str("duration") == "long"
+                val result = withContext(Dispatchers.Main) {
+                    ui.snackbar.showSnackbar(message, a.str("action"), duration = if (long) SnackbarDuration.Long else SnackbarDuration.Short)
+                }
+                JsonPrimitive(if (result == SnackbarResult.ActionPerformed) "action" else "dismissed").toString()
+            }
+            "ui.alert", "ui.confirm" -> settle(cbId) {
+                val texts = DialogTexts.of(host.currentLocale())
+                val confirmed = ui.ask(
+                    DialogRequest(
+                        title = a.str("title"),
+                        message = a.str("message") ?: throw HostException("E_INVALID", "$name needs a message"),
+                        confirm = a.str("confirm") ?: texts.ok,
+                        cancel = if (name == "ui.confirm") a.str("cancel") ?: texts.cancel else null,
+                    ),
                 )
-                val response = services.http.request(request)
-                buildJsonObject { put("status", response.status); put("body", Json.parseToJsonElement(response.bodyJson)) }.toString()
+                if (name == "ui.confirm") confirmed.toString() else ""
+            }
+            "linking.openUrl" -> settle(cbId) {
+                val url = a.str("url")?.takeIf { URL_SCHEME.containsMatchIn(it) } ?: throw HostException("E_INVALID", "linking.openUrl needs an absolute URL")
+                withContext(Dispatchers.Main) { (host.links ?: LinkOpener.System).open(url, context) }
+                ""
             }
             else -> when (val capability = host.capabilities[name]) {
                 null -> scope.launch { reject(cbId, "E_UNSUPPORTED", "$name is not available") }
@@ -280,10 +340,46 @@ class PageHost internal constructor(
         }
     }
 
+    /** docs/native-api.md §6: any response comes back from the channel; non-2xx rejects E_HTTP with status, headers and body. */
+    private suspend fun http(a: JsonObject): String {
+        val channelName = a.str("channel") ?: TinyUIHost.DEFAULT_CHANNEL
+        val channel = host.channel(channelName) ?: throw HostException("E_UNSUPPORTED", "the host has no http channel \"$channelName\"")
+        val headers = (a["headers"] as? JsonObject)?.mapValues { it.value.jsonPrimitive.content }.orEmpty().toMutableMap()
+        val body = when (val b = a["body"]) {
+            null, JsonNull -> null
+            is JsonPrimitive if b.isString -> b.content
+            else -> {
+                if (headers.keys.none { it.equals("content-type", ignoreCase = true) }) headers["Content-Type"] = "application/json"
+                b.toString()
+            }
+        }
+        val request = HttpRequest(
+            method = a.str("method") ?: "GET",
+            url = a.str("url") ?: throw HostException("E_INVALID", "http.request needs url"),
+            headers = headers,
+            body = body,
+            timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
+        )
+        val response = request.timeoutMs?.let { ms ->
+            withTimeoutOrNull(ms) { channel.request(request) } ?: throw HostException("E_TIMEOUT", "${request.method} ${request.url} took longer than $ms ms")
+        } ?: channel.request(request)
+        val fields = mapOf(
+            "status" to JsonPrimitive(response.status),
+            "headers" to JsonObject(response.headers.mapValues { JsonPrimitive(it.value) }),
+            "body" to (runCatching { Json.parseToJsonElement(response.body) }.getOrNull() ?: JsonPrimitive(response.body)),
+        )
+        if (response.status !in 200..299) throw HttpStatusException(response.status, JsonObject(fields))
+        return JsonObject(fields).toString()
+    }
+
+    private class HttpStatusException(val status: Int, val details: JsonObject) : Exception("HTTP $status")
+
     /** Runs one J3 on the page scope and answers with K3: the JSON [block] returns, or its E3 code. */
     private fun settle(cbId: Int, block: suspend () -> String) = scope.launch {
         try {
             resolve(cbId, block())
+        } catch (e: HttpStatusException) {
+            reject(cbId, "E_HTTP", e.message ?: "", e.details)
         } catch (e: HostException) {
             reject(cbId, e.code, e.message ?: "")
         } catch (e: Exception) {
@@ -291,20 +387,49 @@ class PageHost internal constructor(
         }
     }
 
-    /** J4 (docs/native-api.md §2–§4). */
+    /** J4 (docs/native-api.md §3–§12). */
     private fun send(name: String, argsJson: String) {
         val a = args(argsJson)
         when (name) {
             "timer.cancel" -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
-            "navigation.push" -> services.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}")
-            "navigation.pop" -> services.navigator.pop(a["result"]?.toString())
-            "store.set" -> { val key = a.str("key") ?: return; services.store.set(key, a.str("value") ?: "null") }
+            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}")
+            "navigation.pop" -> host.navigator.pop(a["result"]?.toString())
+            "store.set" -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
             // one host listener per key / topic; JS fans out to its own handlers
-            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { services.store.observe(key) { v -> storeChanged(key, v) } } }
-            "events.emit" -> services.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
-            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { services.events.subscribe(topic) { json -> emit(topic, json) } } }
+            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }
+            "storage.remove" -> storage?.remove(a.str("key") ?: return)
+            "storage.clear" -> storage?.clear()
+            "events.emit" -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
+            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> emit(topic, json) } } }
+            "i18n.subscribe" -> host.locale?.let { flow ->
+                subscriptions.getOrPut("i18n") { follow(flow) { emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
+            }
+            "session.subscribe" -> host.session?.let { source ->
+                subscriptions.getOrPut("session") { follow(source.state) { emit("session", sessionJson(it)) } }
+            }
+            "analytics.track" -> track(a)
             else -> sink.log("unknown J4 $name")
         }
+    }
+
+    /** K5 for every value of [flow], the current one included; stops with the page. */
+    private fun <T> follow(flow: StateFlow<T>, push: (T) -> Unit): AutoCloseable {
+        val job = scope.launch { flow.collect(push) }
+        return AutoCloseable { job.cancel() }
+    }
+
+    private fun track(a: JsonObject) {
+        val name = a.str("name") ?: return
+        val props = (a["props"] as? JsonObject).orEmpty().mapValues { (_, v) ->
+            val p = v as? JsonPrimitive
+            when {
+                p == null || p is JsonNull -> null
+                p.isString -> p.content
+                else -> p.booleanOrNull ?: p.longOrNull ?: p.doubleOrNull
+            }
+        }
+        val sink = host.analytics
+        if (sink == null) { if (TinyUI.debug) this.sink.log("analytics: no sink, dropped $name") } else sink.track(name, props, context)
     }
 
     /** Notifications may arrive out of order across threads; the version decides, applied inside the entry (under the lock). */
@@ -350,7 +475,11 @@ class PageHost internal constructor(
             color("background")?.let { m = m.background(it) }
             // 0.dp is Compose's hairline (one pixel), not "no border"
             get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
-            if (clickable && has("onClick")) m = m.clickable { dispatch("onClick") }
+            if (clickable && has("onClick")) {
+                val role = roleOf(get<String>("role"))
+                val selected = get<Boolean>("selected")
+                m = if (selected != null) m.selectable(selected, role = role) { dispatch("onClick") } else m.clickable(role = role) { dispatch("onClick") }
+            }
             val all = get<Dp>("padding")
             val h = get<Dp>("paddingHorizontal") ?: all
             val v = get<Dp>("paddingVertical") ?: all
@@ -380,6 +509,16 @@ class PageHost internal constructor(
     companion object {
         /** `import.meta.url` of a page module is `tinyui:<name>` (docs/adr-005-engine.md). */
         const val MODULE_SCHEME = "tinyui"
+        private val URL_SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
+
+        private fun roleOf(name: String?): Role? = when (name) {
+            "button" -> Role.Button
+            "checkbox" -> Role.Checkbox
+            "switch" -> Role.Switch
+            "radio" -> Role.RadioButton
+            "tab" -> Role.Tab
+            else -> null
+        }
         private val ENTRY_NAMES = listOf("mount", "unmount", "visible", "dispatch", "resolve", "reject", "emit", "flush")
     }
 }

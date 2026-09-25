@@ -1,0 +1,105 @@
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { isPathSegment } from "./bundle.ts";
+import type { TinyUIConfig } from "./config.ts";
+
+/** A package's strings as `tinyui build` checked them (docs/build-chain.md §8). */
+export interface PackageI18n {
+    defaultLocale: string;
+    /** locale → key → string */
+    dictionaries: Map<string, Record<string, string>>;
+    /** locale → the file's path inside the package (`i18n/en.json`) */
+    paths: Map<string, string>;
+    /** locale → the file on disk */
+    sources: Map<string, string>;
+}
+
+const LOCALE = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+const KEY = /^[A-Za-z0-9._-]+$/;
+const PLACEHOLDER = /\{([A-Za-z0-9_]+)\}/g;
+
+export class I18nError extends Error {}
+
+/** Null when the package has no `i18n/` directory and no `defaultLocale`; otherwise every rule of build-chain.md §8 holds or it throws. */
+export async function loadI18n(root: string, config: TinyUIConfig): Promise<PackageI18n | null> {
+    const dir = join(root, config.i18n);
+    let names: string[];
+    try {
+        names = (await readdir(dir)).filter((n) => n.endsWith(".json")).sort();
+    } catch {
+        if (config.defaultLocale !== undefined) throw new I18nError(`"defaultLocale" is set but ${dir} does not exist`);
+        return null;
+    }
+    if (names.length === 0 && config.defaultLocale === undefined) return null;
+    const defaultLocale = config.defaultLocale;
+    if (defaultLocale === undefined) throw new I18nError(`${dir} has strings but tinyui.config.json has no "defaultLocale"`);
+    const problems: string[] = [];
+    const dictionaries = new Map<string, Record<string, string>>();
+    const sources = new Map<string, string>();
+    for (const name of names) {
+        const locale = name.slice(0, -".json".length);
+        if (!LOCALE.test(locale) || !isPathSegment(name)) { problems.push(`${name}: the file name must be a BCP 47 tag, such as en.json or zh-Hant.json`); continue; }
+        const file = join(dir, name);
+        let raw: unknown;
+        try {
+            raw = JSON.parse(await readFile(file, "utf8"));
+        } catch (e) {
+            problems.push(`${name}: ${(e as Error).message}`);
+            continue;
+        }
+        if (typeof raw !== "object" || raw === null || Array.isArray(raw)) { problems.push(`${name}: expected a flat object of strings`); continue; }
+        let valid = true;
+        for (const [key, value] of Object.entries(raw)) {
+            if (!KEY.test(key)) { problems.push(`${name}: key "${key}" must match [A-Za-z0-9._-]+`); valid = false; }
+            if (typeof value !== "string") { problems.push(`${name}: "${key}" must be a string`); valid = false; }
+        }
+        // a broken file is reported as such; comparing it against the others would only add noise or throw
+        if (!valid) continue;
+        dictionaries.set(locale, raw as Record<string, string>);
+        sources.set(locale, file);
+    }
+    const base = dictionaries.get(defaultLocale);
+    if (!base && !sources.has(defaultLocale) && !problems.length) problems.push(`there is no ${defaultLocale}.json for the default language`);
+    if (base) {
+        for (const [locale, dict] of dictionaries) {
+            if (locale === defaultLocale) continue;
+            const missing = Object.keys(base).filter((k) => !Object.hasOwn(dict, k));
+            const extra = Object.keys(dict).filter((k) => !Object.hasOwn(base, k));
+            if (missing.length) problems.push(`${locale}.json lacks ${missing.map((k) => `"${k}"`).join(", ")}`);
+            if (extra.length) problems.push(`${locale}.json has ${extra.map((k) => `"${k}"`).join(", ")}, which ${defaultLocale}.json does not`);
+            for (const key of Object.keys(base)) {
+                if (!Object.hasOwn(dict, key)) continue;
+                const want = placeholders(base[key]!).join(", ");
+                const have = placeholders(dict[key]!).join(", ");
+                if (want !== have) problems.push(`${locale}.json "${key}" has placeholders {${have}}, ${defaultLocale}.json has {${want}}`);
+            }
+        }
+    }
+    if (problems.length) throw new I18nError(`${dir}:\n${problems.map((p) => `  ${p}`).join("\n")}`);
+    const paths = new Map([...dictionaries.keys()].map((l) => [l, `i18n/${l}.json`]));
+    return { defaultLocale, dictionaries, paths, sources };
+}
+
+export function placeholders(text: string): string[] {
+    return [...new Set([...text.matchAll(PLACEHOLDER)].map((m) => m[1]!))].sort();
+}
+
+/** The module augmentation that types `i18n.t`: each key of the default language and its placeholder names. */
+export function i18nTypes(i18n: PackageI18n): string {
+    const base = i18n.dictionaries.get(i18n.defaultLocale)!;
+    const lines = Object.keys(base).sort().map((key) => {
+        const names = placeholders(base[key]!);
+        return `        ${JSON.stringify(key)}: ${names.length ? names.map((n) => JSON.stringify(n)).join(" | ") : "never"};`;
+    });
+    return [
+        "// Generated by `tinyui i18n` from i18n/; do not edit.",
+        'import "tinyui-native";',
+        "",
+        'declare module "tinyui-native" {',
+        "    interface I18nKeys {",
+        ...lines,
+        "    }",
+        "}",
+        "",
+    ].join("\n");
+}

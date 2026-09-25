@@ -1,6 +1,6 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）与网络通道名的静态识别（§5.1）
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、页面级配置文件不在本期（`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完，见 §5）；字节码行号回映射见 §7
 
@@ -134,3 +134,13 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - 产物：文件原样复制到输出目录的 `i18n/`，进 manifest 的 `i18n`（`{ "default": "en", "files": { "en": "i18n/en.json", … } }`）与 `hashes`，随包签名（updates.md §1.1）
 - 类型：`tinyui i18n --ts <file>` 生成对 `tinyui-native` 的模块扩充（每个 key 及其占位符名），`i18n.t` 的 key 与参数因此在编译期检查；与 `tinyui schema` 一样把生成物提交进仓
 - 页面没有用到 i18n 的包可以没有 `i18n/` 目录，此时不写 `defaultLocale`
+
+## 9. SVG 图标
+
+定于 2026-09-25（ADR-007 §3.7，组件契约见 components.md §3）。页面 `import icon from "….svg"` 得到 `Icon` 要的字符串：`tinyui build` 在 esbuild 里给 `.svg` 挂加载器，构建期转换，设备上不解析 SVG。
+
+- 填充图标：`<svg viewBox>` 下的 `path` / `circle` / `ellipse` / `rect`（含圆角）/ `line` / `polyline` / `polygon` 合并成一个 path，得 `"<viewBox>|<d>"`；`fill` 只能缺省或 `currentColor`
+- 描边图标：根元素 `fill="none"` 且有 `stroke`（Lucide 的写法），得 `"<viewBox>|<d>|<stroke-width>"`
+- 构建失败：渐变、`image`、`text`、`use`、`mask`、`transform`、`style`、透明度、另一种颜色的 `fill`、没有 `viewBox`（且没有 `width` / `height`）
+- 类型：页面工程的 tsconfig 加 `"types": ["tinyui-core/assets"]`，`*.svg` 的默认导出是 `string`
+

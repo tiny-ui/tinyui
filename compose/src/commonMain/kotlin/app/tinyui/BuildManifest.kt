@@ -23,7 +23,13 @@ class BuildManifest(
     val requires: Map<String, PageRequires> = emptyMap(),
     /** Present only in a manifest `tinyui bundle` wrote: the embedded package has none. */
     val hostVersion: String? = null,
+    /** The package's strings (docs/updates.md §1.1); null when it has none. */
+    val i18n: I18nFiles? = null,
 ) {
+    /** Every file of the package besides the manifest, as (path, key into [hashes]). */
+    val payload: List<Pair<String, String>>
+        get() = pages.map { file(it) + ".bin" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList())
+
     fun buildId(module: String): String = buildIds[module] ?: ""
 
     /** Output path of [module] without extension (`pages/home`): append `.bin` or `.js.map`. */
@@ -56,13 +62,23 @@ class BuildManifest(
                     PageRequires(
                         components = page["components"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                         capabilities = page["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                        channels = page["channels"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                     )
                 } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
+                i18n = root["i18n"]?.jsonObject?.let { i ->
+                    I18nFiles(
+                        defaultLocale = i["default"]?.jsonPrimitive?.contentOrNull ?: "",
+                        files = i["files"]?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap(),
+                    )
+                },
             )
         }
     }
 }
 
-/** Dotted host components and `host.call` capability names one page uses. */
-class PageRequires(val components: List<String>, val capabilities: List<String>)
+/** Dotted host components, capability names (`host.call`, `session.signIn`) and http channels one page uses. */
+class PageRequires(val components: List<String>, val capabilities: List<String>, val channels: List<String> = emptyList())
+
+/** `manifest.i18n`: the default language and each language's file inside the package. */
+class I18nFiles(val defaultLocale: String, val files: Map<String, String>)

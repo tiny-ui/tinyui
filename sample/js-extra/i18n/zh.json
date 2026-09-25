@@ -1,0 +1,18 @@
+{
+  "features.title": "框架给页面的能力",
+  "features.locale": "语言：{locale}",
+  "features.count": "重启后仍保留的点击数：{count}",
+  "features.tap": "点一下",
+  "features.toast": "弹一条提示",
+  "features.toast.message": "已保存",
+  "features.toast.undo": "撤销",
+  "features.confirm": "二次确认",
+  "features.confirm.message": "清空计数？",
+  "features.open": "打开 tinyui.app",
+  "features.plan.annual": "年付",
+  "features.plan.monthly": "月付",
+  "features.session.in": "已登录：{user}",
+  "features.session.out": "未登录",
+  "features.signin": "登录",
+  "features.zen": "GitHub 说：{text}"
+}

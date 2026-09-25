@@ -4,8 +4,10 @@ import { parseSync } from "oxc-parser";
 export interface PageRequires {
     /** Host component types, always dotted (`ta.Icon`); built-ins follow the TinyUI version and are not listed. */
     components: string[];
-    /** `host.call` names. */
+    /** `host.call` names, and `session.signIn` when the page calls it. */
     capabilities: string[];
+    /** `http.client` channel names; the built-in `default` is not listed. */
+    channels: string[];
 }
 
 export class RequiresError extends Error {}
@@ -34,6 +36,7 @@ export function analyzePage(page: string, code: string): PageRequires {
     const shadowed = new Set<string>();
     const components = new Set<string>();
     const capabilities = new Set<string>();
+    const channels = new Set<string>();
     const problem = (node: AnyNode, message: string) => problems.push(`  ${origin(code, node.start)}: ${snippet(code, node)}\n    ${message}`);
 
     const useHost = (ref: AnyNode) => {
@@ -42,6 +45,25 @@ export function analyzePage(page: string, code: string): PageRequires {
         const target = literal((call["arguments"] as AnyNode[])[0]);
         if (target === undefined) return problem(call, "the first argument of host.call must be a string literal (docs/build-chain.md §5.1)");
         capabilities.add(target);
+    };
+    const parentOf = (n: AnyNode) => (n as AnyNode & { parentNode?: AnyNode })["parentNode"] ?? null;
+    /** [ref] is `http` (or `native.http`): only its members, and `client` only with a literal channel name. */
+    const useHttp = (ref: AnyNode) => {
+        const member = memberOf(ref, parentOf(ref));
+        if (!member) return problem(ref, "http may only be used as http.<method>(…) or http.client(\"<name>\") (docs/build-chain.md §5.1)");
+        if (member.name !== "client") return;
+        const call = parentOf(member.node);
+        if (call?.type !== "CallExpression" || call["callee"] !== member.node) return problem(member.node, "http.client may only be called, not passed around (docs/build-chain.md §5.1)");
+        const name = literal((call["arguments"] as AnyNode[])[0]);
+        if (name === undefined) return problem(call, "the argument of http.client must be a string literal (docs/build-chain.md §5.1)");
+        // the built-in channel is every host's, nothing to check it against
+        if (name !== "default") channels.add(name);
+    };
+    /** [ref] is `session` (or `native.session`): only its members; reaching signIn is a use of the session. */
+    const useSession = (ref: AnyNode) => {
+        const member = memberOf(ref, parentOf(ref));
+        if (!member) return problem(ref, "session may only be used as session.<member> (docs/build-chain.md §5.1)");
+        if (member.name === "signIn") capabilities.add("session.signIn");
     };
     const useH = (ref: AnyNode) => {
         const call = (ref as AnyNode & { parentNode?: AnyNode })["parentNode"];
@@ -66,6 +88,8 @@ export function analyzePage(page: string, code: string): PageRequires {
         }
         const binding = only(list);
         if (binding?.kind === "native" && binding.imported === "host") return useHost(node);
+        if (binding?.kind === "native" && binding.imported === "http") return useHttp(node);
+        if (binding?.kind === "native" && binding.imported === "session") return useSession(node);
         if (binding?.kind === "core" && binding.imported === "h") return useH(node);
         if ((binding?.kind === "native" || binding?.kind === "core") && binding.imported === "*") {
             // a namespace import is followed through its members, and only there: passed whole it could reach host or h unseen
@@ -74,11 +98,13 @@ export function analyzePage(page: string, code: string): PageRequires {
             }
             const member = (parent["property"] as AnyNode)["name"];
             if (binding.kind === "native" && member === "host") return useHost(parent);
+            if (binding.kind === "native" && member === "http") return useHttp(parent);
+            if (binding.kind === "native" && member === "session") return useSession(parent);
             if (binding.kind === "core" && member === "h") return useH(parent);
         }
     });
     if (problems.length) throw new RequiresError(`${page} uses its host in a way tinyui build cannot follow:\n${problems.join("\n")}`);
-    return { components: [...components].sort(), capabilities: [...capabilities].sort() };
+    return { components: [...components].sort(), capabilities: [...capabilities].sort(), channels: [...channels].sort() };
 }
 
 function isRuntimeImport(binding: Binding): boolean {
@@ -199,6 +225,14 @@ function collectBindings(program: AnyNode): Map<string, Binding[]> {
 
 function only(list: Binding[] | undefined): Binding | undefined {
     return list?.length === 1 ? list[0] : undefined;
+}
+
+/** The non-computed member [id] is the object of, e.g. `client` in `http.client`; undefined otherwise. */
+function memberOf(id: AnyNode, parent: AnyNode | null): { node: AnyNode; name: string } | undefined {
+    if (parent?.type !== "MemberExpression" || parent["object"] !== id) return undefined;
+    const property = parent["property"] as AnyNode;
+    const name = parent["computed"] ? literal(property) : (property["name"] as string);
+    return name === undefined ? undefined : { node: parent, name };
 }
 
 /** `host.call(…)` when [id] is its `host`; otherwise undefined. */
