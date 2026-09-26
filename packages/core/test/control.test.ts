@@ -25,6 +25,15 @@ describe("Show", () => {
         unmount();
     });
 
+    it("puts a static sibling after an empty slot at the right index", () => {
+        mount(() => h(Column, null,
+            h(Show, { when: false }, () => h(Text, { text: "never" })),
+            h(Text, { text: "tail" }),
+        ));
+        assert.deepEqual(bridge.ops().filter((o) => o[0] === "i"), [["i", 2, 1, 0], ["i", 0, 2, 0]]);
+        unmount();
+    });
+
     it("switches only on truthiness and disposes the old branch", () => {
         const log: string[] = [];
         mount(() => {
@@ -84,6 +93,15 @@ describe("For", () => {
             ["p", 4, "text", "0:c"],
             ["p", 2, "text", "1:a"],
         ]);
+        unmount();
+    });
+
+    it("puts a static sibling after a multi-row For at the right index", () => {
+        mount(() => h(Column, null,
+            h(For, { each: [1, 2, 3], key: (n: number) => n }, (n: () => number) => h(Text, { text: thunk(() => String(n())) })),
+            h(Text, { text: "tail" }),
+        ));
+        assert.deepEqual(bridge.ops().filter((o) => o[0] === "i").slice(-2), [["i", 5, 4, 3], ["i", 0, 5, 0]]);
         unmount();
     });
 

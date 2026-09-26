@@ -154,13 +154,15 @@ function createElement(type: string, props: Props | null, children: Child[]): No
         }
     }
     const entries: SlotEntry[] = [];
+    let index = 0;
     for (const child of flatten(children)) {
         if (child instanceof Slot) {
             entries.push(child);
             child.mount(id, entries, entries.length - 1);
+            index += child.length;
         } else {
             entries.push({ length: 1 });
-            patches.push(["i", id, child, entries.length - 1]);
+            patches.push(["i", id, child, index++]);
         }
     }
     return id as Node;
