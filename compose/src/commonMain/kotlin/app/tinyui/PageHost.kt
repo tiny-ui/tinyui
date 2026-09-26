@@ -119,7 +119,7 @@ class PageHost internal constructor(
     private val sink: PageSink get() = host.sink
     internal val context = PageContext(page.name, locals.associate { it.local to it.value })
     private val storage by lazy { host.storages.of(page.pkg) }
-    internal val ui = PageUi()
+    internal val ui = PageUI()
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set

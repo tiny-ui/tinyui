@@ -19,8 +19,8 @@ internal class DialogRequest(val title: String?, val message: String, val confir
     val result = CompletableDeferred<Boolean>()
 }
 
-/** The page's own snackbar and dialog (docs/native-api.md §10), drawn by [TinyUIPage] over the page. */
-internal class PageUi {
+/** The page's own snackbar and dialog (docs/native-api.md `ui`), drawn by [TinyUIPage] over the page. */
+internal class PageUI {
     val snackbar = SnackbarHostState()
     var dialog: DialogRequest? by mutableStateOf(null)
         private set
