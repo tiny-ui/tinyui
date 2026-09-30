@@ -238,7 +238,7 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 | store key / events topic 的包名前缀由库强制（`tinyui-native` 自动加） | 出现跨包撞 key / 撞 topic |
 | `Updates` 的分包 `check()` 调度（按包设不同检查时机） | 某个包要求与其他包不同的更新节奏 |
 | 控制台 | CLI 管理面不够用（多人协作、非开发者操作回滚） |
-| 遥测（客户端上报 `UpdateEvent`） | 控制台需要采用率与回退率。定了做法（2026-09-19）：服务端接 eventbase（`createIngest` / `createQuery` 挂进 tinyui-updates-server，租户各一个 appKey，`active` 即采用率分母，按 props 切片先走 `POST /sql`；投递日志用 `createTracker`），协议归 eventbase 仓 `docs/protocol.md`，本仓只引用；客户端 `tinyui-updates` 不依赖 eventbase-kt，提供按该协议格式化的 `EventbaseTelemetry(app, send)` 适配器（`install` = `sha256(installId + app)`，按 app 而非按包去重，事件 props 带 `pkg`，无队列），已用 eventbase-kt 的宿主直接把 `onEvent` 桥到 `track`。前置：eventbase 加租户级取数（按 appKey 作用域的 token） |
+| 遥测（客户端上报 `UpdateEvent`） | 控制台需要采用率与回退率。定了做法（2026-09-19）：服务端接 eventbase（`createIngest` / `createQuery` 挂进 tinyui-updates-server，租户各一个 appKey，`active` 即采用率分母，按 props 切片先走 `POST /sql`；投递日志用 `createTracker`），协议归 eventbase 仓 `docs/protocol.md`，本仓只引用；客户端 `tinyui-updates` 不依赖 eventbase-kmp，提供按该协议格式化的 `EventbaseTelemetry(app, send)` 适配器（`install` = `sha256(installId + app)`，按 app 而非按包去重，事件 props 带 `pkg`，无队列），已用 eventbase-kt 的宿主直接把 `onEvent` 桥到 `track`。前置：eventbase 加租户级取数（按 appKey 作用域的 token） |
 | 服务端 D1 | 控制台需要跨维度查询；遥测立项时随 eventbase 的 migrations 到位 |
 | 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
 | 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情；MAU 按 app 内 `install` 去重，不因分包重复计数） | 托管实例对外收费；业界参照见 §4.4 |
