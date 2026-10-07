@@ -59,7 +59,7 @@ export interface Manifest {
     createdAt: string;
     /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
     engine: string;
-    /** Version of the `tinyui-core` the pages were built against: the oldest runtime they run on (docs/updates.md §1.1). */
+    /** The oldest tinyui the pages run on: the `tinyui-core` they were built against or the CLI that wrote them, whichever is newer (docs/updates.md §1.1). */
     tinyui: string;
     /** Module name → sha256 hex of its `.qjsb`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
