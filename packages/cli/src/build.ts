@@ -12,6 +12,7 @@ import { compileModule, findQjsc } from "./qjsc.ts";
 import { analyzePage, RequiresError, type PageRequires } from "./requires.ts";
 import { SvgError, svgToIcon } from "./svg.ts";
 import { TransformError, transformJsx } from "./transform.ts";
+import { compareVersions } from "./version.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -245,7 +246,14 @@ async function engineCommit(bin: string): Promise<string> {
     return commit;
 }
 
+/** The oldest tinyui the pages run on: the runtime they were built against, or this CLI if newer, since the file layout it writes is read by a library of the same version or later. */
 async function tinyuiVersion(root: string): Promise<string> {
+    const core = await coreVersion(root);
+    const cli = (JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+    return compareVersions(cli, core) > 0 ? cli : core;
+}
+
+async function coreVersion(root: string): Promise<string> {
     // the package's exports map hides package.json, so walk up from a file it does export
     let dir = dirname(createRequire(join(root, "package.json")).resolve("tinyui-core"));
     for (;;) {
