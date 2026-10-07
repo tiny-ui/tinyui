@@ -50,7 +50,7 @@ export interface BuildResult {
 /** `manifest.json` as `tinyui build` writes it (docs/updates.md §1.1). */
 export interface Manifest {
     pages: string[];
-    /** Module name → output path without extension (`pages/home`); hosts locate `.qjsb` / `.js.map` through it. */
+    /** Module name → output path without extension (`pages/home`); hosts locate `.jsb` / `.js.map` through it. */
     files: Record<string, string>;
     buildIds: Record<string, string>;
     name: string;
@@ -61,7 +61,7 @@ export interface Manifest {
     engine: string;
     /** The oldest tinyui the pages run on: the `tinyui-core` they were built against or the CLI that wrote them, whichever is newer (docs/updates.md §1.1). */
     tinyui: string;
-    /** Module name → sha256 hex of its `.qjsb`; empty when built with `jsOnly`. */
+    /** Module name → sha256 hex of its `.jsb`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
     /** Page module name → the host capabilities, http channels and host components it uses (docs/updates.md §1.3). */
     requires: Record<string, PageRequires>;
@@ -142,7 +142,7 @@ async function finish(root: string, modules: BuiltModule[], qjsc: string | undef
         m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
         await rootRelativeSources(root, m.map);
         if (!qjsc) continue;
-        m.bin = m.js.replace(/\.js$/, ".qjsb");
+        m.bin = m.js.replace(/\.js$/, ".jsb");
         await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
     }
 }

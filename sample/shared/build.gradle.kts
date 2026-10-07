@@ -38,7 +38,7 @@ kotlin {
 
 val updateHostSnapshot = providers.gradleProperty("tinyui.updateHostSnapshot")
 
-// JS 侧：pnpm 编三个包 → tinyui build 把每个示例包的页面编成字节码 → 只把 .qjsb 与清单打成 Compose 资源（运行时随库）
+// JS 侧：pnpm 编三个包 → tinyui build 把每个示例包的页面编成字节码 → 只把 .jsb 与清单打成 Compose 资源（运行时随库）
 // 两个包演示多包模型（docs/updates.md §0）：各自的 JS 工程、密钥、资源子目录
 val jsPackages = mapOf("sample" to rootDir.resolve("sample/js"), "sample-extra" to rootDir.resolve("sample/js-extra"))
 val cliOut = layout.buildDirectory.dir("tinyui-cli")
@@ -89,7 +89,7 @@ val collectTinyUIResources by tasks.registering(Sync::class) {
     jsPackages.keys.forEachIndexed { i, pkg ->
         from(packageBuilds[i]) {
             into("files/tinyui/$pkg")
-            include("pages/**/*.qjsb", "i18n/*.json", "manifest.json")
+            include("pages/**/*.jsb", "i18n/*.json", "manifest.json")
             if (providers.gradleProperty("tinyui.maps").orNull != "false") include("pages/**/*.js.map")
         }
     }

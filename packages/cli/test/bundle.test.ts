@@ -36,8 +36,8 @@ describe("tinyui bundle", () => {
         const versionDir = join(result.dir, result.version);
         assert.deepEqual((await readdir(versionDir, { recursive: true })).filter((f) => f.includes(".")).sort(), [
             "manifest.json",
-            "pages/home.qjsb",
-            "pages/orders.qjsb",
+            "pages/home.jsb",
+            "pages/orders.jsb",
         ]);
         const pointer = JSON.parse(await readFile(result.pointer, "utf8")) as Pointer;
         assert.deepEqual(Object.keys(pointer), ["version", "rollout", "signature"]);
@@ -89,7 +89,7 @@ describe("tinyui bundle", () => {
 
     it("refuses a build whose bytecode changed since manifest.json was written, touching nothing", async () => {
         const dist = await fakeDist(join(tmp, "dist-stale"));
-        await writeFile(join(dist, "pages", "home.qjsb"), "tampered");
+        await writeFile(join(dist, "pages", "home.jsb"), "tampered");
         await assert.rejects(bundle({ dist, hostVersion: "1", signingKey }), /does not match manifest.hashes/);
         await assert.rejects(readdir(join(dist, "ota")), /ENOENT/, "nothing was written");
     });
@@ -123,7 +123,7 @@ describe("tinyui bundle", () => {
         await assert.rejects(bundle({ dist: name, hostVersion: "1", signingKey }), /manifest name must match/);
         const files = await fakeDist(join(tmp, "dist-files"), (m) => { m.files["fixture/home"] = "../outside/core"; });
         await mkdir(join(tmp, "outside"), { recursive: true });
-        await writeFile(join(tmp, "outside", "core.qjsb"), "x");
+        await writeFile(join(tmp, "outside", "core.jsb"), "x");
         await assert.rejects(bundle({ dist: files, hostVersion: "1", signingKey }), /points outside/);
         await assert.rejects(readdir(join(tmp, "escape")), /ENOENT/);
     });
@@ -164,7 +164,7 @@ describe("tinyui bundle", () => {
         assert.ok(verify(config.publicKey, bytes, pointer.signature));
         const manifest = JSON.parse(bytes.toString("utf8")) as Manifest;
         for (const m of built.pages) {
-            const copied = await readFile(join(result.dir, result.version, manifest.files[m.name]! + ".qjsb"));
+            const copied = await readFile(join(result.dir, result.version, manifest.files[m.name]! + ".jsb"));
             assert.equal(createHash("sha256").update(copied).digest("hex"), manifest.hashes[m.name]);
         }
     });

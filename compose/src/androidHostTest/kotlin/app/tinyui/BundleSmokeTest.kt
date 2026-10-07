@@ -29,7 +29,7 @@ class BundleSmokeTest {
             engine.evaluateModule("import \"tinyui-core\"; export const v = typeof globalThis.__tinyui.mount;").use {
                 assertEquals(JsValue.Str("function"), it.get("v"))
             }
-            engine.runBytecode(out.resolve("pages/counter.qjsb").readBytes()).let { if (it is AutoCloseable) it.close() }
+            engine.runBytecode(out.resolve("pages/counter.jsb").readBytes()).let { if (it is AutoCloseable) it.close() }
         }
     }
 

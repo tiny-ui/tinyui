@@ -19,7 +19,7 @@
 
 ```
 manifest.json
-pages/**/*.qjsb
+pages/**/*.jsb
 ```
 
 ### 1.1 `manifest.json`
@@ -33,8 +33,8 @@ pages/**/*.qjsb
 | `publicKey` | `tinyui build` | 验签公钥（§7 格式），读自 `tinyui.config.json`；**信任来源只有内置包里的这份**，下载的 manifest 里的只用于诊断 |
 | `version` | `tinyui build` | 包标识，目录名，只求唯一：`<createdAt 紧凑形式>-<git 短 sha（12 位）或 nogit>`，如 `20260918T100212Z-3f2a1c9e04b7`；`--version` 可覆盖 |
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
-| `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.qjsb` 一致，取第一个）；客户端要求等于宿主 |
-| `hashes` | `tinyui build` | 模块名 → 该模块 `.qjsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件，键为其相对路径（`i18n/en.json`） |
+| `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.jsb` 一致，取第一个）；客户端要求等于宿主 |
+| `hashes` | `tinyui build` | 模块名 → 该模块 `.jsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件，键为其相对路径（`i18n/en.json`） |
 | `i18n` | `tinyui build` | `{ "default": 默认语言, "files": { 语言: 相对路径 } }`，包没有 i18n 资源时省略（build-chain.md §8） |
 | `tinyui` | `tinyui build` | 页面需要的最低运行时：JS 工程构建时的 `tinyui-core` 版本（能用哪些内置组件与运行时 API）与 `tinyui-cli` 版本（产物布局由同版本起的库读取）取较新者；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels }`：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
@@ -53,7 +53,7 @@ tinyui bundle --host-version <hostVersion> --signing-key <私钥 PEM> [--rollout
 ```
 dist/ota/<pkg>/<hostVersion>/current.json             指针：{ "version", "rollout", "signature" }
 dist/ota/<pkg>/<hostVersion>/<version>/manifest.json  build 的 manifest + hostVersion，写定后不再变
-dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.qjsb
+dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.jsb
 dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n 列出的文件（有才写）
 ```
 
@@ -102,7 +102,7 @@ tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<
 |---|---|---|
 | `<pkg>/<hostVersion>/current.json` | 可变指针 | `Cache-Control: no-store` |
 | `<pkg>/<hostVersion>/<version>/manifest.json` | 不可变，签名覆盖其原始字节 | `Cache-Control: public, max-age=31536000, immutable` |
-| `<pkg>/<hostVersion>/<version>/<files[module]>.qjsb` | 不可变内容 | 同上 |
+| `<pkg>/<hostVersion>/<version>/<files[module]>.jsb` | 不可变内容 | 同上 |
 | `<pkg>/<hostVersion>/<version>/<i18n.files[locale]>` | 不可变内容（包内 i18n 资源，build-chain.md §8） | 同上 |
 
 - `pkg` 库从内置 manifest 读，`hostVersion` 宿主给；宿主只拼 base，一个 App 不管几个包都是一个 base URL、一个 `fetch`
@@ -134,7 +134,7 @@ base = https://updates.tinyui.app/<app>/<channel>
 把宿主现在手写的"读 manifest → 读页面与 map"收进库；运行时字节码随库（ADR-006 §2.11），不从包里读：
 
 ```kotlin
-fun interface BundleFiles { suspend fun read(path: String): ByteArray? }   // path 如 pages/home.qjsb、manifest.json
+fun interface BundleFiles { suspend fun read(path: String): ByteArray? }   // path 如 pages/home.jsb、manifest.json
 
 class Bundle(val manifest: BuildManifest, files: BundleFiles) {
     val name: String get() = manifest.name
@@ -247,7 +247,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   │  / engine ≠ QuickJs.upstreamCommit / tinyui 与 TinyUI.version 不兼容 ▶ Skipped(incompatible)   // 发错目录，上报
   ├─ createdAt ≤ embedded.createdAt（内置可用）────────────────────────▶ Skipped(older-than-embedded)
   │
-  ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>（files 的 .qjsb 与 i18n.files）→ <pkg>/staging/<version>/，每个核对 sha256
+  ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>（files 的 .jsb 与 i18n.files）→ <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
   ▼ manifest 原始字节写入 staging/<version>/manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed
   ▼ Installed(version)   // 下次启动生效

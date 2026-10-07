@@ -11,7 +11,7 @@ export interface PayloadManifest {
 /** Every file of the package: its path inside the package, and its key into `hashes`. */
 export function payload(manifest: PayloadManifest): { path: string; hashKey: string }[] {
     return [
-        ...manifest.pages.map((module) => ({ path: `${manifest.files[module]}.qjsb`, hashKey: module })),
+        ...manifest.pages.map((module) => ({ path: `${manifest.files[module]}.jsb`, hashKey: module })),
         ...Object.values(manifest.i18n?.files ?? {}).map((path) => ({ path, hashKey: path })),
     ];
 }

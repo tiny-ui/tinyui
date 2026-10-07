@@ -24,9 +24,9 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 |---|---|
 | `tinyui.config.json` | 工程根，`name`（`[a-z0-9-]+`，必填）/ `publicKey`（必填）/ `pages`（缺省 `src/pages`）；`build` 无配置文件即报错 |
 | 模块名改 `<pkg>/<相对路径>` | esbuild 入口 → `-n <pkg>/home`，`import.meta.url = tinyui:<pkg>/home`；manifest 的 `pages` / `files` / `buildIds` / `hashes` 键随之改；sample 包名 `sample`，`sample/shared` 与 CLI 测试里的 `pages/…` 全部改 |
-| `manifest.json` 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes` | `name` / `publicKey` 抄配置；`engine` 从第一个 `.qjsb` 的文件头读（`QJKB` 起偏移 12 的 40 字节 hex）；`protocol` 读 `tinyui-core/protocol` 子路径导出，core 包加这个入口 |
+| `manifest.json` 加 `name` / `publicKey` / `version` / `createdAt` / `engine` / `protocol` / `hashes` | `name` / `publicKey` 抄配置；`engine` 从第一个 `.jsb` 的文件头读（`QJKB` 起偏移 12 的 40 字节 hex）；`protocol` 读 `tinyui-core/protocol` 子路径导出，core 包加这个入口 |
 | `tinyui keys generate` | Node `crypto.generateKeyPairSync("ec", { namedCurve: "P-256" })`；输出私钥 PKCS#8 PEM 与 X9.63 裸点 base64 公钥（updates.md §7） |
-| `tinyui bundle --runtime-version --signing-key [--rollout] [--out]` | manifest 加 `runtimeVersion` 后写定为 `<pkg>/<rv>/<version>/manifest.json`，对该文件字节 `crypto.sign("sha256", …, { dsaEncoding: "der" })`，签名与 `version` / `rollout` 写 `<pkg>/<rv>/current.json`；`.qjsb` 复制进 `<version>/`；签名私钥的公钥必须等于 manifest 的 `publicKey`，否则拒绝 |
+| `tinyui bundle --runtime-version --signing-key [--rollout] [--out]` | manifest 加 `runtimeVersion` 后写定为 `<pkg>/<rv>/<version>/manifest.json`，对该文件字节 `crypto.sign("sha256", …, { dsaEncoding: "der" })`，签名与 `version` / `rollout` 写 `<pkg>/<rv>/current.json`；`.jsb` 复制进 `<version>/`；签名私钥的公钥必须等于 manifest 的 `publicKey`，否则拒绝 |
 | 测试 | 夹具目录 → 字段齐全、模块名带包名、`hashes` 对得上、`current.json` 的签名可用公钥对 `manifest.json` 字节验回、改 `current.json` 的 `rollout` 不影响验签、私钥与 `publicKey` 不配对被拒、缺配置文件被拒 |
 
 验收：`sample/js` 跑 `tinyui build && tinyui bundle`，双端显示 `tinyui:sample/home`，产出目录用 `openssl dgst -sha256 -verify` 对 `<version>/manifest.json` 验 `current.json` 里的签名。
@@ -55,7 +55,7 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 | 测试 | 假 `fetch` 按协议喂：指针解析失败、签名错（含公钥轮换的诊断信息）、`name` 不匹配、manifest `version` 与指针不符、engine 不匹配、旧于内置、rollout 不中、sha256 错、全通过各一条；两个包一坏一好互不影响；启动选择四种情况 + installed 文件被改一个字节即回内置并 `Failed(integrity)` + 清理被去掉的包与 rv 不匹配的 installed；Android host 与 iOS simulator 各跑一遍验签 |
 | sample | 第二个包 `sample-extra`（一页即可）验多包；一个开关把 base URL 指向本机 `python3 -m http.server` 起的 `dist/ota/`，手动验"下次启动生效"与回退 |
 
-验收：sample 在 Android 与 iOS 模拟器上从本机静态目录装上新包、重启生效；故意给一个包发坏包（改一个 `.qjsb` 字节、或页面顶层 `throw`）能回退并收到带 `pkg` 的 `RolledBack`，另一个包不受影响。
+验收：sample 在 Android 与 iOS 模拟器上从本机静态目录装上新包、重启生效；故意给一个包发坏包（改一个 `.jsb` 字节、或页面顶层 `throw`）能回退并收到带 `pkg` 的 `RolledBack`，另一个包不受影响。
 
 ## M4 · `tinyui-updates-server` MVP
 

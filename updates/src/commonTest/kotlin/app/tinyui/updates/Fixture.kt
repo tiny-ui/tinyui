@@ -33,5 +33,5 @@ object Fixture {
     """.trimIndent() + "\n"
 
     /** The bytes whose sha256 the fixture manifest lists. */
-    val FILES = mapOf("pages/home.qjsb" to "HOME2")
+    val FILES = mapOf("pages/home.jsb" to "HOME2")
 }
