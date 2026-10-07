@@ -4,14 +4,14 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { join } from "node:path";
 import type { Manifest } from "../src/build.ts";
 
-/** A `tinyui build` output written by hand: bundle only needs the manifest and the `.bin` files it lists. */
+/** A `tinyui build` output written by hand: bundle only needs the manifest and the `.qjsb` files it lists. */
 export async function fakeDist(dir: string, publicKey: string, edit: (m: Manifest) => void = () => {}): Promise<string> {
     const files = { "fixture/home": "pages/home", "fixture/orders": "pages/orders" };
     const hashes: Record<string, string> = {};
     for (const [module, path] of Object.entries(files)) {
         const bytes = Buffer.concat([Buffer.from("QJKB"), Buffer.alloc(8), Buffer.from("a".repeat(40)), Buffer.from(module)]);
         await mkdir(join(dir, path, ".."), { recursive: true });
-        await writeFile(join(dir, path + ".bin"), bytes);
+        await writeFile(join(dir, path + ".qjsb"), bytes);
         hashes[module] = createHash("sha256").update(bytes).digest("hex");
     }
     const manifest: Manifest = {

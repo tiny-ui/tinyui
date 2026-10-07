@@ -62,7 +62,7 @@ describe("tinyui pull", () => {
 
         await publish(NEW, "2026-09-23T09:00:00Z");
         assert.deepEqual(await pull(into(out)), { version: NEW, changed: true });
-        assert.deepEqual((await readdir(join(out, "pages"))).sort(), ["home.bin", "orders.bin"]);
+        assert.deepEqual((await readdir(join(out, "pages"))).sort(), ["home.qjsb", "orders.qjsb"]);
     });
 
     it("keeps the embedded package while the channel rolls out, or when it is not newer", async () => {
@@ -89,9 +89,9 @@ describe("tinyui pull", () => {
         await assert.rejects(pull(into(out)), (e: Error) => e.message.includes(`pass --accept-key ${rotated.publicKey}`));
         assert.equal(JSON.parse(await readFile(join(out, "manifest.json"), "utf8")).version, OLD);
 
-        const page = join(hostDir, ROTATED, "pages", "home.bin");
+        const page = join(hostDir, ROTATED, "pages", "home.qjsb");
         await writeFile(page, "tampered");
-        await assert.rejects(pull(into(out, { acceptKey: rotated.publicKey })), /pages\/home\.bin does not match manifest\.hashes/);
+        await assert.rejects(pull(into(out, { acceptKey: rotated.publicKey })), /pages\/home\.qjsb does not match manifest\.hashes/);
         assert.equal(JSON.parse(await readFile(join(out, "manifest.json"), "utf8")).version, OLD);
     });
 });

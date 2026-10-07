@@ -43,17 +43,17 @@ class UpdatesTest {
         engine: String = Fixture.ENGINE,
         tinyui: String = Fixture.TINYUI,
         publicKey: String = Fixture.PUBLIC_KEY,
-        files: Map<String, String> = mapOf("pages/home.bin" to "HOME-$version"),
+        files: Map<String, String> = mapOf("pages/home.qjsb" to "HOME-$version"),
         hostVersion: String? = "1",
     ): String {
         val modules = mapOf("$name/home" to "pages/home")
-        val hashes = modules.entries.joinToString(",") { (m, p) -> "\"$m\":\"${files.getValue("$p.bin").encodeUtf8().sha256().hex()}\"" }
+        val hashes = modules.entries.joinToString(",") { (m, p) -> "\"$m\":\"${files.getValue("$p.qjsb").encodeUtf8().sha256().hex()}\"" }
         val hostVersion = if (hostVersion == null) "" else ",\"hostVersion\":\"$hostVersion\""
         return """{"pages":["$name/home"],"files":{${modules.entries.joinToString(",") { "\"${it.key}\":\"${it.value}\"" }}},"buildIds":{},"name":"$name","publicKey":"$publicKey","version":"$version","createdAt":"$createdAt","engine":"$engine","tinyui":"$tinyui","hashes":{$hashes}$hostVersion}"""
     }
 
     private fun embedded(name: String = "shop", version: String = "v0", createdAt: String = "2026-09-22T09:00:00Z"): Bundle {
-        val files = mapOf("pages/home.bin" to "HOME-$version")
+        val files = mapOf("pages/home.qjsb" to "HOME-$version")
         val json = manifest(name, version, createdAt, files = files, hostVersion = null)
         return Bundle(BuildManifest.parse(json)) { path -> files[path]?.encodeToByteArray() }
     }
@@ -64,7 +64,7 @@ class UpdatesTest {
         val version = pointerVersion ?: m.version
         server["$pkg/$hostVersion/current.json"] = """{"version":"$version","rollout":$rollout,"signature":"$signature"}""".encodeToByteArray()
         server["$pkg/$hostVersion/$version/manifest.json"] = manifestJson.encodeToByteArray()
-        val content = files ?: mapOf("pages/home.bin" to "HOME-${m.version}")
+        val content = files ?: mapOf("pages/home.qjsb" to "HOME-${m.version}")
         for ((path, bytes) in content) server["$pkg/$hostVersion/$version/$path"] = bytes.encodeToByteArray()
     }
 
@@ -82,7 +82,7 @@ class UpdatesTest {
         assertEquals(UpdateEvent.Installed("shop", "v1"), events.last())
         assertEquals("HOME-v0", pageBytes(first.current("shop")), "the process keeps what it started with")
         assertTrue(fs.exists(dir / "shop/installed/v1/manifest.json"))
-        assertTrue(fs.exists(dir / "shop/installed/v1/pages/home.bin"))
+        assertTrue(fs.exists(dir / "shop/installed/v1/pages/home.qjsb"))
         assertFalse(fs.exists(dir / "shop/staging"))
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"installed\":\"v1\"")
 
@@ -187,11 +187,11 @@ class UpdatesTest {
 
     @Test
     fun aFileThatDoesNotMatchItsHashOrCannotBeFetchedLeavesNothingBehind() = runTest {
-        publish(manifest(), files = mapOf("pages/home.bin" to "tampered"))
+        publish(manifest(), files = mapOf("pages/home.qjsb" to "tampered"))
         val integrity = assertIs<CheckResult.Failed>(updates(embedded()).check("shop"))
         assertEquals(FailStage.INTEGRITY, integrity.stage)
-        assertContains(integrity.message, "pages/home.bin")
-        server.remove("shop/1/v1/pages/home.bin")
+        assertContains(integrity.message, "pages/home.qjsb")
+        server.remove("shop/1/v1/pages/home.qjsb")
         publish(manifest(), files = emptyMap())
         val download = assertIs<CheckResult.Failed>(updates(embedded()).check("shop"))
         assertEquals(FailStage.DOWNLOAD, download.stage)
@@ -240,7 +240,7 @@ class UpdatesTest {
     fun startupChecksTheInstalledBytesAndBlacklistsACorruptedPackage() = runTest {
         publish(manifest())
         updates(embedded()).check("shop")
-        fs.write(dir / "shop/installed/v1/pages/home.bin") { writeUtf8("HOME-v1 ") }
+        fs.write(dir / "shop/installed/v1/pages/home.qjsb") { writeUtf8("HOME-v1 ") }
         events.clear()
         val u = updates(embedded())
         assertEquals("HOME-v0", pageBytes(u.current("shop")))
