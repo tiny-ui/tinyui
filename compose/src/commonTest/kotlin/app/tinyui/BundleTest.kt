@@ -36,8 +36,8 @@ class BundleTest {
     private fun files(vararg extra: Pair<String, String>) = Files(
         mapOf(
             "manifest.json" to manifest,
-            "pages/home.bin" to "HOME",
-            "pages/cart.bin" to "CART",
+            "pages/home.jsb" to "HOME",
+            "pages/cart.jsb" to "CART",
             *extra,
         ),
     )
@@ -62,7 +62,7 @@ class BundleTest {
         val bundle = Bundle.load(files)
         bundle.page("shop/home")
         bundle.page("shop/home")
-        assertEquals(listOf("manifest.json", "pages/home.bin", "pages/home.js.map", "pages/home.bin"), files.reads, "a missing map is asked for once")
+        assertEquals(listOf("manifest.json", "pages/home.jsb", "pages/home.js.map", "pages/home.jsb"), files.reads, "a missing map is asked for once")
     }
 
     @Test

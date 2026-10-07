@@ -60,7 +60,7 @@ export async function bundle(options: BundleOptions): Promise<BundleResult> {
     if (publicKeyOf(privateKeyPem) !== manifest.publicKey) {
         throw new Error(`${options.signingKey} does not match the publicKey in ${dist}/manifest.json (tinyui.config.json)`);
     }
-    if (!manifest.engine) throw new Error(`${dist} has no bytecode (built with --js-only); a package needs .bin files`);
+    if (!manifest.engine) throw new Error(`${dist} has no bytecode (built with --js-only); a package needs .jsb files`);
 
     // everything is checked before anything is written
     const files: { source: string; target: string }[] = [];

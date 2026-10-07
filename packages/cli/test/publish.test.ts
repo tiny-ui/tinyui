@@ -13,7 +13,7 @@ import { fakeDist, startFakeServer, type FakeServer } from "./helpers.ts";
 const pair = generateKeyPair();
 const VERSION = "20260922T090000Z-3f2a1c";
 const HOST_1 = "hostVersion 1\ntinyui 0.3.0\n\ncomponents\n  ta.Icon  name: string\n\ncapabilities\n  billing.prices\n";
-const FILES = ["pages/home.bin", "pages/orders.bin", "manifest.json"];
+const FILES = ["pages/home.jsb", "pages/orders.jsb", "manifest.json"];
 
 describe("tinyui publish", () => {
     let tmp: string;
@@ -173,8 +173,8 @@ describe("tinyui publish", () => {
         const dir = await bundled("symlink");
         const secret = join(tmp, "secret.txt");
         await writeFile(secret, "not this package's to publish");
-        await rm(join(dir, "fixture", "1", VERSION, "pages", "home.bin"));
-        await symlink(secret, join(dir, "fixture", "1", VERSION, "pages", "home.bin"));
+        await rm(join(dir, "fixture", "1", VERSION, "pages", "home.jsb"));
+        await symlink(secret, join(dir, "fixture", "1", VERSION, "pages", "home.jsb"));
         const mark = server.requests.length;
         // lexical checks pass here; only resolving the link catches it
         await assert.rejects(publish({ client, dir, app: "demo", channel: "staging" }), /leaves .*a bundle only publishes its own files/);

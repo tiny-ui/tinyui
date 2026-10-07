@@ -28,11 +28,11 @@ class BuildManifest(
 ) {
     /** Every file of the package besides the manifest, as (path, key into [hashes]). */
     val payload: List<Pair<String, String>>
-        get() = pages.map { file(it) + ".bin" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList())
+        get() = pages.map { file(it) + ".jsb" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList())
 
     fun buildId(module: String): String = buildIds[module] ?: ""
 
-    /** Output path of [module] without extension (`pages/home`): append `.bin` or `.js.map`. */
+    /** Output path of [module] without extension (`pages/home`): append `.jsb` or `.js.map`. */
     fun file(module: String): String = files[module] ?: module
 
     companion object {

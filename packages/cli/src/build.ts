@@ -12,6 +12,7 @@ import { compileModule, findQjsc } from "./qjsc.ts";
 import { analyzePage, RequiresError, type PageRequires } from "./requires.ts";
 import { SvgError, svgToIcon } from "./svg.ts";
 import { TransformError, transformJsx } from "./transform.ts";
+import { compareVersions } from "./version.ts";
 
 const execFileAsync = promisify(execFile);
 
@@ -49,7 +50,7 @@ export interface BuildResult {
 /** `manifest.json` as `tinyui build` writes it (docs/updates.md §1.1). */
 export interface Manifest {
     pages: string[];
-    /** Module name → output path without extension (`pages/home`); hosts locate `.bin` / `.js.map` through it. */
+    /** Module name → output path without extension (`pages/home`); hosts locate `.jsb` / `.js.map` through it. */
     files: Record<string, string>;
     buildIds: Record<string, string>;
     name: string;
@@ -58,9 +59,9 @@ export interface Manifest {
     createdAt: string;
     /** Engine commit the bytecode is bound to; empty when built with `jsOnly`. */
     engine: string;
-    /** Version of the `tinyui-core` the pages were built against: the oldest runtime they run on (docs/updates.md §1.1). */
+    /** The oldest tinyui the pages run on: the `tinyui-core` they were built against or the CLI that wrote them, whichever is newer (docs/updates.md §1.1). */
     tinyui: string;
-    /** Module name → sha256 hex of its `.bin`; empty when built with `jsOnly`. */
+    /** Module name → sha256 hex of its `.jsb`; empty when built with `jsOnly`. */
     hashes: Record<string, string>;
     /** Page module name → the host capabilities, http channels and host components it uses (docs/updates.md §1.3). */
     requires: Record<string, PageRequires>;
@@ -141,7 +142,7 @@ async function finish(root: string, modules: BuiltModule[], qjsc: string | undef
         m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
         await rootRelativeSources(root, m.map);
         if (!qjsc) continue;
-        m.bin = m.js.replace(/\.js$/, ".bin");
+        m.bin = m.js.replace(/\.js$/, ".jsb");
         await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
     }
 }
@@ -245,7 +246,14 @@ async function engineCommit(bin: string): Promise<string> {
     return commit;
 }
 
+/** The oldest tinyui the pages run on: the runtime they were built against, or this CLI if newer, since the file layout it writes is read by a library of the same version or later. */
 async function tinyuiVersion(root: string): Promise<string> {
+    const core = await coreVersion(root);
+    const cli = (JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
+    return compareVersions(cli, core) > 0 ? cli : core;
+}
+
+async function coreVersion(root: string): Promise<string> {
     // the package's exports map hides package.json, so walk up from a file it does export
     let dir = dirname(createRequire(join(root, "package.json")).resolve("tinyui-core"));
     for (;;) {

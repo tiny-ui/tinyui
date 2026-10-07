@@ -85,7 +85,7 @@ describe("management commands", () => {
     it("encodes each segment and holds names to the rule the server enforces", () => {
         assert.equal(segments("demo", "a/b", "1"), "/demo/a%2Fb/1");
         // page paths are ASCII by construction (tinyui build refuses the rest); encoding is the last line of defence
-        assert.equal(segments("demo", "fixture", "1", "订单.bin"), "/demo/fixture/1/%E8%AE%A2%E5%8D%95.bin");
+        assert.equal(segments("demo", "fixture", "1", "订单.jsb"), "/demo/fixture/1/%E8%AE%A2%E5%8D%95.jsb");
         // encodeURIComponent leaves dots alone, so a traversing value is refused rather than escaped
         for (const traversal of ["..", ".", ""]) assert.throws(() => segments("demo", traversal, "1"), /cannot be a path segment/);
         assert.throws(() => requireName("--app", ".."), /--app must match \[a-z0-9-\]\+/);

@@ -3,7 +3,7 @@ package app.tinyui
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Where a package's bytes come from; [path] is relative to the package (`manifest.json`, `pages/home.bin`). Null when absent. */
+/** Where a package's bytes come from; [path] is relative to the package (`manifest.json`, `pages/home.jsb`). Null when absent. */
 fun interface BundleFiles {
     suspend fun read(path: String): ByteArray?
 }
@@ -24,7 +24,7 @@ class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
 
     suspend fun page(name: String): LoadedPage {
         require(name in manifest.pages) { "page $name is not in package ${manifest.name}: ${manifest.pages}" }
-        val bytecode = read(manifest.file(name) + ".bin")
+        val bytecode = read(manifest.file(name) + ".jsb")
         val module = PageModule(name, bytecode, manifest.buildId(name), i18n())
         return LoadedPage(module, sourceMaps(name), this)
     }

@@ -19,7 +19,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | `PageHost` 只收字节，库零 I/O，读资源在宿主 | `PageHost.kt`、TrendingAI `TinyUIHost.kt` | 热下发对库来说是"多一个字节来源 + 选哪个" |
 | release 不带 map，靠 `buildId` 离线对映射 | build-chain.md §7 | 错误上报链路不变 |
 
-产物尺寸：`core.bin` 20 KB、`native.bin` 3 KB、页面 1～4 KB；十几页的 App 整包不到 100 KB。运行时随宿主后（§2.11）包里只剩页面，运行时的 23 KB 随库进 App。
+产物尺寸：`core.jsb` 20 KB、`native.jsb` 3 KB、页面 1～4 KB；十几页的 App 整包不到 100 KB。运行时随宿主后（§2.11）包里只剩页面，运行时的 23 KB 随库进 App。
 
 ## 2. 候选与取舍
 
@@ -202,7 +202,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 | 项 | 结论 |
 |---|---|
-| 包 | App 由 N≥1 个包组成；一个包 = 一次 `tinyui build` 的产物（`pages/**/*.bin` + `manifest.json`；运行时随宿主，§2.11），整包原子生效，各包独立；不做单页下发、不做跨包共享模块、不做 zip、不做 diff |
+| 包 | App 由 N≥1 个包组成；一个包 = 一次 `tinyui build` 的产物（`pages/**/*.jsb` + `manifest.json`；运行时随宿主，§2.11），整包原子生效，各包独立；不做单页下发、不做跨包共享模块、不做 zip、不做 diff |
 | 包名与模块名 | 包名 `[a-z0-9-]+` 来自 `tinyui.config.json`；模块名 = 路由键 = `<pkg>/<相对路径>`，无 `pages/` 段 |
 | 兼容键 | 宿主声明的 `hostVersion`，作服务端路径；`engine` 要求相等、`tinyui` 要求与宿主兼容（同 major 且宿主不低于包），只校验；单纯升 tinyui 不加 `hostVersion` |
 | 运行时 | `tinyui-core` / `tinyui-native` 随库编成字节码进 App，包里不带；运行时公开面只增不删、不改语义（§2.11 铁律） |
