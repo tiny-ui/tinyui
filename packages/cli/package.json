@@ -1,6 +1,6 @@
 {
   "name": "tinyui-cli",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "TinyUI build tool: TSX -> h() (ES2025) -> ESM module bytecode.",
   "license": "MIT",
   "type": "module",
