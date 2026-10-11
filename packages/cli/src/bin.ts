@@ -9,6 +9,7 @@ import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, Upda
 import { loadConfig, requireName } from "./config.ts";
 import { i18nTypes, loadI18n } from "./i18n.ts";
 import { generateKeyPair } from "./keys.ts";
+import { useEnvProxy } from "./proxy.ts";
 import { publish } from "./publish.ts";
 import { pull } from "./pull.ts";
 import { parseHostSnapshot } from "./snapshot.ts";
@@ -390,6 +391,7 @@ async function main(argv: string[]): Promise<number> {
         return argv.includes("--help") || argv.includes("-h") ? 0 : 2;
     }
     const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, options: command.options });
+    await useEnvProxy();
     return command.run(values, positionals);
 }
 
