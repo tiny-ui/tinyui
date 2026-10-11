@@ -34,7 +34,8 @@
     "esbuild": "0.28.2",
     "magic-string": "1.4.1",
     "oxc-parser": "0.150.0",
-    "qjsc-kmp": "0.1.2"
+    "qjsc-kmp": "0.1.2",
+    "undici": "7.30.0"
   },
   "devDependencies": {
     "tinyui-core": "workspace:*",
