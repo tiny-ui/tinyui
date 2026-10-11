@@ -78,4 +78,12 @@ describe("useEnvProxy", () => {
     it("skips a proxy setting it cannot use instead of failing the command", async () => {
         assert.equal(await useEnvProxy({ HTTPS_PROXY: "not a url" }), false);
     });
+
+    it("goes direct after an unusable setting even if a proxy was installed before", async () => {
+        assert.equal(await useEnvProxy({ HTTP_PROXY: proxyUrl }), true);
+        assert.equal(await useEnvProxy({ HTTP_PROXY: "not a url" }), false);
+        // direct, a name that does not resolve fails; through the stale proxy it would have succeeded
+        await assert.rejects(fetch("http://updates.example.invalid/after"));
+        assert.deepEqual(seen, []);
+    });
 });

@@ -17,15 +17,18 @@ export async function useEnvProxy(env: NodeJS.ProcessEnv = process.env): Promise
     const httpsProxy = env.HTTPS_PROXY || env.https_proxy;
     if (!httpProxy && !httpsProxy) return false;
     const noProxy = [env.NO_PROXY || env.no_proxy, ...LOOPBACK].filter(Boolean).join(",");
+    let undici: typeof import("undici") | undefined;
     try {
-        const { EnvHttpProxyAgent, setGlobalDispatcher } = await import("undici");
-        setGlobalDispatcher(new EnvHttpProxyAgent({
+        undici = await import("undici");
+        undici.setGlobalDispatcher(new undici.EnvHttpProxyAgent({
             ...(httpProxy ? { httpProxy } : {}),
             ...(httpsProxy ? { httpsProxy } : {}),
             noProxy,
         }));
         return true;
     } catch (e) {
+        // make "directly" true even if an earlier call had installed a proxy
+        undici?.setGlobalDispatcher(new undici.Agent());
         process.stderr.write(`tinyui: ignoring the proxy settings (${e instanceof Error ? e.message : String(e)}); connecting directly\n`);
         return false;
     }
