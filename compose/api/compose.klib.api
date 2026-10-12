@@ -552,7 +552,7 @@ final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
 }
 
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
-    constructor <init>(app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HttpChannel> = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui/SessionSource? = ..., app.tinyui/AnalyticsSink? = ..., app.tinyui/LinkOpener? = ..., app.tinyui/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.HttpChannel>;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.SessionSource?;app.tinyui.AnalyticsSink?;app.tinyui.LinkOpener?;app.tinyui.Navigator;okio.Path?){}[0]
+    constructor <init>(app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HttpChannel> = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui/SessionSource? = ..., app.tinyui/AnalyticsSink? = ..., app.tinyui/LinkOpener? = ..., app.tinyui/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.HttpChannel>;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.SessionSource?;app.tinyui.AnalyticsSink?;app.tinyui.LinkOpener?;app.tinyui.Navigator;okio.Path?){}[0]
 
     final val analytics // app.tinyui/TinyUIHost.analytics|{}analytics[0]
         final fun <get-analytics>(): app.tinyui/AnalyticsSink? // app.tinyui/TinyUIHost.analytics.<get-analytics>|<get-analytics>(){}[0]
@@ -580,6 +580,8 @@ final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
         final fun <get-sink>(): app.tinyui/PageSink // app.tinyui/TinyUIHost.sink.<get-sink>|<get-sink>(){}[0]
     final val store // app.tinyui/TinyUIHost.store|{}store[0]
         final fun <get-store>(): app.tinyui/Store // app.tinyui/TinyUIHost.store.<get-store>|<get-store>(){}[0]
+    final val timeZone // app.tinyui/TinyUIHost.timeZone|{}timeZone[0]
+        final fun <get-timeZone>(): kotlinx.coroutines.flow/StateFlow<kotlin/String>? // app.tinyui/TinyUIHost.timeZone.<get-timeZone>|<get-timeZone>(){}[0]
 }
 
 sealed class app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec|null[0]
@@ -679,12 +681,16 @@ sealed class app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec|null[0]
 }
 
 final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.components.generated/BuiltinSchemas|null[0]
+    final val BottomSheet // app.tinyui.components.generated/BuiltinSchemas.BottomSheet|{}BottomSheet[0]
+        final fun <get-BottomSheet>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.BottomSheet.<get-BottomSheet>|<get-BottomSheet>(){}[0]
     final val Box // app.tinyui.components.generated/BuiltinSchemas.Box|{}Box[0]
         final fun <get-Box>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Box.<get-Box>|<get-Box>(){}[0]
     final val Button // app.tinyui.components.generated/BuiltinSchemas.Button|{}Button[0]
         final fun <get-Button>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
     final val Column // app.tinyui.components.generated/BuiltinSchemas.Column|{}Column[0]
         final fun <get-Column>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
+    final val Divider // app.tinyui.components.generated/BuiltinSchemas.Divider|{}Divider[0]
+        final fun <get-Divider>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Divider.<get-Divider>|<get-Divider>(){}[0]
     final val Icon // app.tinyui.components.generated/BuiltinSchemas.Icon|{}Icon[0]
         final fun <get-Icon>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Icon.<get-Icon>|<get-Icon>(){}[0]
     final val LazyColumn // app.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]

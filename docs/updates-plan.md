@@ -91,7 +91,7 @@ M1 之后 M2 → M3 与 M4 并行；M5.1、M5.2 与 tinyui 0.3.0（npm 三包 + 
 
 ## M5.2 · `qjsc-kmp` npm 平台包
 
-仓：quickjs-kmp + tinyui（`packages/cli`）。原是 M7 前置，提前：它不只挡 CI，还挡"`pnpm install` 之后就能 build"，PingPong 与托管实例的外部用户都需要。
+仓：quickjs-kmp + tinyui（`packages/cli`）。原是 M7 前置，提前：它不只挡 CI，还挡"`pnpm install` 之后就能 build"，接入的宿主 App 与托管实例的外部用户都需要。
 
 - quickjs-kmp CI 矩阵编宿主工具（macOS arm64 / x64、Linux x64；Linux arm64 做时再定），按 esbuild 的模式每个平台发一个 npm 包，版本跟 quickjs-kmp 走
 - `tinyui-cli` 的 `optionalDependencies` 钉住与 tinyui 引擎一致的那一版；CLI 查找顺序：`--qjsc` → `TINYUI_QJSC` → 平台包 → PATH

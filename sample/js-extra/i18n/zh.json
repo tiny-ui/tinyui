@@ -14,5 +14,12 @@
   "features.session.in": "已登录：{user}",
   "features.session.out": "未登录",
   "features.signin": "登录",
-  "features.zen": "GitHub 说：{text}"
+  "features.zen": "GitHub 说：{text}",
+  "features.time": "{zone} 当前时间：{time}",
+  "features.copy": "复制时间",
+  "features.copied": "已复制",
+  "features.sheet": "打开底部弹层",
+  "features.sheet.title": "底部弹层",
+  "features.sheet.body": "下滑、点外面或按返回都能关；也可以在这里关。",
+  "features.sheet.close": "关闭"
 }

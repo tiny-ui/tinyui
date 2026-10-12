@@ -1,5 +1,5 @@
-import { Box, Button, Column, Icon, Loading, observable, RadioButton, Row, Show, signal, Text } from "tinyui-core";
-import { analytics, cached, http, i18n, linking, session, storage, ui } from "tinyui-native";
+import { BottomSheet, Box, Button, Column, Divider, Icon, Loading, observable, RadioButton, Row, Show, signal, Text } from "tinyui-core";
+import { analytics, cached, clipboard, http, i18n, linking, session, storage, ui } from "tinyui-native";
 import bolt from "@material-symbols/svg-400/outlined/bolt.svg";
 import heart from "../assets/heart.svg";
 
@@ -10,6 +10,9 @@ export default function Features() {
     const t = i18n.t;
     const [count, setCount] = signal(storage.get<number>("count") ?? 0);
     const state = observable({ plan: "annual" as Plan });
+    const [sheet, setSheet] = signal(false);
+    const openedAt = Date.now();
+    const time = () => i18n.formatDate(openedAt, "yyyy-MM-dd HH:mm:ss");
     const [zen] = cached("zen", () => http.get<string>("https://api.github.com/zen").then((r) => r.body));
 
     function tap() {
@@ -20,6 +23,11 @@ export default function Features() {
 
     async function toast() {
         if ((await ui.toast(t("features.toast.message"), { action: t("features.toast.undo") })) === "action") setCount(Math.max(0, count() - 1));
+    }
+
+    async function copy() {
+        await clipboard.setText(time());
+        void ui.toast(t("features.copied"));
     }
 
     async function clear() {
@@ -53,6 +61,19 @@ export default function Features() {
                 <Text text={session.state().loggedIn ? t("features.session.in", { user: session.state().userId ?? "" }) : t("features.session.out")} />
                 <Show when={!session.state().loggedIn}>{() => <Button text={t("features.signin")} variant="text" onClick={() => void session.signIn("features")} />}</Show>
             </Row>
+            <Divider />
+            <Text text={t("features.time", { zone: i18n.timeZone(), time: time() })} />
+            <Row gap={8}>
+                <Button text={t("features.copy")} variant="outlined" onClick={() => void copy()} />
+                <Button text={t("features.sheet")} variant="outlined" onClick={() => setSheet(true)} />
+            </Row>
+            <BottomSheet open={sheet()} onDismiss={() => setSheet(false)}>
+                <Column width="fill" paddingHorizontal={24} paddingVertical={16} gap={12}>
+                    <Text text={t("features.sheet.title")} style="titleMedium" />
+                    <Text text={t("features.sheet.body")} style="bodyMedium" />
+                    <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
+                </Column>
+            </BottomSheet>
             <Show when={zen() !== undefined} fallback={() => <Box padding={8}><Loading /></Box>}>
                 {() => <Text text={t("features.zen", { text: zen() ?? "" })} style="bodySmall" color="onSurfaceVariant" />}
             </Show>

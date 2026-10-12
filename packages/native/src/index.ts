@@ -1,4 +1,4 @@
-export const VERSION = "0.9.2";
+export const VERSION = "0.10.0";
 export * as navigation from "./navigation.ts";
 export * as store from "./store.ts";
 export * as events from "./events.ts";
@@ -9,6 +9,7 @@ export * as i18n from "./i18n.ts";
 export * as session from "./session.ts";
 export * as ui from "./ui.ts";
 export * as linking from "./linking.ts";
+export * as clipboard from "./clipboard.ts";
 export * as analytics from "./analytics.ts";
 export { cached } from "./storage.ts";
 export type { HttpResponse, HttpOptions, HttpClient } from "./http.ts";

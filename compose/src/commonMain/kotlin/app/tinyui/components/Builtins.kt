@@ -15,18 +15,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LoadingIndicatorDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -125,6 +131,14 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         Icon(icon.vector, contentDescription = scope.get<String>("label"), tint = scope.color("tint") ?: LocalContentColor.current, modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp))
     }
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
+    register(BuiltinSchemas.BottomSheet) { scope -> BottomSheetComponent(scope) }
+    register(BuiltinSchemas.Divider) { scope ->
+        HorizontalDivider(
+            modifier = scope.modifier(),
+            thickness = scope.get<Dp>("thickness") ?: DividerDefaults.Thickness,
+            color = scope.color("color") ?: DividerDefaults.color,
+        )
+    }
 }
 
 // a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
@@ -232,4 +246,31 @@ private fun LoadingComponent(scope: NodeScope) {
         modifier = scope.modifier().size(scope.get<Dp>("size") ?: 24.dp),
         color = scope.color("color") ?: LoadingIndicatorDefaults.indicatorColor,
     )
+}
+
+/**
+ * `open` is the page's; going false animates the sheet out before it leaves composition. A user dismissal (swipe, scrim,
+ * back) has already hidden it when `onDismiss` fires: it stays down until `open` goes false and true again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BottomSheetComponent(scope: NodeScope) {
+    val open = scope.get<Boolean>("open") == true
+    var showing by remember { mutableStateOf(false) }
+    // content-sized, never parked half way
+    val state = rememberBottomSheetState(initialValue = SheetValue.Hidden, enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded))
+    LaunchedEffect(open) {
+        when {
+            // reopened while the hide was still animating: still composed, so bring it back up
+            open && showing -> state.show()
+            open -> showing = true
+            showing -> { state.hide(); showing = false }
+        }
+    }
+    if (showing) {
+        ModalBottomSheet(
+            onDismissRequest = { showing = false; if (scope.has("onDismiss")) scope.dispatch("onDismiss") },
+            sheetState = state,
+        ) { scope.Children() }
+    }
 }

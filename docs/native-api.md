@@ -13,6 +13,7 @@ val host = TinyUIHost(
     dataDir = filesDir / "tinyui-data",                    // storage 落盘目录（§7）
     channels = mapOf("app" to KtorChannel(appHttpClient)), // §6
     locale = uiLanguage,                                   // StateFlow<String>，BCP 47；缺省跟系统（§8）
+    timeZone = displayZone,                                // StateFlow<String>，IANA；缺省跟系统（§8）
     session = SessionSource(state, signIn),                // §9
     analytics = AnalyticsSink { name, props, page -> … },  // §12
     links = LinkOpener { url, page -> … },                 // §11，缺省 LinkOpener.System
@@ -39,6 +40,8 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 | `storage.set` | `null`，或错误码 `"E_QUOTA"`；`tinyui-native` 收到错误码即抛 `HostError`（§7） |
 | `i18n.t` | 字符串（§8） |
 | `i18n.locale` | 字符串（§8） |
+| `i18n.timeZone` | 字符串，IANA 时区 id（§8） |
+| `i18n.zoneOffset` | 数字：当前时区在参数 `ms` 那一刻领先 UTC 的分钟数，含夏令时（§8） |
 | `session.get` | `{ loggedIn, userId }`（§9） |
 
 `storage.set` 是白名单里唯一的写：它只改内存、写盘另行合并，所以能在调用线程立即返回；放 J2 是为了让超额在调用处同步报出。
@@ -140,13 +143,18 @@ const [paywall] = cached("paywall.v1", () => api.get(`${BASE}/api/app-config`).t
 i18n.t("subscription.title")
 i18n.t("subscription.savings", { percent: "43%" })
 i18n.locale()   // accessor，如 "zh"
+i18n.timeZone() // accessor，如 "Asia/Shanghai"
+i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2026-01-01 08:00:00"
 ```
 
 - 字典在包里：`i18n/<locale>.json`，扁平的 key → 字符串，包的默认语言写在 `tinyui.config.json`（build-chain.md §8）
 - 包第一次挂页面时，各语言的字典全部读进内存（manifest 的 `i18n`，与字节码同一来源）
 - 当前语言：`TinyUIHost.locale` 的值，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 查找回退：`zh-Hant-TW → zh-Hant → zh → 默认语言`；全部缺失返回 key 本身，并经 `PageSink` 每个 key 上报一次
-- 插值只有 `{name}`，值按字符串替换；没有复数与数字 / 日期格式化（引擎无 `Intl`）
+- 插值只有 `{name}`，值按字符串替换；没有复数与数字格式化（引擎无 `Intl`）
+- 当前时区：`TinyUIHost.timeZone` 的值（IANA id），缺省为系统时区；变化时经 K5 topic `i18n.timeZone` 通知活页面，`timeZone()` 与 `formatDate()` 的绑定重算。不给 `timeZone` 时跟系统时区：公共代码里没有系统时区的变化回调，页面每次回到前台（`pageVisible()` 变 true，用户可能刚在设置里改过）时重新读一次，变了才推 K5；iOS 每次读前清掉进程内的系统时区缓存。平台不认识的 id 按系统时区显示，并经 `PageSink` 每个 id 上报一次
+- `formatDate(epochMs, pattern)`：Unicode 日期模式的纯数字子集——`yyyy MM M dd d HH H mm ss SSS`，字母之外原样输出，`'…'` 内是字面量，`''` 是一个单引号；其他字母（`MMM`、`yy`、`a`、`EEE`…）以及超出 JS `Date` 范围（±8.64e15 ms）的时间以 `E_INVALID` 抛出。2026-10-12 加（第一个需要的业务页面触发：后端给毫秒时间戳，按用户设置的时区显示）
+- 分工：JS 唯一拿不到的是时区规则，所以原生只答 J2 `i18n.zoneOffset`（那一刻的偏移，夏令时随日期走），模式在 JS 里格式化——全是数字字段，不需要语言数据，同步、可在 node 测试。月份名、星期、上下午这类随语言变的文字字段，以及复数与数字格式化，仍等第一个需要的页面，届时原生实现
 - key 的 TS 类型由 CLI 生成（build-chain.md §8），写错的 key 编译期报
 
 ## 9. `session`
@@ -262,3 +270,16 @@ TinyUIPage(module, host, locals = listOf(Coupon provides viewModel))
 | `onScrollEnd` | 滚动停止时触发，带首个可见行 index | 同上 |
 | `onProgress` 类节流 | 1 s | 首批组件没有，写在这里备查 |
 | `storage` 每包上限 | 约 1 MB | `Storage` |
+
+## 15. `clipboard`
+
+```ts
+await clipboard.setText("ORD-20261012-0001")
+await ui.toast(i18n.t("copied"))   // 要不要提示由页面决定
+```
+
+- J3 `clipboard.setText`，纯文本写入系统剪贴板后 resolve；框架实现（Compose `Clipboard`，Android `ClipData`、iOS `UIPasteboard`），宿主不接管
+- 只写不读：读剪贴板在 iOS 会弹"粘贴自…"的系统提示，也会让页面看到别处复制的内容；出现需要读的页面再议
+- 没给 `text` → `E_INVALID`；页面不在屏幕上（`TinyUIPage` 不在组合里）→ `E_UNSUPPORTED`
+- Android 13 起系统会自己弹"已复制"浮层，页面再 toast 会重复；这是平台行为，框架不判断
+- 2026-10-12 加（第一个需要的业务页面触发：复制订单号）
