@@ -57,7 +57,8 @@ export function formatDate(epochMs: number, pattern: string): string {
     zone();
     // beyond ±8.64e15 ms Date is invalid and every field would read NaN
     const invalid = () => new HostError("E_INVALID", `i18n.formatDate: ${epochMs} is not a time Date can hold`);
-    if (Number.isNaN(new Date(epochMs).getTime())) throw invalid();
+    // isFinite first: Date would coerce null / true / "1" into a time
+    if (!Number.isFinite(epochMs) || Number.isNaN(new Date(epochMs).getTime())) throw invalid();
     // the offset at that instant, so daylight saving follows the date rather than today
     const d = new Date(epochMs + internal.query<number>("i18n.zoneOffset", { ms: epochMs }) * 60_000);
     if (Number.isNaN(d.getTime())) throw invalid();

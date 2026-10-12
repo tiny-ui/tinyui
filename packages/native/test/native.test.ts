@@ -111,6 +111,7 @@ describe("tinyui-native", () => {
         assert.throws(() => i18n.formatDate(at, "dd MMM yyyy"), (e: HostError) => e.code === "E_INVALID" && e.message.includes("MMM"));
         assert.throws(() => i18n.formatDate(at, "yy"), (e: HostError) => e.code === "E_INVALID");
         assert.throws(() => i18n.formatDate(Number.NaN, "yyyy"), (e: HostError) => e.code === "E_INVALID");
+        assert.throws(() => i18n.formatDate(null as unknown as number, "yyyy"), (e: HostError) => e.code === "E_INVALID");
         assert.throws(() => i18n.formatDate(8.64e15 + 1, "yyyy"), (e: HostError) => e.code === "E_INVALID");
         // inside the range, but the zone offset pushes it out
         bridge.queries["i18n.zoneOffset"] = 60;
