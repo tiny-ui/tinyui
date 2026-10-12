@@ -56,7 +56,7 @@ class PageHostTest {
                     __host_call("http.request", 15, JSON.stringify({ channel: "nope", method: "GET", url: "/x" }));
                     __host_call("session.signIn", 16, "{}");
                     __host_call("clipboard.setText", 17, "{}");
-                    __host_call("clipboard.setText", 18, JSON.stringify({ text: "PP-1024" }));
+                    __host_call("clipboard.setText", 18, JSON.stringify({ text: "ORD-1024" }));
                 }
                 // 2026-01-01 and 2026-07-01 UTC: either side of daylight saving
                 if (event === "onZone") patches.push(["p",1,"text", [__host_query("i18n.timeZone", "{}"), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1767225600000 })), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1782864000000 }))].join("|")]);

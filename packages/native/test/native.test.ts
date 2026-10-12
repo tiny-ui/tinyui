@@ -137,8 +137,8 @@ describe("tinyui-native", () => {
         assert.equal(bridge.calls.at(-1)!.name, "ui.confirm");
         void linking.openUrl("https://x");
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["linking.openUrl", { url: "https://x" }]);
-        void clipboard.setText("PP-1024");
-        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["clipboard.setText", { text: "PP-1024" }]);
+        void clipboard.setText("ORD-1024");
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["clipboard.setText", { text: "ORD-1024" }]);
         analytics.track("checkout_step", { step: "plan_selected", plan: "annual" });
         assert.deepEqual(bridge.sent.at(-1), { name: "analytics.track", args: { name: "checkout_step", props: { step: "plan_selected", plan: "annual" } } });
         assert.throws(() => analytics.track("x", { nested: {} as unknown as string }), (e: HostError) => e.code === "E_INVALID");
