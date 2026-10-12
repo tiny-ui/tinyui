@@ -55,9 +55,12 @@ const pad = (n: number, width: number) => String(n).padStart(width, "0");
 export function formatDate(epochMs: number, pattern: string): string {
     follow();
     zone();
-    if (!Number.isFinite(epochMs)) throw new HostError("E_INVALID", `i18n.formatDate: ${epochMs} is not a time`);
+    // beyond ±8.64e15 ms Date is invalid and every field would read NaN
+    const invalid = () => new HostError("E_INVALID", `i18n.formatDate: ${epochMs} is not a time Date can hold`);
+    if (Number.isNaN(new Date(epochMs).getTime())) throw invalid();
     // the offset at that instant, so daylight saving follows the date rather than today
     const d = new Date(epochMs + internal.query<number>("i18n.zoneOffset", { ms: epochMs }) * 60_000);
+    if (Number.isNaN(d.getTime())) throw invalid();
     return pattern.replace(TOKEN, (m, quoted: string | undefined) => {
         if (quoted !== undefined) return quoted === "" ? "'" : quoted.replaceAll("''", "'");
         switch (m) {

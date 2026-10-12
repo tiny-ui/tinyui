@@ -44,6 +44,8 @@ class TinyUIHost(
     internal val storages = Storages(dataDir, sink)
     internal val missingKeys = MissingKeys()
     internal val defaultChannel: HttpChannel by lazy { KtorChannel(defaultHttpClient()) }
+    /** The platform's zone when [timeZone] is null; replaceable so tests can move it. */
+    internal var systemZone: () -> String = ::systemTimeZone
 
     init {
         for (name in channels.keys) {
@@ -58,7 +60,7 @@ class TinyUIHost(
 
     internal fun currentLocale(): String = locale?.value ?: systemLocale()
 
-    internal fun currentTimeZone(): String = timeZone?.value ?: systemTimeZone()
+    internal fun currentTimeZone(): String = timeZone?.value ?: systemZone()
 
     internal companion object {
         const val DEFAULT_CHANNEL = "default"

@@ -90,8 +90,8 @@ class PageHostTest {
     private val tracked = mutableListOf<String>()
     private val store = tinyui.store
 
-    private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY) =
-        PageHost(RuntimeBundle(core, native), page, tinyui, props, listOf(Merchant provides "acme"), sourceMaps = maps)
+    private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY, app: TinyUIHost = tinyui) =
+        PageHost(RuntimeBundle(core, native), page, app, props, listOf(Merchant provides "acme"), sourceMaps = maps)
 
     // runTest's virtual time never advances the real engine thread: wait on a real dispatcher
     private suspend fun PageHost.await(check: () -> Boolean) =
@@ -266,6 +266,30 @@ class PageHostTest {
         val system = systemTimeZone()
         host.await { text() == """"Nowhere/Atlantis"|${zoneOffsetMinutes(system, 1767225600000)}|${zoneOffsetMinutes(system, 1782864000000)}""" }
         assertEquals(1, log.count { "unknown time zone \"Nowhere/Atlantis\"" in it }, "reported once, shown in the system zone")
+        host.close()
+    }
+
+    @Test
+    fun withoutAHostZoneTheSystemZoneIsCheckedAgainWhenThePageComesBack() = runTest {
+        val system = MutableStateFlow("Europe/London")
+        val app = TinyUIHost(ComponentRegistry().registerBuiltins(), sink).apply { systemZone = { system.value } }
+        val host = host(app = app)
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        val text = { host.tree.node(1)!!.props["text"] as? String }
+        host.dispatch(2, "onI18nSubscribe", "{}")
+        host.await { text() == "subscribed" }
+        host.visible(false)
+        host.visible(true)
+        host.dispatch(2, "onZone", "{}")
+        host.await { text() == """"Europe/London"|0|60""" }
+        system.value = "Asia/Tokyo"
+        host.visible(false)
+        host.visible(true)
+        // #1: coming back with the zone unchanged sent nothing
+        host.await { text() == """i18n.timeZone {"timeZone":"Asia/Tokyo"} #1""" }
+        host.dispatch(2, "onZone", "{}")
+        host.await { text() == """"Asia/Tokyo"|540|540""" }
         host.close()
     }
 

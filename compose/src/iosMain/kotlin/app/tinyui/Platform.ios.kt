@@ -11,6 +11,7 @@ import platform.Foundation.NSTimeZone
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
+import platform.Foundation.resetSystemTimeZone
 import platform.Foundation.localeIdentifier
 import platform.Foundation.preferredLanguages
 import platform.Foundation.timeZoneWithName
@@ -25,7 +26,11 @@ internal actual fun platformInfo(): Map<String, String> = mapOf(
 internal actual fun systemLocale(): String =
     (NSLocale.preferredLanguages.firstOrNull() as? String) ?: NSLocale.currentLocale.localeIdentifier.replace('_', '-')
 
-internal actual fun systemTimeZone(): String = NSTimeZone.localTimeZone.name
+// the system zone is cached for the process until reset, so a change in Settings would never show
+internal actual fun systemTimeZone(): String {
+    NSTimeZone.resetSystemTimeZone()
+    return NSTimeZone.localTimeZone.name
+}
 
 internal actual fun zoneOffsetMinutes(zone: String, epochMs: Long): Int? =
     NSTimeZone.timeZoneWithName(zone)?.secondsFromGMTForDate(NSDate.dateWithTimeIntervalSince1970(epochMs / 1000.0))?.toInt()?.div(60)

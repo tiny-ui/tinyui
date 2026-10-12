@@ -152,8 +152,8 @@ i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2
 - 当前语言：`TinyUIHost.locale` 的值，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 查找回退：`zh-Hant-TW → zh-Hant → zh → 默认语言`；全部缺失返回 key 本身，并经 `PageSink` 每个 key 上报一次
 - 插值只有 `{name}`，值按字符串替换；没有复数与数字格式化（引擎无 `Intl`）
-- 当前时区：`TinyUIHost.timeZone` 的值（IANA id），缺省为系统时区；变化时经 K5 topic `i18n.timeZone` 通知活页面，`timeZone()` 与 `formatDate()` 的绑定重算。平台不认识的 id 按系统时区显示，并经 `PageSink` 每个 id 上报一次
-- `formatDate(epochMs, pattern)`：Unicode 日期模式的纯数字子集——`yyyy MM M dd d HH H mm ss SSS`，字母之外原样输出，`'…'` 内是字面量，`''` 是一个单引号；其他字母（`MMM`、`yy`、`a`、`EEE`…）以 `E_INVALID` 抛出。2026-10-12 加（PingPong 交易详情页触发：后端给毫秒时间戳，按用户设置的时区显示）
+- 当前时区：`TinyUIHost.timeZone` 的值（IANA id），缺省为系统时区；变化时经 K5 topic `i18n.timeZone` 通知活页面，`timeZone()` 与 `formatDate()` 的绑定重算。不给 `timeZone` 时跟系统时区：公共代码里没有系统时区的变化回调，页面每次回到前台（`pageVisible()` 变 true，用户可能刚在设置里改过）时重新读一次，变了才推 K5；iOS 每次读前清掉进程内的系统时区缓存。平台不认识的 id 按系统时区显示，并经 `PageSink` 每个 id 上报一次
+- `formatDate(epochMs, pattern)`：Unicode 日期模式的纯数字子集——`yyyy MM M dd d HH H mm ss SSS`，字母之外原样输出，`'…'` 内是字面量，`''` 是一个单引号；其他字母（`MMM`、`yy`、`a`、`EEE`…）以及超出 JS `Date` 范围（±8.64e15 ms）的时间以 `E_INVALID` 抛出。2026-10-12 加（PingPong 交易详情页触发：后端给毫秒时间戳，按用户设置的时区显示）
 - 分工：JS 唯一拿不到的是时区规则，所以原生只答 J2 `i18n.zoneOffset`（那一刻的偏移，夏令时随日期走），模式在 JS 里格式化——全是数字字段，不需要语言数据，同步、可在 node 测试。月份名、星期、上下午这类随语言变的文字字段，以及复数与数字格式化，仍等第一个需要的页面，届时原生实现
 - key 的 TS 类型由 CLI 生成（build-chain.md §8），写错的 key 编译期报
 

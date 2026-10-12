@@ -138,7 +138,7 @@ internal expect fun platformInfo(): Map<String, String>
 /** BCP 47, e.g. `zh-Hans-CN`. */
 internal expect fun systemLocale(): String
 
-/** IANA id, e.g. `Asia/Shanghai`; read each time, so a zone the user changes in system settings is picked up on the next format. */
+/** IANA id, e.g. `Asia/Shanghai`; read fresh each time (iOS caches it otherwise), so a zone changed in system settings shows up. */
 internal expect fun systemTimeZone(): String
 
 /** Minutes [zone] is ahead of UTC at [epochMs] (daylight saving included); null when the platform does not know [zone]. */

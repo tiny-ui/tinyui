@@ -128,6 +128,8 @@ class PageHost internal constructor(
     private val timers = HashMap<Int, Job>()
     private val subscriptions = HashMap<String, AutoCloseable>()
     private val storeVersions = HashMap<String, Long>()
+    /** The system zone the page last got, once it subscribed without a host zone; under the runtime lock like [timers]. */
+    private var systemZoneSeen: String? = null
     private val jsThread = newSingleThreadContext("tinyui-page")
     private val runtime = JsRuntime(
         JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log, onUnhandledRejection = { report("E7", it.message ?: "unhandled rejection", stack = it.jsStack) }),
@@ -178,6 +180,20 @@ class PageHost internal constructor(
     fun visible(visible: Boolean) {
         wantVisible = visible
         entry("visible", JsValue.Bool(visible))
+        if (visible) systemZoneMoved()
+    }
+
+    /**
+     * Without a host zone the page follows the system's, which has no change callback in common code: coming back on screen
+     * (the user may have just been in Settings) is when it is checked again.
+     */
+    private fun systemZoneMoved() {
+        if (host.timeZone != null) return
+        val zone = host.systemZone()
+        var same = false
+        entry("emit", JsValue.Str("i18n.timeZone"), JsValue.Str(buildJsonObject { put("timeZone", zone) }.toString()), before = {
+            if (systemZoneSeen == null || systemZoneSeen == zone) same = true else systemZoneSeen = zone
+        }, skipWhen = { same })
     }
     fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
     fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
@@ -302,7 +318,7 @@ class PageHost internal constructor(
         val zone = host.currentTimeZone()
         return zoneOffsetMinutes(zone, epochMs.toLong()) ?: run {
             if (host.missingKeys.firstTime("timeZone:$zone")) sink.log("i18n: unknown time zone \"$zone\", using the system zone")
-            zoneOffsetMinutes(systemTimeZone(), epochMs.toLong()) ?: 0
+            zoneOffsetMinutes(host.systemZone(), epochMs.toLong()) ?: 0
         }
     }
 
@@ -420,8 +436,11 @@ class PageHost internal constructor(
                 host.locale?.let { flow ->
                     subscriptions.getOrPut("i18n") { follow(flow) { emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
                 }
-                host.timeZone?.let { flow ->
-                    subscriptions.getOrPut("i18n.timeZone") { follow(flow) { emit("i18n.timeZone", buildJsonObject { put("timeZone", it) }.toString()) } }
+                val zone = host.timeZone
+                if (zone != null) {
+                    subscriptions.getOrPut("i18n.timeZone") { follow(zone) { emit("i18n.timeZone", buildJsonObject { put("timeZone", it) }.toString()) } }
+                } else if (systemZoneSeen == null) {
+                    systemZoneSeen = host.systemZone()
                 }
             }
             "session.subscribe" -> host.session?.let { source ->
