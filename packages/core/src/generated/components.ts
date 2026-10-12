@@ -198,6 +198,12 @@ export interface BottomSheetProps {
     children?: Node | Node[];
 }
 
+/** M3 horizontal divider: a full-width line. Inset it with paddingHorizontal. */
+export interface DividerProps extends LayoutProps {
+    thickness?: number;
+    color?: ColorValue;
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -211,6 +217,7 @@ export interface IntrinsicElements {
     Icon: IconProps;
     Loading: LoadingProps;
     BottomSheet: BottomSheetProps;
+    Divider: DividerProps;
 }
 
 export const Column = "Column";
@@ -225,3 +232,4 @@ export const Spacer = "Spacer";
 export const Icon = "Icon";
 export const Loading = "Loading";
 export const BottomSheet = "BottomSheet";
+export const Divider = "Divider";

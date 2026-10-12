@@ -199,7 +199,21 @@ object BuiltinSchemas {
         layout = false,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet)
+    val Divider = ComponentSchema(
+        type = "Divider",
+        props = mapOf(
+            "thickness" to PropSpec.Dp(default = 1.0, required = false, initial = false),
+            "color" to PropSpec.ColorSpec(default = "outlineVariant", required = false, initial = false),
+        ),
+        events = mapOf(
+        ),
+        commands = mapOf(
+        ),
+        children = false,
+        layout = true,
+    )
+
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")

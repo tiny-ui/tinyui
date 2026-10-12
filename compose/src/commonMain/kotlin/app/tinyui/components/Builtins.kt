@@ -15,8 +15,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LoadingIndicatorDefaults
@@ -130,6 +132,13 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     }
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
     register(BuiltinSchemas.BottomSheet) { scope -> BottomSheetComponent(scope) }
+    register(BuiltinSchemas.Divider) { scope ->
+        HorizontalDivider(
+            modifier = scope.modifier(),
+            thickness = scope.get<Dp>("thickness") ?: DividerDefaults.Thickness,
+            color = scope.color("color") ?: DividerDefaults.color,
+        )
+    }
 }
 
 // a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0

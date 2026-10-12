@@ -12,5 +12,6 @@ import Spacer from "./components/spacer.ts";
 import Icon from "./components/icon.ts";
 import Loading from "./components/loading.ts";
 import BottomSheet from "./components/bottom-sheet.ts";
+import Divider from "./components/divider.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider];

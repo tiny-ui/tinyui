@@ -1,4 +1,4 @@
-import { BottomSheet, Box, Button, Column, Icon, Loading, observable, RadioButton, Row, Show, signal, Text } from "tinyui-core";
+import { BottomSheet, Box, Button, Column, Divider, Icon, Loading, observable, RadioButton, Row, Show, signal, Text } from "tinyui-core";
 import { analytics, cached, clipboard, http, i18n, linking, session, storage, ui } from "tinyui-native";
 import bolt from "@material-symbols/svg-400/outlined/bolt.svg";
 import heart from "../assets/heart.svg";
@@ -61,6 +61,7 @@ export default function Features() {
                 <Text text={session.state().loggedIn ? t("features.session.in", { user: session.state().userId ?? "" }) : t("features.session.out")} />
                 <Show when={!session.state().loggedIn}>{() => <Button text={t("features.signin")} variant="text" onClick={() => void session.signIn("features")} />}</Show>
             </Row>
+            <Divider />
             <Text text={t("features.time", { zone: i18n.timeZone(), time: time() })} />
             <Row gap={8}>
                 <Button text={t("features.copy")} variant="outlined" onClick={() => void copy()} />

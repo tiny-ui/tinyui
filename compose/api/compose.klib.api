@@ -689,6 +689,8 @@ final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.comp
         final fun <get-Button>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
     final val Column // app.tinyui.components.generated/BuiltinSchemas.Column|{}Column[0]
         final fun <get-Column>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
+    final val Divider // app.tinyui.components.generated/BuiltinSchemas.Divider|{}Divider[0]
+        final fun <get-Divider>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Divider.<get-Divider>|<get-Divider>(){}[0]
     final val Icon // app.tinyui.components.generated/BuiltinSchemas.Icon|{}Icon[0]
         final fun <get-Icon>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Icon.<get-Icon>|<get-Icon>(){}[0]
     final val LazyColumn // app.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]

@@ -78,6 +78,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 | `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
+| `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
 
@@ -101,6 +102,8 @@ const [open, setOpen] = signal(false);
     <Column paddingHorizontal={24} paddingVertical={16} gap={12}>…</Column>
 </BottomSheet>
 ```
+
+`Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 
