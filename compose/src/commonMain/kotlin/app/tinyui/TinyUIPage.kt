@@ -14,6 +14,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -43,9 +44,11 @@ fun TinyUIPage(
         PageHost(page, host, propsJson, locals, sourceMaps = sourceMaps)
     }
     val uriHandler = LocalUriHandler.current
+    val clipboard = LocalClipboard.current
     // a new list of the same objects each recomposition must not remount the page: the context just follows it
     SideEffect {
         pageHost.context.uriHandler = uriHandler
+        pageHost.context.clipboard = clipboard
         pageHost.context.locals = locals.associate { it.local to it.value }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle

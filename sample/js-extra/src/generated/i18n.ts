@@ -5,6 +5,8 @@ declare module "tinyui-native" {
     interface I18nKeys {
         "features.confirm": never;
         "features.confirm.message": never;
+        "features.copied": never;
+        "features.copy": never;
         "features.count": "count";
         "features.locale": "locale";
         "features.open": never;
@@ -12,8 +14,13 @@ declare module "tinyui-native" {
         "features.plan.monthly": never;
         "features.session.in": "user";
         "features.session.out": never;
+        "features.sheet": never;
+        "features.sheet.body": never;
+        "features.sheet.close": never;
+        "features.sheet.title": never;
         "features.signin": never;
         "features.tap": never;
+        "features.time": "time" | "zone";
         "features.title": never;
         "features.toast": never;
         "features.toast.message": never;

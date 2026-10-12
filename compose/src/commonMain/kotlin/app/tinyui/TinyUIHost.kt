@@ -1,5 +1,6 @@
 package app.tinyui
 
+import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.UriHandler
 import app.tinyui.schema.ComponentRegistry
 import kotlin.concurrent.Volatile
@@ -15,6 +16,7 @@ import okio.Path
  *
  * @param channels HTTP channels pages pick by name (`http.client("app")`); `default` is the framework's own and cannot be registered.
  * @param locale the user's language (BCP 47); the system language when null.
+ * @param timeZone the zone dates are shown in (IANA id, e.g. `Asia/Shanghai`); the system zone when null.
  * @param dataDir where `storage` keeps each package's file; `storage` answers E_UNSUPPORTED when null. Not the `Updates` directory.
  */
 class TinyUIHost(
@@ -23,6 +25,7 @@ class TinyUIHost(
     val capabilities: CapabilityRegistry = CapabilityRegistry(),
     val channels: Map<String, HttpChannel> = emptyMap(),
     val locale: StateFlow<String>? = null,
+    val timeZone: StateFlow<String>? = null,
     val session: SessionSource? = null,
     val analytics: AnalyticsSink? = null,
     val links: LinkOpener? = null,
@@ -54,6 +57,8 @@ class TinyUIHost(
     internal fun channel(name: String): HttpChannel? = if (name == DEFAULT_CHANNEL) defaultChannel else channels[name]
 
     internal fun currentLocale(): String = locale?.value ?: systemLocale()
+
+    internal fun currentTimeZone(): String = timeZone?.value ?: systemTimeZone()
 
     internal companion object {
         const val DEFAULT_CHANNEL = "default"
@@ -90,6 +95,7 @@ fun interface HostCapability {
 /** The mount a call came from: the page's module name and the objects its `locals` provide. */
 class PageContext internal constructor(val name: String, @Volatile internal var locals: Map<PageLocal<*>, Any>) {
     internal var uriHandler: UriHandler? = null
+    internal var clipboard: Clipboard? = null
 
     @Suppress("UNCHECKED_CAST")
     operator fun <T : Any> get(local: PageLocal<T>): T? = locals[local] as T?
@@ -103,6 +109,11 @@ class PageContext internal constructor(val name: String, @Volatile internal var 
                 throw HostException("E_UNSUPPORTED", e.message ?: "nothing can open $url")
             }
         }
+    }
+
+    internal suspend fun copy(text: String) {
+        val target = clipboard ?: throw HostException("E_UNSUPPORTED", "the page is not on screen")
+        withContext(Dispatchers.Main) { target.setClipEntry(plainTextClipEntry(text)) }
     }
 }
 

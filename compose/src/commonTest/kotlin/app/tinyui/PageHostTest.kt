@@ -25,6 +25,8 @@ class PageHostTest {
         override fun log(line: String) { log += line }
     }
 
+    private val zoneFlow = MutableStateFlow("America/New_York")
+
     private val core = module("tinyui-core", """
         let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
@@ -53,7 +55,12 @@ class PageHostTest {
                     __host_call("http.request", 14, JSON.stringify({ channel: "app", method: "GET", url: "/gone" }));
                     __host_call("http.request", 15, JSON.stringify({ channel: "nope", method: "GET", url: "/x" }));
                     __host_call("session.signIn", 16, "{}");
+                    __host_call("clipboard.setText", 17, "{}");
+                    __host_call("clipboard.setText", 18, JSON.stringify({ text: "PP-1024" }));
                 }
+                // 2026-01-01 and 2026-07-01 UTC: either side of daylight saving
+                if (event === "onZone") patches.push(["p",1,"text", [__host_query("i18n.timeZone", "{}"), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1767225600000 })), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1782864000000 }))].join("|")]);
+                if (event === "onI18nSubscribe") { __host_send("i18n.subscribe", "{}"); patches.push(["p",1,"text","subscribed"]); }
             },
             emit(topic, json) { emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
@@ -77,6 +84,7 @@ class PageHostTest {
             if (request.url == "/todos") HttpResponse(200, mapOf("content-type" to "application/json"), """[{"id":1}]""") else HttpResponse(404, emptyMap(), """{"gone":true}""")
         }),
         locale = MutableStateFlow("en"),
+        timeZone = zoneFlow,
         analytics = AnalyticsSink { name, props, page -> tracked += "${page.name} $name $props" },
     ).apply { store.setJson("cart", """{"n":2}""") }
     private val tracked = mutableListOf<String>()
@@ -105,7 +113,7 @@ class PageHostTest {
         val host = host("""{"name":"tinyui"}""")
         host.start()
         host.await { host.tree.root.children.isNotEmpty() }
-        assertEquals("hello tinyui / 11", host.tree.node(1)!!.props["text"])
+        assertEquals("hello tinyui / 12", host.tree.node(1)!!.props["text"])
         assertNull(host.failure)
         host.close()
     }
@@ -211,11 +219,13 @@ class PageHostTest {
         host.await { host.tree.root.children.isNotEmpty() }
         val text = { host.tree.node(1)!!.props["text"] as? String }
         host.dispatch(2, "onFramework", "{}")
-        host.await { text()?.count { it == ';' } == 2 }
+        host.await { text()?.count { it == ';' } == 4 }
         assertEquals(
             """rejected 14 {"status":404,"headers":{},"body":{"gone":true},"code":"E_HTTP","message":"HTTP 404"};""" +
                 """rejected 15 {"code":"E_UNSUPPORTED","message":"the host has no http channel \"nope\""};""" +
-                """rejected 16 {"code":"E_UNSUPPORTED","message":"the host provides no session"}""",
+                """rejected 16 {"code":"E_UNSUPPORTED","message":"the host provides no session"};""" +
+                """rejected 17 {"code":"E_INVALID","message":"clipboard.setText needs text"};""" +
+                """rejected 18 {"code":"E_UNSUPPORTED","message":"the page is not on screen"}""",
             text(),
         )
         assertEquals(listOf("pages/counter tap {n=2, ok=true, s=x}"), tracked)
@@ -231,6 +241,31 @@ class PageHostTest {
         host.dispatch(2, "onQueries", "{}")
         host.await { text()?.startsWith("\"en\"") == true }
         assertEquals(""""en"|"missing"|{"loggedIn":false,"userId":null}|"E_UNSUPPORTED"""", text(), "no session, no data directory")
+        host.close()
+    }
+
+    @Test
+    fun timeZoneQueriesFollowTheHostZoneIncludingDaylightSaving() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        val text = { host.tree.node(1)!!.props["text"] as? String }
+        host.dispatch(2, "onZone", "{}")
+        host.await { text() == """"America/New_York"|-300|-240""" }
+        host.dispatch(2, "onI18nSubscribe", "{}")
+        // the current locale and zone arrive first, in either order
+        host.await { text()?.endsWith("#2") == true }
+        zoneFlow.value = "Asia/Tokyo"
+        host.await { text() == """i18n.timeZone {"timeZone":"Asia/Tokyo"} #3""" }
+        host.dispatch(2, "onZone", "{}")
+        host.await { text() == """"Asia/Tokyo"|540|540""" }
+        zoneFlow.value = "Nowhere/Atlantis"
+        host.await { text() == """i18n.timeZone {"timeZone":"Nowhere/Atlantis"} #4""" }
+        host.dispatch(2, "onZone", "{}")
+        host.dispatch(2, "onZone", "{}")
+        val system = systemTimeZone()
+        host.await { text() == """"Nowhere/Atlantis"|${zoneOffsetMinutes(system, 1767225600000)}|${zoneOffsetMinutes(system, 1782864000000)}""" }
+        assertEquals(1, log.count { "unknown time zone \"Nowhere/Atlantis\"" in it }, "reported once, shown in the system zone")
         host.close()
     }
 

@@ -187,6 +187,17 @@ export interface LoadingProps extends LayoutProps {
     color?: ColorValue;
 }
 
+export interface BottomSheetDismissPayload {
+}
+
+/** M3 modal bottom sheet over the page; children are its content. Shown while `open`; set it to false in `onDismiss`, which fires after the user swiped, tapped the scrim or pressed back. */
+export interface BottomSheetProps {
+    /** true slides it in, false animates it out */
+    open: boolean;
+    onDismiss?: (e: BottomSheetDismissPayload) => void;
+    children?: Node | Node[];
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -199,6 +210,7 @@ export interface IntrinsicElements {
     Spacer: SpacerProps;
     Icon: IconProps;
     Loading: LoadingProps;
+    BottomSheet: BottomSheetProps;
 }
 
 export const Column = "Column";
@@ -212,3 +224,4 @@ export const LazyColumn = "LazyColumn";
 export const Spacer = "Spacer";
 export const Icon = "Icon";
 export const Loading = "Loading";
+export const BottomSheet = "BottomSheet";

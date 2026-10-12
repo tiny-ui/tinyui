@@ -11,5 +11,6 @@ import LazyColumn from "./components/lazy-column.ts";
 import Spacer from "./components/spacer.ts";
 import Icon from "./components/icon.ts";
 import Loading from "./components/loading.ts";
+import BottomSheet from "./components/bottom-sheet.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet];

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { Column, h, Text, thunk } from "tinyui-core";
-import { analytics, cached, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
+import { analytics, cached, clipboard, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
 const tinyui = (): Entries => (globalThis as Record<string, unknown>)["__tinyui"] as Entries;
@@ -76,16 +76,41 @@ describe("tinyui-native", () => {
         assert.equal(data(), "newer");
     });
 
-    it("i18n.t fills placeholders and re-runs bindings when the locale changes", () => {
+    // one engine per page, so i18n subscribes once per module: everything that relies on its K5 topics is in this one test
+    it("i18n.t and i18n.formatDate re-run bindings when the locale or the time zone changes", () => {
         bridge.queries["i18n.locale"] = "zh";
         bridge.queries["i18n.t"] = "省 {percent}";
-        tinyui().mount(() => h(Text, { text: thunk(() => `${i18n.locale()}:${i18n.t("savings", { percent: "43%" })}`) }), "{}", HOST);
+        bridge.queries["i18n.timeZone"] = "Asia/Shanghai";
+        bridge.queries["i18n.zoneOffset"] = 480;
+        const at = Date.UTC(2026, 0, 2, 3, 4, 5, 6);
+        tinyui().mount(() => h(Column, null,
+            h(Text, { text: thunk(() => `${i18n.locale()}:${i18n.t("savings", { percent: "43%" })}`) }),
+            h(Text, { text: thunk(() => `${i18n.timeZone()} ${i18n.formatDate(at, "yyyy-MM-dd HH:mm:ss.SSS")}`) }),
+        ), "{}", HOST);
         tinyui().flush();
-        assert.deepEqual(bridge.applied.at(-1)!.filter((o) => o[0] === "p"), [["p", 1, "text", "zh:省 43%"]]);
+        assert.deepEqual(bridge.applied.at(-1)!.filter((o) => o[0] === "p"), [
+            ["p", 1, "text", "zh:省 43%"],
+            ["p", 2, "text", "Asia/Shanghai 2026-01-02 11:04:05.006"],
+        ]);
         bridge.queries["i18n.t"] = "Save {percent}";
         tinyui().emit("i18n.locale", JSON.stringify({ locale: "en" }));
         tinyui().flush();
         assert.deepEqual(bridge.applied.at(-1), [["p", 1, "text", "en:Save 43%"]]);
+        // the offset is asked for again at that instant, daylight saving included
+        bridge.queries["i18n.zoneOffset"] = -300;
+        tinyui().emit("i18n.timeZone", JSON.stringify({ timeZone: "America/New_York" }));
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.at(-1), [["p", 2, "text", "America/New_York 2026-01-01 22:04:05.006"]]);
+    });
+
+    it("i18n.formatDate keeps quoted text and rejects fields it cannot format", () => {
+        bridge.queries["i18n.zoneOffset"] = 0;
+        const at = Date.UTC(2026, 8, 7, 8, 9);
+        assert.equal(i18n.formatDate(at, "yyyy'年'M'月'd'日' H:mm"), "2026年9月7日 8:09");
+        assert.equal(i18n.formatDate(at, "HH 'o''clock' ''"), "08 o'clock '");
+        assert.throws(() => i18n.formatDate(at, "dd MMM yyyy"), (e: HostError) => e.code === "E_INVALID" && e.message.includes("MMM"));
+        assert.throws(() => i18n.formatDate(at, "yy"), (e: HostError) => e.code === "E_INVALID");
+        assert.throws(() => i18n.formatDate(Number.NaN, "yyyy"), (e: HostError) => e.code === "E_INVALID");
     });
 
     it("session.state follows K5 and signIn is a J3", () => {
@@ -100,13 +125,15 @@ describe("tinyui-native", () => {
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["session.signIn", { source: "paywall" }]);
     });
 
-    it("ui, linking and analytics map to their bridge names", () => {
+    it("ui, linking, clipboard and analytics map to their bridge names", () => {
         void ui.toast("hi", { action: "undo" });
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["ui.toast", { message: "hi", action: "undo" }]);
         void ui.confirm({ message: "sure?" });
         assert.equal(bridge.calls.at(-1)!.name, "ui.confirm");
         void linking.openUrl("https://x");
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["linking.openUrl", { url: "https://x" }]);
+        void clipboard.setText("PP-1024");
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["clipboard.setText", { text: "PP-1024" }]);
         analytics.track("checkout_step", { step: "plan_selected", plan: "annual" });
         assert.deepEqual(bridge.sent.at(-1), { name: "analytics.track", args: { name: "checkout_step", props: { step: "plan_selected", plan: "annual" } } });
         assert.throws(() => analytics.track("x", { nested: {} as unknown as string }), (e: HostError) => e.code === "E_INVALID");

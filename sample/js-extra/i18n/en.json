@@ -14,5 +14,12 @@
   "features.session.in": "Signed in as {user}",
   "features.session.out": "Signed out",
   "features.signin": "Sign in",
-  "features.zen": "GitHub says: {text}"
+  "features.zen": "GitHub says: {text}",
+  "features.time": "Now in {zone}: {time}",
+  "features.copy": "Copy the time",
+  "features.copied": "Copied",
+  "features.sheet": "Open a sheet",
+  "features.sheet.title": "A bottom sheet",
+  "features.sheet.body": "Swipe down, tap outside or press back; or close it from here.",
+  "features.sheet.close": "Close"
 }

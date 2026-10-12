@@ -77,6 +77,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
+| `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
 
@@ -90,6 +91,16 @@ const ICONS: Record<string, string> = { quota: bolt };
 ```
 
 `Loading` 是 M3 Expressive 的 `LoadingIndicator`，不定进度；有进度的进度条等需求。`LoadingIndicator` 只在 CMP material3 的 alpha 线上有，库因此依赖与 CMP 同代的 material3 alpha（catalog `composeMaterial3`）。
+
+`BottomSheet` 是 M3 `ModalBottomSheet`，浮在页面之上，不占父容器的布局（2026-10-12 加，PingPong 交易详情页触发）。`open` 由页面掌握：变 true 滑入，变 false 播完收起动画再离开组合；用户下滑、点遮罩或按返回时，弹层已经自己收起，再报 `onDismiss`，页面在里面把 `open` 置回 false——不置的话它保持收起，直到 `open` 先 false 再 true。只有展开一档（内容多高就多高，不停在半屏）。内容的布局（内边距、标题、关闭按钮）由页面用 children 自己写。命令式的 `ui.alert` / `ui.confirm` 仍是纯文本对话框；声明式 `Dialog` 继续推迟。
+
+```tsx
+const [open, setOpen] = signal(false);
+<Button text="查看收款账户" onClick={() => setOpen(true)} />
+<BottomSheet open={open()} onDismiss={() => setOpen(false)}>
+    <Column paddingHorizontal={24} paddingVertical={16} gap={12}>…</Column>
+</BottomSheet>
+```
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 

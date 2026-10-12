@@ -1,5 +1,6 @@
 package app.tinyui
 
+import androidx.compose.ui.platform.ClipEntry
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update
@@ -110,9 +111,9 @@ class EventBus {
 /** Names the framework dispatches itself (J2 / J3 / J4); a host capability may not take one. */
 internal val FrameworkNames = setOf(
     "device.info", "store.get", "store.set", "store.subscribe", "storage.get", "storage.set", "storage.remove", "storage.clear",
-    "i18n.t", "i18n.locale", "i18n.subscribe", "session.get", "session.subscribe", "session.signIn",
+    "i18n.t", "i18n.locale", "i18n.timeZone", "i18n.zoneOffset", "i18n.subscribe", "session.get", "session.subscribe", "session.signIn",
     "navigation.push", "navigation.pop", "events.emit", "events.subscribe", "http.request", "timer.schedule", "timer.cancel",
-    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "analytics.track",
+    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "clipboard.setText", "analytics.track",
 )
 
 /** What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a session. */
@@ -136,3 +137,11 @@ internal expect fun platformInfo(): Map<String, String>
 
 /** BCP 47, e.g. `zh-Hans-CN`. */
 internal expect fun systemLocale(): String
+
+/** IANA id, e.g. `Asia/Shanghai`; read each time, so a zone the user changes in system settings is picked up on the next format. */
+internal expect fun systemTimeZone(): String
+
+/** Minutes [zone] is ahead of UTC at [epochMs] (daylight saving included); null when the platform does not know [zone]. */
+internal expect fun zoneOffsetMinutes(zone: String, epochMs: Long): Int?
+
+internal expect fun plainTextClipEntry(text: String): ClipEntry

@@ -287,6 +287,8 @@ class PageHost internal constructor(
             }
             "i18n.t" -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
             "i18n.locale" -> JsonPrimitive(host.currentLocale()).toString()
+            "i18n.timeZone" -> JsonPrimitive(host.currentTimeZone()).toString()
+            "i18n.zoneOffset" -> JsonPrimitive(zoneOffset(a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0)).toString()
             "session.get" -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
             else -> "null"
         }
@@ -294,6 +296,15 @@ class PageHost internal constructor(
 
     private fun translate(key: String): String =
         page.i18n.lookup(key, host.currentLocale()) ?: key.also { if (host.missingKeys.firstTime("${page.pkg}:$it")) sink.log("i18n: ${page.pkg} has no \"$it\" in any language") }
+
+    /** A zone the platform does not know is reported once per host and shown in the system zone instead. */
+    private fun zoneOffset(epochMs: Double): Int {
+        val zone = host.currentTimeZone()
+        return zoneOffsetMinutes(zone, epochMs.toLong()) ?: run {
+            if (host.missingKeys.firstTime("timeZone:$zone")) sink.log("i18n: unknown time zone \"$zone\", using the system zone")
+            zoneOffsetMinutes(systemTimeZone(), epochMs.toLong()) ?: 0
+        }
+    }
 
     private fun sessionJson(s: Session): String = buildJsonObject { put("loggedIn", s.loggedIn); put("userId", s.userId) }.toString()
 
@@ -327,6 +338,10 @@ class PageHost internal constructor(
                     ),
                 )
                 if (name == "ui.confirm") confirmed.toString() else ""
+            }
+            "clipboard.setText" -> settle(cbId) {
+                context.copy(a.str("text") ?: throw HostException("E_INVALID", "clipboard.setText needs text"))
+                ""
             }
             "linking.openUrl" -> settle(cbId) {
                 val url = a.str("url")?.takeIf { URL_SCHEME.containsMatchIn(it) } ?: throw HostException("E_INVALID", "linking.openUrl needs an absolute URL")
@@ -401,8 +416,13 @@ class PageHost internal constructor(
             "storage.clear" -> storage?.clear()
             "events.emit" -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
             "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> emit(topic, json) } } }
-            "i18n.subscribe" -> host.locale?.let { flow ->
-                subscriptions.getOrPut("i18n") { follow(flow) { emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
+            "i18n.subscribe" -> {
+                host.locale?.let { flow ->
+                    subscriptions.getOrPut("i18n") { follow(flow) { emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
+                }
+                host.timeZone?.let { flow ->
+                    subscriptions.getOrPut("i18n.timeZone") { follow(flow) { emit("i18n.timeZone", buildJsonObject { put("timeZone", it) }.toString()) } }
+                }
             }
             "session.subscribe" -> host.session?.let { source ->
                 subscriptions.getOrPut("session") { follow(source.state) { emit("session", sessionJson(it)) } }
