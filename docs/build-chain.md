@@ -78,7 +78,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 字节码编译放 CLI 而不放 Gradle：业务 App 不会有本仓的 build-logic，`tinyui build` 必须自己出最终产物。`qjsc-kmp` 二进制查找顺序：`--qjsc` 参数 → `TINYUI_QJSC` 环境变量 → npm 包 `qjsc-kmp` 的预编译版 → PATH。
 
-字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 版本钉成与 catalog 的 `quickjsKmp` 相等（`packages/cli/test/qjsc.test.ts` 校验），所以 JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 之间，只要两个版本钉的 `quickjsKmp` 相同，引擎就对得上；JS 工程的 `tinyui-cli` 须与目标宿主的 tinyui 下限兼容：同 major 且不高于它（updates.md §1.1、§1.3）。某个 tinyui 版本升级了 `quickjsKmp` 时，宿主升到它就是换引擎，按 updates.md §4.1 加 `hostVersion`，下限随之抬到这个版本。
+字节码绑定引擎构建（文件头记上游 commit，quickjs-kmp `docs/native-build.md`"字节码与宿主工具"），CLI 用的 `qjsc-kmp` 必须与 App 链接的 quickjs-kmp 同一上游 commit。`tinyui-cli` 依赖的 `qjsc-kmp` 通常与 catalog 的 `quickjsKmp` 同版本，但校验的是上游 commit 而不是版本号：内置运行时由 CLI 的 `qjsc-kmp` 编出（`pnpm runtime:check` 保证入库的与现编一致），`RuntimeBytecodeTest` 核对它的文件头与链接引擎的 `QuickJs.upstreamCommit` 相等，两边 commit 不同 CI 即失败。所以上游 commit 不变的 quickjs-kmp 版本两边可以不同步：0.10.1 起 catalog 为 0.1.4，`qjsc-kmp` 仍是 0.1.2（0.1.3、0.1.4 只把 Android `.so` 改成 16 KB 页面对齐，编译器源码未动，npm 上也没有这两版）。JS 工程的 `tinyui-cli` 与 App 的 `tinyui` 之间，只要两边的上游 commit 相同，引擎就对得上；JS 工程的 `tinyui-cli` 须与目标宿主的 tinyui 下限兼容：同 major 且不高于它（updates.md §1.1、§1.3）。某个 tinyui 版本升级了 `quickjsKmp` 且上游 commit 随之改变（即 `manifest.engine` 变了）时，宿主升到它就是换引擎，按 updates.md §4.1 加 `hostVersion`，下限随之抬到这个版本；只改构建参数或绑定层、上游 commit 不变的升级（如 0.10.1 的 quickjs-kmp 0.1.4）不算换引擎，旧字节码照常被接受，不加。
 
 | 场景 | 来源 |
 |---|---|
