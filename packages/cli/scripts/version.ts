@@ -1,6 +1,9 @@
 // `pnpm version:set <x.y.z>` / `pnpm version:check [expected]`: the monorepo's one version number (README「发布」).
-// It lives in packages/core/package.json and is mirrored where it cannot be read from there at runtime;
-// `check` is the gate publish.yml runs before anything goes to Maven Central or npm, and build.yml runs on every PR.
+// It lives in packages/core/package.json and is mirrored where it cannot be read from there at runtime
+// (each package's VERSION export, which its own test keeps equal to its package.json). `set` also rebuilds the
+// runtime bytecode, since core's VERSION is compiled into it; `check` is the gate publish.yml runs before
+// anything goes to Maven Central or npm, and build.yml runs on every PR.
+import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -10,7 +13,9 @@ const SITES: { file: string; pattern: RegExp }[] = [
     { file: "packages/native/package.json", pattern: /("version":\s*")([^"]+)(")/ },
     { file: "packages/cli/package.json", pattern: /("version":\s*")([^"]+)(")/ },
     { file: "packages/core/src/version.ts", pattern: /(export const VERSION = ")([^"]+)(")/ },
+    { file: "packages/native/src/index.ts", pattern: /(export const VERSION = ")([^"]+)(")/ },
 ];
+const BYTECODE = "compose/src/commonMain/kotlin/app/tinyui/generated/RuntimeBytecode.kt";
 const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 
 const [mode, arg] = process.argv.slice(2);
@@ -21,7 +26,10 @@ if (mode === "set" && arg && VERSION.test(arg)) {
         if (!pattern.test(text)) throw new Error(`${file}: no version found`);
         await writeFile(path, text.replace(pattern, `$1${arg}$3`));
     }
-    process.stdout.write(`${arg} written to ${SITES.length} files\n`);
+    process.stdout.write(`${arg} written to ${SITES.length} files; rebuilding the runtime bytecode\n`);
+    // the runtime is bundled from each package's dist, so build first; npm_execpath is the pnpm that ran this script
+    execFileSync(process.execPath, [process.env.npm_execpath!, "build"], { cwd: root, stdio: "inherit" });
+    execFileSync(process.execPath, [join(import.meta.dirname, "runtime.ts"), BYTECODE], { cwd: root, stdio: "inherit" });
 } else if (mode === "check" && (arg === undefined || arg === "")) {
     await check(undefined);
 } else if (mode === "check" && VERSION.test(arg)) {
