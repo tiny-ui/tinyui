@@ -30,6 +30,14 @@ build-logic/ Gradle convention plugins
 
 版本号与 git tag 一致，不带 `v` 前缀，Maven 与 npm 三包同号同 tag 发：推 tag 触发 `publish.yml`，Maven 走 Sonatype，npm 走 trusted publishing（OIDC，无 token）。
 
+## 发布
+
+版本号的真源是 `packages/core/package.json`：Kotlin 库的 `TinyUI.version` 由它生成，页面包的 `tinyui` 下限由它写入，所以源码构建与 Maven 产物报同一个数（docs/updates.md §1.1）。它另有四处镜像（native、cli 的 `package.json`，core 与 native 的 `VERSION` 导出），而 core 的 `VERSION` 会编进库内嵌的运行时字节码，所以改版本号一定伴随 `RuntimeBytecode.kt` 的重生成。只用脚本改：
+
+1. `pnpm version:set <x.y.z>`：改五处并重生成字节码，连同改动一起进 PR；`build.yml` 的 `pnpm version:check` 与 `pnpm runtime:check` 保证一致
+2. 合入 main 后打同号 tag 推送。`publish.yml` 先跑 `versions` job 核对五处等于 tag、字节码是最新的，不符则 Maven 与 npm 都不发
+3. 想先看 npm 会发什么：Actions 里手动跑 `publish.yml`，只做 `--dry-run`
+
 ## 构建
 
 ```sh
