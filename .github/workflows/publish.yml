@@ -7,7 +7,21 @@ on:
   workflow_dispatch:   # npm job --dry-run only: preview what a tag push would publish (no Maven, no release)
 
 jobs:
+  # Nothing goes to Maven Central or npm (both irrevocable) until the version number agrees everywhere:
+  # the three packages, core's VERSION export — which is also what the Kotlin library reports as TinyUI.version —
+  # and, on a tag push, the tag itself (the Maven coordinate comes from the tag).
+  versions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node packages/cli/scripts/version.ts check "${{ github.event_name == 'push' && github.ref_name || '' }}"
+
   maven:
+    needs: versions
     if: github.event_name == 'push'
     runs-on: macos-15
     timeout-minutes: 60
@@ -48,6 +62,7 @@ jobs:
   # npm trusted publishing (OIDC): no token, provenance attached. Each package's Trusted Publisher
   # on npmjs.com is bound to this workflow's filename, so renaming publish.yml breaks it.
   npm:
+    needs: versions
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -60,13 +75,6 @@ jobs:
         with:
           node-version: 24   # bundles npm >= 11.5.1, required for OIDC
           cache: pnpm
-      - name: Tag must equal package versions
-        if: github.event_name == 'push'
-        run: |
-          for pkg in core native cli; do
-            v=$(node -p "require('./packages/$pkg/package.json').version")
-            [ "$v" = "$GITHUB_REF_NAME" ] || { echo "packages/$pkg is $v, tag is $GITHUB_REF_NAME"; exit 1; }
-          done
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
