@@ -1,7 +1,7 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.20"
-composeMultiplatform = "1.12.0"
+kotlin = "2.4.21"
+composeMultiplatform = "1.12.1"
 # 独立版本线，只发 alpha；须与 composeMultiplatform 同代，LoadingIndicator 也只在这里有
 composeMaterial3 = "1.12.0-alpha03"
 android-minSdk = "24"
@@ -14,7 +14,7 @@ quickjsKmp = "0.1.4"
 vanniktechMavenPublish = "0.37.0"
 binaryCompatibilityValidator = "0.18.2"
 okio = "3.18.2"
-ktor = "3.5.2"
+ktor = "3.6.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
