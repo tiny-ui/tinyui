@@ -24,8 +24,8 @@ importers:
         specifier: 0.150.0
         version: 0.150.0
       qjsc-kmp:
-        specifier: 0.1.2
-        version: 0.1.2
+        specifier: 0.1.4
+        version: 0.1.4
       undici:
         specifier: 7.30.0
         version: 7.30.0
@@ -368,23 +368,23 @@ packages:
   '@oxc-project/types@0.150.0':
     resolution: {integrity: sha512-rDS5/31E9HfPl/CIzGrn0DOlvBbXFseQ5URJ9sYMfstbKLD/c6Gm9vmRzRGDdAXyOIL4zmO37lc9RIwYqVruZw==}
 
-  '@qjsc-kmp/darwin-arm64@0.1.2':
-    resolution: {integrity: sha512-WWl+kN3GGl3mvHZl7vWfyfskEwrsZoQ3FOgKTb1KHDx4aGuv6/Qd0y38JYNgG9nQuTPT/wBXROY2HOYaLlD5HQ==}
+  '@qjsc-kmp/darwin-arm64@0.1.4':
+    resolution: {integrity: sha512-ENUC4Jo5U4NF8Np3WzQp7KOoCNZOYyPE+mmS2jcWcq3sxQrDO+6mredi8sX+Gh493pLG4O8nKsncY8b0ddCQBg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@qjsc-kmp/darwin-x64@0.1.2':
-    resolution: {integrity: sha512-Dw2WBaYPgbD5N7yCz8iSEpLoMlfPddnmwH6EzQItHsmBXnmf4pAO6MYfvfOwQ5wYbypjyvPT9vXOUh61mVE5Rg==}
+  '@qjsc-kmp/darwin-x64@0.1.4':
+    resolution: {integrity: sha512-yCFFo+iny4jd18YFyNpfI5xKoMrHl3M/mBXKdA6UWHOzcTwDsDZ69oUhVJmVKlfUtiJ4HPHqpNhA+ba64qb6Mg==}
     cpu: [x64]
     os: [darwin]
 
-  '@qjsc-kmp/linux-arm64@0.1.2':
-    resolution: {integrity: sha512-2qHMVnAR0psnok/5/QnAXVqgpvk8g3H71uIxIx7IGtKd9DIUB7b4UuF92nAPpoW6l5bOtiOeN6oHcuKAafopFg==}
+  '@qjsc-kmp/linux-arm64@0.1.4':
+    resolution: {integrity: sha512-xISrUtNSLwXzoDl5//GFNyqbYygv1l3orTWvTWF0M8Gj1ndLAGlIxYvZmQX6GUV1mWqxxIxfMLN/jGzNK+quEw==}
     cpu: [arm64]
     os: [linux]
 
-  '@qjsc-kmp/linux-x64@0.1.2':
-    resolution: {integrity: sha512-vs9ITUQccN4R39O3KaPKszElXpxYg4Ts+WFqvBWbI127lh5gLGvy3QdG3tSvnIA4aYbJTl7Tv52WE4Pt/Ivi7A==}
+  '@qjsc-kmp/linux-x64@0.1.4':
+    resolution: {integrity: sha512-o9Lo/AGG/Hj/DnsUv9e6cS7HlJKm9aXkkmZT13N74x5J/jk3yJV77lQuculO9DtMWLrCDcZBtERVimGuHyjENg==}
     cpu: [x64]
     os: [linux]
 
@@ -523,8 +523,8 @@ packages:
     resolution: {integrity: sha512-zwajKw1GUa57IOdafIS7/yOObGF2NihwIfZfs5yJTRprMSkiwhWOc/k+n8bwnUPbHr2/XsjfBO8KyTPaW3VpWg==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  qjsc-kmp@0.1.2:
-    resolution: {integrity: sha512-JDx7fslSos8pHww+/GAst8yqhwhxu3ThUYsn+3xq9P9Nf8JobeSJJsiBoHMBoKSLFmVxwcI/6r+NA84LLn5kQg==}
+  qjsc-kmp@0.1.4:
+    resolution: {integrity: sha512-YuGXun+o+s86nEjVuJg3xZozRXHabGaMwr6/VNIqaM317RSBdBJkyOTbq5kOsKUB4kkGsAL5Z3mZbN3dC7tJCg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -683,16 +683,16 @@ snapshots:
 
   '@oxc-project/types@0.150.0': {}
 
-  '@qjsc-kmp/darwin-arm64@0.1.2':
+  '@qjsc-kmp/darwin-arm64@0.1.4':
     optional: true
 
-  '@qjsc-kmp/darwin-x64@0.1.2':
+  '@qjsc-kmp/darwin-x64@0.1.4':
     optional: true
 
-  '@qjsc-kmp/linux-arm64@0.1.2':
+  '@qjsc-kmp/linux-arm64@0.1.4':
     optional: true
 
-  '@qjsc-kmp/linux-x64@0.1.2':
+  '@qjsc-kmp/linux-x64@0.1.4':
     optional: true
 
   '@types/node@22.20.3':
@@ -816,12 +816,12 @@ snapshots:
       '@oxc-parser/binding-win32-ia32-msvc': 0.150.0
       '@oxc-parser/binding-win32-x64-msvc': 0.150.0
 
-  qjsc-kmp@0.1.2:
+  qjsc-kmp@0.1.4:
     optionalDependencies:
-      '@qjsc-kmp/darwin-arm64': 0.1.2
-      '@qjsc-kmp/darwin-x64': 0.1.2
-      '@qjsc-kmp/linux-arm64': 0.1.2
-      '@qjsc-kmp/linux-x64': 0.1.2
+      '@qjsc-kmp/darwin-arm64': 0.1.4
+      '@qjsc-kmp/darwin-x64': 0.1.4
+      '@qjsc-kmp/linux-arm64': 0.1.4
+      '@qjsc-kmp/linux-x64': 0.1.4
 
   typescript@7.0.2:
     optionalDependencies:
