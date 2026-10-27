@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -183,7 +183,7 @@ class Updates(
 
 内置包另有一个宿主测试（照 sample 的 `EmbeddedPackageTest`）：对每个内置包的 manifest 跑 `PackageCheck.problems(manifest, host)`，要求为空；内置包取自服务端的宿主再断言 `manifest.hostVersion` 等于当前 `hostVersion`（§1.4）。后一条在 `hostVersion` 刚加 1、JS 还没在新版本下发布时必然不过，所以它是发版检查，由宿主的发版脚本与发版 CI 跑，不进日常测试。
 
-**接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调）。回滚（一个新 version）对已装上的用户生效靠的是下一次 `check()` 装上它；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
+**接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调；用 §4.6 的 `UpdatesScheduler` 时即 `start()`）。回滚（一个新 version）对已装上的用户生效靠的是下一次 `check()` 装上它；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
 
 文件与 sha256 用 okio（`FileSystem` + `ByteString.sha256`）；core 库自 ADR-007 起也依赖 okio（`storage`）。ECDSA 验签走平台 API（§7）。
 
@@ -192,8 +192,9 @@ class Updates(
 | 成员 | 语义 |
 |---|---|
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
-| `suspend fun check(): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果 |
-| `suspend fun check(pkg: String): CheckResult` | 只查一个包 |
+| `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
+| `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
+| `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` / `onForeground()` / `onBackground()` / `checkNow()`，`attachToAppLifecycle()` 接平台前后台（§4.6） |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
 `CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running`、`EmbeddedIncompatible` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
@@ -202,11 +203,13 @@ class Updates(
 |---|---|---|
 | `EmbeddedIncompatible` | 构造时，内置包不能在本宿主上跑 | `version`、`mismatch`：`ENGINE` / `TINYUI` 的集合（§4.4） |
 | `Running` | 构造时每包一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
-| `UpToDate` | `check()` | `version` |
-| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `TINYUI` / `HOST_VERSION` 的集合 |
-| `Installed` | `check()` | `version` |
-| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出，`STORAGE` 也在回退落盘失败（§4.5）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
+| `UpToDate` | `check()` | `version`、`trigger` |
+| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `TINYUI` / `HOST_VERSION` 的集合、`trigger` |
+| `Installed` | `check()` | `version`、`trigger` |
+| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出，`STORAGE` 也在回退落盘失败（§4.5）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换）、`trigger`（不来自 `check()` 的为空） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
+
+`trigger`：`STARTUP` / `RETRY` / `FOREGROUND` / `MANUAL`，说明这次 `check()` 由什么发起（§4.6）；宿主直接调 `check()` 时为 `MANUAL`。重试与前台检查会让失败事件的次数变多，失败率按设备去重不受影响，按次数看时按 `trigger` 拆开。
 
 这些字段由下面的遥测产品功能倒推而来；事件在库里定形，上报到哪里（宿主埋点、更新服务的控制台）是宿主的事。控制台的一切视图都按 (app, pkg) 切，采用率的分母 `install` 按 app 去重（ADR-006 §4.3）。
 
@@ -284,6 +287,31 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 页面来自 embedded 时的失败走宿主自己的 `error` 槽，与不用 `tinyui-updates` 时相同。
 
 进程内已经挂在该包 installed 上的其他页面不动（各自独立 Runtime），下次启动统一回到 embedded。
+
+### 4.6 检查时机
+
+`Updates` 只在被调用时检查。何时调用对每个宿主都一样，又直接决定新版本与回滚多快送到，库提供可选的 `UpdatesScheduler` 统一它；要自己控制时机的宿主照旧直接调 `check()`。
+
+```kotlin
+val scheduler = UpdatesScheduler(updates, processScope)   // interval = 1.hours, retryAfter = 10.seconds
+scheduler.start()                                          // 启动即调，先于任何页面挂载（§4.1）
+scheduler.attachToAppLifecycle()                           // Android ProcessLifecycleOwner / iOS didBecomeActive
+scheduler.checkNow()                                       // 切了通道或服务地址后
+```
+
+| 时机 | 条件 | `trigger` |
+|---|---|---|
+| `start()` | 每进程一次，重复调用无效 | `STARTUP` |
+| 启动检查失败后 `retryAfter` | 失败在网络阶段（`POINTER` / `MANIFEST` / `DOWNLOAD`），且此刻在前台；只重试一次 | `RETRY` |
+| 回到前台 | 上次检查在网络阶段失败且已过 1 分钟，或上次成功已过 `interval` | `FOREGROUND` |
+| `checkNow()` | 无条件 | `MANUAL` |
+
+- 冷启动那几秒网络常常还没就绪，弱网地区尤甚；进程又常常活好几天，只在冷启动检查的话，一次失败要等下次冷启动、进程活着时发的新版本也收不到。
+- 签名、完整性、落盘失败再问也不会好，不重试，也不让前台检查绕过 `interval`。
+- 前台检查装上的版本同样**下次启动生效**（§4.4）；它把下载与冷启动解耦：网络好时先装好，下次冷启动即便没网也直接用上。
+- `interval` 默认 1 小时：每次检查只取一次指针，有新版本才下载；额度紧的宿主调大。`start()` 之前的前台事件不触发检查，第一次检查留给 `STARTUP`。
+- 各触发串行：一次检查进行中到来的触发，等它结束后按它的结果判断要不要再查。`scope` 由宿主给、进程级，检查不随页面取消。
+- `attachToAppLifecycle()` 任何线程可调，每进程一次；Android 依赖 `androidx.lifecycle:lifecycle-process`。
 
 ## 5. 与既有契约的关系
 

@@ -33,11 +33,18 @@ import app.tinyui.TinyUI
 import app.tinyui.sample.res.Res
 import app.tinyui.updates.Updates
 import app.tinyui.updates.UpdatesPage
+import app.tinyui.updates.UpdatesScheduler
+import app.tinyui.updates.attachToAppLifecycle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 
 /** The two packages the App embeds, each under its own resource directory (docs/updates.md §3). */
 private val packages = listOf("sample", "sample-extra")
 
 private val pages = listOf("sample/todos", "sample-extra/hello", "sample-extra/features")
+
+/** Checks outlive any screen: process-wide. */
+private val updatesScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
 @OptIn(ExperimentalResourceApi::class)
 private suspend fun embedded(pkg: String): Bundle = Bundle.load { path ->
@@ -60,8 +67,14 @@ fun App(updatesDir: Path) {
             }
         }
     }
-    // docs/updates.md §4.1: check before any page mounts, so a rollback reaches this install on the next start
-    LaunchedEffect(updates) { updates?.check() }
+    // docs/updates.md §4.1 / §4.6: check at startup before any page mounts, again in the foreground when due
+    LaunchedEffect(updates) {
+        val u = updates ?: return@LaunchedEffect
+        UpdatesScheduler(u, updatesScope).apply {
+            start()
+            attachToAppLifecycle()
+        }
+    }
     var page by remember { mutableStateOf(pages.first()) }
     val host = remember(updatesDir) { sampleHost(updatesDir.parent!! / "tinyui-data") }
     val locale by sampleLocale.collectAsState()

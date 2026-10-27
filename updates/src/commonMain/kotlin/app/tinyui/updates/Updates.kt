@@ -83,14 +83,17 @@ class Updates internal constructor(
     /** The bundle every page of [pkg] loads from in this process: chosen at construction, embedded again after a rollback. */
     fun current(pkg: String): Bundle = pkg(pkg).current
 
-    /** Runs the check for every package at once; a second call while one is running joins it. */
-    suspend fun check(): Map<String, CheckResult> {
+    /**
+     * Runs the check for every package at once; a second call while one is running joins it, and its events keep the
+     * [trigger] of the call that started it.
+     */
+    suspend fun check(trigger: CheckTrigger = CheckTrigger.MANUAL): Map<String, CheckResult> {
         val (run, owner) = checkLock.withLock {
             inFlight?.let { it to false } ?: CompletableDeferred<Map<String, CheckResult>>().also { inFlight = it }.let { it to true }
         }
         if (!owner) return run.await()
         try {
-            val results = coroutineScope { packages.keys.map { pkg -> async { pkg to check(pkg) } }.map { it.await() } }.toMap()
+            val results = coroutineScope { packages.keys.map { pkg -> async { pkg to check(pkg, trigger) } }.map { it.await() } }.toMap()
             run.complete(results)
             return results
         } catch (e: Throwable) {
@@ -102,9 +105,9 @@ class Updates internal constructor(
     }
 
     /** One package; two calls for the same package at once run one after the other. */
-    suspend fun check(pkg: String): CheckResult {
+    suspend fun check(pkg: String, trigger: CheckTrigger = CheckTrigger.MANUAL): CheckResult {
         val p = pkg(pkg)
-        return p.lock.withLock { p.check() }.also { onEvent(it.toEvent(pkg)) }
+        return p.lock.withLock { p.check() }.also { onEvent(it.toEvent(pkg, trigger)) }
     }
 
     internal fun embedded(pkg: String): Bundle = pkg(pkg).embedded

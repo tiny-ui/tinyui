@@ -22,6 +22,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
         }
+        androidMain.dependencies {
+            // UpdatesScheduler.attachToAppLifecycle
+            implementation(libs.androidx.lifecycle.process)
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)

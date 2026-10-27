@@ -6,6 +6,7 @@ import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okio.ByteString.Companion.encodeUtf8
@@ -21,6 +22,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class UpdatesTest {
     // the real file system on both platforms (okio's fake one does not link on iOS with this Kotlin), a fresh directory per test
@@ -345,6 +348,91 @@ class UpdatesTest {
         val next = updates(embedded())
         assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v0", Source.EMBEDDED)), events, "construction does not throw")
         assertEquals("HOME-v0", pageBytes(next.current("shop")))
+    }
+
+    /** The trigger of every check outcome so far, and whether it failed. */
+    private fun checks() = events.mapNotNull {
+        when (it) {
+            is UpdateEvent.UpToDate -> it.trigger to "ok"
+            is UpdateEvent.Installed -> it.trigger to "ok"
+            is UpdateEvent.Skipped -> it.trigger to "ok"
+            is UpdateEvent.Failed -> it.trigger?.let { t -> t to it.stage.name }
+            else -> null
+        }
+    }
+
+    private fun upToDate() {
+        server["shop/1/current.json"] = """{"version":"v0","rollout":100,"signature":"ok"}""".encodeToByteArray()
+    }
+
+    @Test
+    fun aStartupThatFailsOnTheNetworkIsRetriedOnceInTheForeground() = runTest {
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
+        s.start()
+        s.onForeground()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "POINTER"), checks(), "a foreground right after a failure waits for the retry")
+        advanceTimeBy(10.seconds)
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "POINTER", CheckTrigger.RETRY to "POINTER"), checks())
+        advanceTimeBy(10.minutes)
+        assertEquals(2, checks().size, "only once")
+    }
+
+    @Test
+    fun noRetryInTheBackgroundButTheNextForegroundChecks() = runTest {
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
+        s.start()
+        advanceTimeBy(2.minutes)
+        assertEquals(listOf(CheckTrigger.STARTUP to "POINTER"), checks())
+        upToDate()
+        s.onForeground()
+        runCurrent()
+        assertEquals(CheckTrigger.FOREGROUND to "ok", checks().last(), "a failed check is due again after a minute")
+    }
+
+    @Test
+    fun aGoodCheckHoldsTheForegroundForTheInterval() = runTest {
+        upToDate()
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
+        s.start()
+        runCurrent()
+        s.onForeground()
+        advanceTimeBy(59.minutes)
+        s.onForeground()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "ok"), checks())
+        advanceTimeBy(1.minutes)
+        s.onForeground()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "ok", CheckTrigger.FOREGROUND to "ok"), checks())
+        s.checkNow()
+        runCurrent()
+        assertEquals(CheckTrigger.MANUAL to "ok", checks().last(), "checkNow ignores the interval")
+    }
+
+    @Test
+    fun aFailureTheNetworkCannotFixIsNotRetried() = runTest {
+        publish(manifest(), signature = "bad")
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
+        s.onForeground()
+        s.start()
+        advanceTimeBy(2.minutes)
+        s.onForeground()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "SIGNATURE"), checks(), "no retry, and the interval holds")
+    }
+
+    @Test
+    fun aForegroundBeforeStartLeavesTheFirstCheckToStartup() = runTest {
+        upToDate()
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
+        s.onForeground()
+        runCurrent()
+        s.start()
+        s.start()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "ok"), checks())
     }
 
     @Test
