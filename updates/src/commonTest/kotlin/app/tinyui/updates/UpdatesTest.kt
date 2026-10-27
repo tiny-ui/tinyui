@@ -370,7 +370,7 @@ class UpdatesTest {
     @Test
     fun aStartupThatFailsOnTheNetworkIsRetriedOnceInTheForeground() = runTest {
         val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
-        s.start()
+        s.start(followAppLifecycle = false)
         s.onForeground()
         runCurrent()
         assertEquals(listOf(CheckTrigger.STARTUP to "POINTER"), checks(), "a foreground right after a failure waits for the retry")
@@ -384,7 +384,7 @@ class UpdatesTest {
     @Test
     fun noRetryInTheBackgroundButTheNextForegroundChecks() = runTest {
         val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
-        s.start()
+        s.start(followAppLifecycle = false)
         advanceTimeBy(2.minutes)
         assertEquals(listOf(CheckTrigger.STARTUP to "POINTER"), checks())
         upToDate()
@@ -397,7 +397,7 @@ class UpdatesTest {
     fun aGoodCheckHoldsTheForegroundForTheInterval() = runTest {
         upToDate()
         val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
-        s.start()
+        s.start(followAppLifecycle = false)
         runCurrent()
         s.onForeground()
         advanceTimeBy(59.minutes)
@@ -418,7 +418,7 @@ class UpdatesTest {
         publish(manifest(), signature = "bad")
         val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
         s.onForeground()
-        s.start()
+        s.start(followAppLifecycle = false)
         advanceTimeBy(2.minutes)
         s.onForeground()
         runCurrent()
@@ -431,7 +431,7 @@ class UpdatesTest {
         val slow: suspend (String) -> ByteArray = { path -> delay(2.hours); fetch(path) }
         val u = Updates(listOf(embedded()), "1", dir, "install-1", slow, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
         val s = UpdatesScheduler(u, backgroundScope, timeSource = testScheduler.timeSource)
-        s.start()
+        s.start(followAppLifecycle = false)
         advanceTimeBy(2.hours + 1.minutes)
         s.onForeground()
         advanceTimeBy(3.hours) // long enough for a second slow check to report
@@ -447,7 +447,7 @@ class UpdatesTest {
         runCurrent()
         val s = UpdatesScheduler(u, backgroundScope, timeSource = testScheduler.timeSource)
         s.onForeground()
-        s.start()
+        s.start(followAppLifecycle = false)
         runCurrent()
         host.cancel() // the screen that called check() itself went away
         runCurrent()
@@ -463,8 +463,8 @@ class UpdatesTest {
         val s = UpdatesScheduler(updates(embedded()), backgroundScope, timeSource = testScheduler.timeSource)
         s.onForeground()
         runCurrent()
-        s.start()
-        s.start()
+        s.start(followAppLifecycle = false)
+        s.start(followAppLifecycle = false)
         runCurrent()
         assertEquals(listOf(CheckTrigger.STARTUP to "ok"), checks())
     }

@@ -33,7 +33,6 @@ import app.tinyui.sample.res.Res
 import app.tinyui.updates.Updates
 import app.tinyui.updates.UpdatesPage
 import app.tinyui.updates.UpdatesScheduler
-import app.tinyui.updates.attachToAppLifecycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
@@ -64,10 +63,7 @@ private object SampleUpdates {
         }.also {
             updates = it
             // docs/updates.md §4.1 / §4.6: check at startup before any page mounts, again in the foreground when due
-            UpdatesScheduler(it, scope).apply {
-                start()
-                attachToAppLifecycle()
-            }
+            UpdatesScheduler(it, scope).start()
         }
     }
 }
