@@ -6,12 +6,14 @@ import app.tinyui.PageFailure
 import app.tinyui.TinyUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.intOrNull
@@ -110,20 +112,30 @@ class Updates internal constructor(
     /**
      * A page of [bundle], an installed package of [pkg], failed (docs/updates.md §4.5): blacklist that version and go
      * back to embedded. A newer version `check()` installed meanwhile is left alone, only the failed one is dropped.
+     *
+     * Pages opened from now on get embedded at once; the rest waits for the package lock, which a running `check()`
+     * holds for its whole download, and is not cancellable: the page that asked may be gone by then. Never throws:
+     * a state that cannot be saved is a [UpdateEvent.Failed] (storage), the process stays on embedded anyway.
      */
     internal suspend fun rollBack(pkg: String, bundle: Bundle, page: String, failure: PageFailure) {
         val p = pkg(pkg)
         val version = bundle.manifest.version
-        p.lock.withLock {
-            if (version !in p.failed) p.failed += version
-            p.current = p.embedded
-            if (p.installed == version) {
-                p.installed = null
-                runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
+        p.current = p.embedded
+        withContext(NonCancellable) {
+            p.lock.withLock {
+                if (version !in p.failed) p.failed += version
+                val drop = p.installed == version
+                if (drop) p.installed = null
+                // the blacklist reaches the disk before the files go: a crash in between must not let check() install it again
+                try {
+                    p.saveState()
+                } catch (e: IOException) {
+                    onEvent(UpdateEvent.Failed(pkg, version, FailStage.STORAGE, "rollback not saved: ${e.message ?: e}"))
+                }
+                if (drop) runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
             }
-            p.saveState()
+            onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
         }
-        onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
     }
 
     private fun pkg(name: String): Package = packages[name] ?: throw IllegalArgumentException("no embedded package named $name; have ${packages.keys}")
@@ -200,8 +212,9 @@ class Updates internal constructor(
         private fun dropInstalled() {
             val keep = installed ?: return
             installed = null
-            saveState()
-            fs.deleteRecursively(root / INSTALLED / keep)
+            // a full disk must not fail the host's startup: unsaved, the next start makes the same choice again
+            runCatching { saveState() }
+            runCatching { fs.deleteRecursively(root / INSTALLED / keep) }
         }
 
         suspend fun check(): CheckResult {

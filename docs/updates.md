@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -165,7 +165,7 @@ class Updates(
 
 验签公钥不由宿主传：每个包的信任锚是它内置 manifest 里的 `publicKey`（§1.1、§7）。单包宿主写 `Updates(listOf(embedded), …)`。
 
-**`fetch` 的现成实现**：宿主用 ktor 时写 `fetch = ktorFetch(client) { "$base/$channel" }`（`tinyui-updates` 自带；ktor-client-core 本就在 core 库的依赖面上，不新增依赖）。客户端仍是宿主的，超时、代理、引擎、`expectSuccess` 都由宿主定；base 每次调用时读，切通道不用重建 `Updates`。它只接管失败文案，因为 `Failed.message` 是传输层唯一能带出来的东西，而宿主上报时还要截到很短：非 2xx 记 `HTTP <状态码> cf-ray=<值或 -> server=<值或 -> body=<前 60 字符>`——Cloudflare 的每个响应都带 `cf-ray`，没有它的 5xx 是设备与服务端之间的代理伪造的，不是源站问题；超时去掉 ktor 附带的 `[url=…]`；DNS / 连接 / TLS 失败保留引擎原话。用别的 HTTP 栈的宿主自己实现 `fetch` 时照这个口径拼文案，各宿主的看板规则才能共用。
+**`fetch` 的现成实现**：宿主用 ktor 时写 `fetch = ktorFetch(client) { "$base/$channel" }`（`tinyui-updates` 自带；ktor-client-core 本就在 core 库的依赖面上，不新增依赖）。客户端仍是宿主的，超时、代理、引擎、`expectSuccess` 都由宿主定。**`fetch` 必须有超时**：`check()` 下载期间持有包锁，一个永不返回的 `fetch` 会让此后的检查和 §4.5 回退的落盘一直等下去（页面不受影响，已切到 embedded）；base 每次调用时读，切通道不用重建 `Updates`。它只接管失败文案，因为 `Failed.message` 是传输层唯一能带出来的东西，而宿主上报时还要截到很短：非 2xx 记 `HTTP <状态码> cf-ray=<值或 -> server=<值或 -> body=<前 60 字符>`——Cloudflare 的每个响应都带 `cf-ray`，没有它的 5xx 是设备与服务端之间的代理伪造的，不是源站问题；超时去掉 ktor 附带的 `[url=…]`；DNS / 连接 / TLS 失败保留引擎原话。用别的 HTTP 栈的宿主自己实现 `fetch` 时照这个口径拼文案，各宿主的看板规则才能共用。
 
 **`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 上游 commit 变化，build-chain.md §5；上游 commit 不变的 quickjs-kmp 升级不算）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
@@ -205,7 +205,7 @@ class Updates(
 | `UpToDate` | `check()` | `version` |
 | `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `TINYUI` / `HOST_VERSION` 的集合 |
 | `Installed` | `check()` | `version` |
-| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
+| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出，`STORAGE` 也在回退落盘失败（§4.5）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
 这些字段由下面的遥测产品功能倒推而来；事件在库里定形，上报到哪里（宿主埋点、更新服务的控制台）是宿主的事。控制台的一切视图都按 (app, pkg) 切，采用率的分母 `install` 按 app 去重（ADR-006 §4.3）。
@@ -279,7 +279,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ### 4.5 失败回退
 
-`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：该包 `failed += version`，`state.installed = null`，`onEvent(RolledBack)`，随后用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎）。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
+`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：先用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎），此后新开的页面也立即拿到 embedded；再在包锁内 `failed += version`、`state.installed = null` 并落盘，然后删该 installed 目录，最后 `onEvent(RolledBack)`。页面不等这一步：`check()` 下载期间一直持有包锁，弱网下可能要等十几秒。这一步不随页面离开而取消；`state.json` 写不进去（如磁盘已满）时发 `Failed(storage)`、不抛出，本进程照样留在 embedded，installed 目录照删：留着它下次启动会再跑一遍坏包，删了最多在磁盘恢复后被 `check()` 再装回一次、再失败一次后拉黑。启动时的落盘同样失败不抛，`Updates` 的构造不因磁盘已满而失败。先落盘再删目录：两步之间进程被杀，下次启动按黑名单跳过，不会让 `check()` 把它再装回来。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
 
 页面来自 embedded 时的失败走宿主自己的 `error` 槽，与不用 `tinyui-updates` 时相同。
 

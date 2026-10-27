@@ -4,6 +4,9 @@ import app.tinyui.BuildManifest
 import app.tinyui.Bundle
 import app.tinyui.PageError
 import app.tinyui.PageFailure
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okio.ByteString.Companion.encodeUtf8
 import okio.IOException
@@ -297,6 +300,51 @@ class UpdatesTest {
         assertTrue(fs.exists(dir / "shop/installed/v2/manifest.json"), "the newer install stays")
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"installed\":\"v2\"")
         assertEquals("HOME-v2", pageBytes(updates(embedded()).current("shop")), "and runs from the next start")
+    }
+
+    @Test
+    fun aRollbackWaitingForACheckSwitchesPagesAtOnceAndIsNotUndoneByLeaving() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        val gate = CompletableDeferred<Unit>()
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", { path -> gate.await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        val failedBundle = u.current("shop")
+        val checking = launch { u.check("shop") }
+        runCurrent()
+        val rolling = launch { u.rollBack("shop", failedBundle, "shop/home", PageFailure(PageError("E2", "shop/home", "cccccccc", "boom"))) }
+        runCurrent()
+        assertSame(u.embedded("shop"), u.current("shop"), "pages opened while check() holds the package get embedded")
+
+        rolling.cancel() // the page that asked is gone
+        gate.complete(Unit)
+        checking.join()
+        rolling.join()
+        assertEquals("v1", assertIs<UpdateEvent.RolledBack>(events.last()).version)
+        assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"failed\":[\"v1\"]")
+        assertFalse(fs.exists(dir / "shop/installed/v1"))
+    }
+
+    @Test
+    fun aRollbackThatCannotBeSavedStillFallsBackAndSaysSo() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        val u = updates(embedded())
+        // a directory where the state is written first: saving fails on both platforms, the old state stays readable
+        fs.createDirectories(dir / "shop/state.json.tmp/blocked")
+        events.clear()
+        u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E6", "shop/home", "cccccccc", "boom")))
+        assertSame(u.embedded("shop"), u.current("shop"))
+        val failed = assertIs<UpdateEvent.Failed>(events[0])
+        assertEquals(FailStage.STORAGE, failed.stage)
+        assertEquals("v1", failed.version)
+        assertIs<UpdateEvent.RolledBack>(events[1])
+        assertFalse(fs.exists(dir / "shop/installed/v1"), "the bad package goes even when the state does not save")
+
+        // the disk is still full at the next start: the state names a version whose files are gone
+        events.clear()
+        val next = updates(embedded())
+        assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v0", Source.EMBEDDED)), events, "construction does not throw")
+        assertEquals("HOME-v0", pageBytes(next.current("shop")))
     }
 
     @Test
