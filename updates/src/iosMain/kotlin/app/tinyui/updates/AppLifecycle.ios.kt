@@ -7,13 +7,16 @@ import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationState
 
-actual fun UpdatesScheduler.attachToAppLifecycle() {
+internal actual fun observeAppLifecycle(onForeground: () -> Unit, onBackground: () -> Unit): () -> Unit {
     val center = NSNotificationCenter.defaultCenter
     val main = NSOperationQueue.mainQueue
-    center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, main) { _ -> onForeground() }
-    center.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, main) { _ -> onBackground() }
-    // attached after the app became active: that notification is gone
+    val tokens = listOf(
+        center.addObserverForName(UIApplicationDidBecomeActiveNotification, null, main) { _ -> onForeground() },
+        center.addObserverForName(UIApplicationDidEnterBackgroundNotification, null, main) { _ -> onBackground() },
+    )
+    // observing after the app became active: that notification is gone
     main.addOperationWithBlock {
         if (UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive) onForeground()
     }
+    return { tokens.forEach(center::removeObserver) }
 }

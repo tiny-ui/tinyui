@@ -194,7 +194,7 @@ class Updates(
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
 | `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
-| `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` / `onForeground()` / `onBackground()` / `checkNow()`，`attachToAppLifecycle()` 接平台前后台（§4.6） |
+| `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` 默认连同平台前后台一起接上，另有 `onForeground()` / `onBackground()` / `checkNow()`（§4.6） |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
 `CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running`、`EmbeddedIncompatible` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
@@ -294,8 +294,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ```kotlin
 val scheduler = UpdatesScheduler(updates, processScope)   // interval = 1.hours, retryAfter = 10.seconds
-scheduler.start()                                          // 启动即调，先于任何页面挂载（§4.1）
-scheduler.attachToAppLifecycle()                           // Android ProcessLifecycleOwner / iOS didBecomeActive
+scheduler.start()                                          // 启动即调，先于任何页面挂载（§4.1）；同时接上前后台
 scheduler.checkNow()                                       // 切了通道或服务地址后
 ```
 
@@ -312,9 +311,9 @@ scheduler.checkNow()                                       // 切了通道或服
 - `interval` 默认 1 小时：每次检查只取一次指针，有新版本才下载；额度紧的宿主调大。`start()` 之前的前台事件不触发检查，第一次检查留给 `STARTUP`。
 - 各触发串行：一次检查进行中到来的触发，等它结束后按它的结果判断要不要再查；间隔从检查**结束**算起。`scope` 由宿主给、进程级，检查不随页面取消；它并入的一次 `check()` 若随别处调用方的 scope 取消，记为一次失败，照常重试。
 - `start()` 只是发起：页面不等它完成，否则弱网下首屏要等十几秒。§4.1 的约定是发起先于挂载；回滚送达靠这次或随后的检查，进程级崩溃的出口仍是灰度与回滚（ADR-006 §4.3）。
-- 每进程一个 `Updates`、一个 `UpdatesScheduler`，放在进程级的地方（`Application`、单例），不放进会随 Activity 重建的 composition；生命周期观察者不摘除。
+- 每进程一个 `Updates`、一个 `UpdatesScheduler`，放在进程级的地方（`Application`、单例），不放进会随 Activity 重建的 composition。
 - `onEvent` 不应抛异常；抛了的检查不当作网络失败重试。
-- `attachToAppLifecycle()` 任何线程可调，每进程一次；Android 依赖 `androidx.lifecycle:lifecycle-process`。
+- 前后台：Android 用 `ProcessLifecycleOwner`（依赖 `androidx.lifecycle:lifecycle-process`），iOS 用 `didBecomeActive` / `didEnterBackground`；`start()` 时已在前台的补一次 `onForeground()`，`scope` 结束时摘除观察者。自己定义前后台的宿主（多窗口、桌面端、测试）用 `start(followAppLifecycle = false)`，再自己调 `onForeground()` / `onBackground()`。
 
 ## 5. 与既有契约的关系
 

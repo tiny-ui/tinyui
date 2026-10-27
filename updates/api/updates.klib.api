@@ -89,7 +89,7 @@ final class app.tinyui.updates/UpdatesScheduler { // app.tinyui.updates/UpdatesS
     final fun checkNow() // app.tinyui.updates/UpdatesScheduler.checkNow|checkNow(){}[0]
     final fun onBackground() // app.tinyui.updates/UpdatesScheduler.onBackground|onBackground(){}[0]
     final fun onForeground() // app.tinyui.updates/UpdatesScheduler.onForeground|onForeground(){}[0]
-    final fun start() // app.tinyui.updates/UpdatesScheduler.start|start(){}[0]
+    final fun start(kotlin/Boolean = ...) // app.tinyui.updates/UpdatesScheduler.start|start(kotlin.Boolean){}[0]
 }
 
 sealed class app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult|null[0]
@@ -334,7 +334,6 @@ final val app.tinyui.updates/app_tinyui_updates_Updates$stableprop // app.tinyui
 final val app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop // app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop|#static{}app_tinyui_updates_UpdatesScheduler$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop // app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop|#static{}app_tinyui_updates_Updates_State_$serializer$stableprop[0]
 
-final fun (app.tinyui.updates/UpdatesScheduler).app.tinyui.updates/attachToAppLifecycle() // app.tinyui.updates/attachToAppLifecycle|attachToAppLifecycle@app.tinyui.updates.UpdatesScheduler(){}[0]
 final fun app.tinyui.updates/UpdatesPage(app.tinyui.updates/Updates, kotlin/String, app.tinyui/TinyUIHost, kotlin/String?, kotlin.collections/List<app.tinyui/PageLocalValue<*>>?, androidx.compose.ui/Modifier?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui.updates/UpdatesPage|UpdatesPage(app.tinyui.updates.Updates;kotlin.String;app.tinyui.TinyUIHost;kotlin.String?;kotlin.collections.List<app.tinyui.PageLocalValue<*>>?;androidx.compose.ui.Modifier?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter|app_tinyui_updates_CheckResult$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter|app_tinyui_updates_CheckResult_Failed$stableprop_getter(){}[0]

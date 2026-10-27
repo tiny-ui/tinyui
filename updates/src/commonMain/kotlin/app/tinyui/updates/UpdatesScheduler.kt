@@ -9,6 +9,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -22,7 +23,8 @@ import kotlinx.coroutines.sync.withLock
  * last check failed on the network (at most once a minute) or the last good one is [interval] old. Installs still take
  * effect at the next start: checking in the foreground only gets the files there before it.
  *
- * Wire the foreground with [attachToAppLifecycle], or call [onForeground] / [onBackground] yourself.
+ * [start] follows the app to the foreground by itself; a host with its own idea of it calls [onForeground] /
+ * [onBackground] instead.
  *
  * @param scope process-wide: a check is not cancelled with a screen
  */
@@ -42,10 +44,18 @@ class UpdatesScheduler(
     @Volatile
     private var foreground = false
 
-    /** Call once, right after constructing [Updates] and before any page mounts (docs/updates.md §4.1). */
-    fun start() {
+    /**
+     * Call once, right after constructing [Updates] and before any page mounts (docs/updates.md §4.1). With
+     * [followAppLifecycle] it also calls [onForeground] / [onBackground] as the app comes and goes, Android's
+     * `ProcessLifecycleOwner`, iOS's `didBecomeActive` / `didEnterBackground`, until [scope] ends.
+     */
+    fun start(followAppLifecycle: Boolean = true) {
         scope.launch {
             if (lock.withLock { started.also { started = true } }) return@launch
+            if (followAppLifecycle) {
+                val stop = observeAppLifecycle(::onForeground, ::onBackground)
+                scope.coroutineContext[Job]?.invokeOnCompletion { stop() }
+            }
             if (run(CheckTrigger.STARTUP) { true }) return@launch
             delay(retryAfter)
             run(CheckTrigger.RETRY) { failed && foreground }
@@ -106,7 +116,7 @@ class UpdatesScheduler(
 }
 
 /**
- * Calls [UpdatesScheduler.onForeground] / [UpdatesScheduler.onBackground] as the app comes and goes: Android's
- * `ProcessLifecycleOwner`, iOS's `didBecomeActive` / `didEnterBackground`. From any thread, once per process.
+ * Calls [onForeground] / [onBackground] as the app comes and goes, [onForeground] right away when it already is in the
+ * foreground; from any thread. The result stops that, from any thread too.
  */
-expect fun UpdatesScheduler.attachToAppLifecycle()
+internal expect fun observeAppLifecycle(onForeground: () -> Unit, onBackground: () -> Unit): () -> Unit
