@@ -313,7 +313,7 @@ scheduler.checkNow()                                       // 切了通道或服
 - `start()` 只是发起：页面不等它完成，否则弱网下首屏要等十几秒。§4.1 的约定是发起先于挂载；回滚送达靠这次或随后的检查，进程级崩溃的出口仍是灰度与回滚（ADR-006 §4.3）。
 - 每进程一个 `Updates`、一个 `UpdatesScheduler`，放在进程级的地方（`Application`、单例），不放进会随 Activity 重建的 composition。
 - `onEvent` 不应抛异常；抛了的检查不当作网络失败重试。
-- 前后台：Android 用 `ProcessLifecycleOwner`（依赖 `androidx.lifecycle:lifecycle-process`），iOS 用 `didBecomeActive` / `didEnterBackground`；`start()` 时已在前台的补一次 `onForeground()`，`scope` 结束时摘除观察者。自己定义前后台的宿主（多窗口、桌面端、测试）用 `start(followAppLifecycle = false)`，再自己调 `onForeground()` / `onBackground()`。
+- 前后台：Android 用 `ProcessLifecycleOwner`（依赖 `androidx.lifecycle:lifecycle-process`），iOS 用 `didBecomeActive` / `didEnterBackground`；`start()` 时已在前台的补一次 `onForeground()`，`scope` 一取消就摘除观察者。自己定义前后台的宿主（多窗口、桌面端、测试）用 `start(followAppLifecycle = false)`，再自己调 `onForeground()` / `onBackground()`。
 
 ## 5. 与既有契约的关系
 

@@ -1,6 +1,8 @@
 package app.tinyui.updates
 
 import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -9,7 +11,7 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -28,6 +30,7 @@ import kotlinx.coroutines.sync.withLock
  *
  * @param scope process-wide: a check is not cancelled with a screen
  */
+@OptIn(ExperimentalAtomicApi::class)
 class UpdatesScheduler(
     private val updates: Updates,
     private val scope: CoroutineScope,
@@ -36,7 +39,7 @@ class UpdatesScheduler(
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
     private val lock = Mutex()
-    private var started = false
+    private val started = AtomicBoolean(false)
     private var lastAttempt: TimeMark? = null
     private var lastGood: TimeMark? = null
     private var failed = false
@@ -47,15 +50,23 @@ class UpdatesScheduler(
     /**
      * Call once, right after constructing [Updates] and before any page mounts (docs/updates.md §4.1). With
      * [followAppLifecycle] it also calls [onForeground] / [onBackground] as the app comes and goes, Android's
-     * `ProcessLifecycleOwner`, iOS's `didBecomeActive` / `didEnterBackground`, until [scope] ends.
+     * `ProcessLifecycleOwner`, iOS's `didBecomeActive` / `didEnterBackground`, until [scope] is cancelled.
      */
     fun start(followAppLifecycle: Boolean = true) {
-        scope.launch {
-            if (lock.withLock { started.also { started = true } }) return@launch
-            if (followAppLifecycle) {
+        // decided here, not in the coroutine: of two calls the first one's followAppLifecycle holds
+        if (!started.compareAndSet(false, true)) return
+        if (followAppLifecycle) {
+            scope.launch {
                 val stop = observeAppLifecycle(::onForeground, ::onBackground)
-                scope.coroutineContext[Job]?.invokeOnCompletion { stop() }
+                // as soon as scope is cancelled, not once a check that ignores cancellation has finished too
+                try {
+                    awaitCancellation()
+                } finally {
+                    stop()
+                }
             }
+        }
+        scope.launch {
             if (run(CheckTrigger.STARTUP) { true }) return@launch
             delay(retryAfter)
             run(CheckTrigger.RETRY) { failed && foreground }
