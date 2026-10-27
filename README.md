@@ -37,6 +37,7 @@ build-logic/ Gradle convention plugins
 1. `pnpm version:set <x.y.z>`：改五处并重生成字节码，连同改动一起进 PR；`build.yml` 的 `pnpm version:check` 与 `pnpm runtime:check` 保证一致
 2. 合入 main 后打同号 tag 推送。`publish.yml` 先跑 `versions` job 核对五处等于 tag、字节码是最新的，不符则 Maven 与 npm 都不发
 3. 想先看 npm 会发什么：Actions 里手动跑 `publish.yml`，只做 `--dry-run`
+4. GitHub Release 的「升级须知」「要点」由 `packages/cli/scripts/release-notes.ts` 调 OpenAI 起草（需仓库 secret `OPENAI_API_KEY`），排在自动生成的 PR 列表之前；没配 key 或调用失败就只有 PR 列表。发布后可在 Release 页上手改；本地预览：`node packages/cli/scripts/release-notes.ts <tag>`
 
 ## 构建
 

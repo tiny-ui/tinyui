@@ -35,6 +35,8 @@ jobs:
       contents: write   # gh release create
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # release-notes.ts diffs against the previous tag
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -61,7 +63,17 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
-      - run: gh release create "$GITHUB_REF_NAME" --generate-notes
+      # 「升级须知」「要点」由模型起草，排在 GitHub 生成的 PR 列表之前；没有 key 或调用失败时 ai-notes.md 为空，照旧只发 PR 列表
+      - name: Draft release notes
+        run: node packages/cli/scripts/release-notes.ts "$GITHUB_REF_NAME" > ai-notes.md
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - run: |
+          if [ -s ai-notes.md ]; then
+            gh release create "$GITHUB_REF_NAME" --generate-notes --notes-file ai-notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --generate-notes
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
 
