@@ -8,6 +8,8 @@ android-minSdk = "24"
 android-compileSdk = "37"
 android-targetSdk = "37"
 androidxActivityCompose = "1.13.0"
+# 与 composeMultiplatform 带来的 androidx.lifecycle 同版本
+androidxLifecycle = "2.9.4"
 kotlinxCoroutines = "1.11.0"
 kotlinxSerialization = "1.11.0"
 quickjsKmp = "0.1.4"
@@ -30,6 +32,7 @@ ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "kto
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityCompose" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidxLifecycle" }
 # build-logic 用：把插件当普通依赖引进 convention plugin 的 classpath
 plugin-android = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 plugin-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

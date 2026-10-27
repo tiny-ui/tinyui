@@ -15,7 +15,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -33,11 +32,45 @@ import app.tinyui.TinyUI
 import app.tinyui.sample.res.Res
 import app.tinyui.updates.Updates
 import app.tinyui.updates.UpdatesPage
+import app.tinyui.updates.UpdatesScheduler
+import app.tinyui.updates.attachToAppLifecycle
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** The two packages the App embeds, each under its own resource directory (docs/updates.md §3). */
 private val packages = listOf("sample", "sample-extra")
 
 private val pages = listOf("sample/todos", "sample-extra/hello", "sample-extra/features")
+
+/**
+ * One [Updates] and one [UpdatesScheduler] per process, whatever happens to the composition: a recreated Activity
+ * must not add a second instance on the same directory, nor a second lifecycle observer.
+ */
+private object SampleUpdates {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val lock = Mutex()
+    private var updates: Updates? = null
+
+    suspend fun get(dir: Path): Updates = lock.withLock {
+        updates ?: withContext(Dispatchers.Default) {
+            val bundles = packages.map { embedded(it) }
+            // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
+            TinyUI.debug = !bundles.first().page("sample/todos").sourceMaps.isEmpty
+            Updates(bundles, hostVersion = HOST_VERSION, dir = dir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
+                println("TinyUI updates $it")
+            }
+        }.also {
+            updates = it
+            // docs/updates.md §4.1 / §4.6: check at startup before any page mounts, again in the foreground when due
+            UpdatesScheduler(it, scope).apply {
+                start()
+                attachToAppLifecycle()
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalResourceApi::class)
 private suspend fun embedded(pkg: String): Bundle = Bundle.load { path ->
@@ -50,18 +83,7 @@ private suspend fun embedded(pkg: String): Bundle = Bundle.load { path ->
  */
 @Composable
 fun App(updatesDir: Path) {
-    val updates by produceState<Updates?>(null) {
-        value = withContext(Dispatchers.Default) {
-            val bundles = packages.map { embedded(it) }
-            // debug builds ship the maps (-Ptinyui.maps); stacks on the failure screen only when they came along
-            TinyUI.debug = !bundles.first().page("sample/todos").sourceMaps.isEmpty
-            Updates(bundles, hostVersion = HOST_VERSION, dir = updatesDir, installId = "sample-install", fetch = { path -> httpGet(otaBaseUrl() + path) }) {
-                println("TinyUI updates $it")
-            }
-        }
-    }
-    // docs/updates.md §4.1: check before any page mounts, so a rollback reaches this install on the next start
-    LaunchedEffect(updates) { updates?.check() }
+    val updates by produceState<Updates?>(null) { value = SampleUpdates.get(updatesDir) }
     var page by remember { mutableStateOf(pages.first()) }
     val host = remember(updatesDir) { sampleHost(updatesDir.parent!! / "tinyui-data") }
     val locale by sampleLocale.collectAsState()
