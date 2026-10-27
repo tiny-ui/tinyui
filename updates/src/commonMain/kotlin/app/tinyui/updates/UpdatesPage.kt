@@ -20,8 +20,8 @@ import kotlinx.coroutines.CancellationException
 
 /**
  * [TinyUIPage] for a page of one of [updates]' packages: [name] is the module name, the part before the first
- * `/` names the package. A page from an installed package that fails with E2 / E6 is remounted from the
- * embedded package, which the whole package falls back to (docs/updates.md §4.5).
+ * `/` names the package. A page from an installed package that fails with E2 / E6, or whose files no longer match
+ * their hashes, is remounted from the embedded package, which the whole package falls back to (docs/updates.md §4.5).
  */
 @Composable
 fun UpdatesPage(
@@ -46,8 +46,18 @@ fun UpdatesPage(
         }
     }
     val result = loaded ?: return
-    // a page the package cannot load (e.g. not in it) is not the package failing to run: no fallback
     val page = result.getOrElse { t ->
+        // an installed file that no longer matches its hash: the package cannot run, an E6 that falls back like any other
+        if (t is IntegrityFailure) {
+            LaunchedEffect(t) {
+                val failure = PageFailure(PageError("E6", name, bundle.manifest.buildId(name), t.message ?: t.toString()))
+                host.sink.error(failure.error)
+                updates.rollBack(pkg, bundle, name, failure)
+                bundle = updates.embedded(pkg)
+            }
+            return
+        }
+        // a page the package cannot load (e.g. not in it) is not the package failing to run: no fallback
         val failure = remember(t) {
             PageFailure(PageError("E6", name, "", t.message ?: t.toString())).also { host.sink.error(it.error) }
         }

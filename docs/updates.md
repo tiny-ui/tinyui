@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4 / §4.5 修订：启动只读 installed 的 manifest，sha256 推迟到页面读文件时逐个核对，不一致按 E6 回退）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -251,7 +251,7 @@ fetch <pkg>/<hostVersion>/current.json ─解析失败────────�
   │
   ▼ 逐文件 fetch <pkg>/<hostVersion>/<version>/<file>（files 的 .jsb 与 i18n.files）→ <pkg>/staging/<version>/，每个核对 sha256
   ├─ 任一失败 ─删 staging──────────────────────────────────────────────▶ Failed(download | integrity)
-  ▼ manifest 原始字节写入 staging/<version>/manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed
+  ▼ manifest 原始字节写入 staging/<version>/manifest.json，staging/<version> 改名 installed/<version>，state.installed = version，删其他 installed（本进程正在跑的那个除外，下次启动再删）
   ▼ Installed(version)   // 下次启动生效
 ```
 
@@ -271,13 +271,13 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded` → `current(pkg) = installed`，否则 `= embedded`。构造只读 installed 的 `manifest.json`，不读页面文件：`Running` 与只有内置包时一样快发出，宿主据此挂的遥测属性（如「本进程跑哪个版本」）赶得上启动后的第一条事件。页面文件在页面读它时才读盘并逐个重算 sha256，不一致或缺失（磁盘损坏、半个文件）即该页加载失败，按 §4.5 的 E6 回退。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住。2026-10-27 之前构造时就逐文件重算 sha256，跑 installed 时 `Running` 晚于宿主启动后的第一条事件（Android 的 `ProcessLifecycleOwner` 在首个 Activity 启动时就触发），遥测属性会缺在这条事件上。
 
 内置包的引擎与宿主不符或 tinyui 不兼容时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 
 ### 4.5 失败回退
 
-`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：该包 `failed += version`，`state.installed = null`，`onEvent(RolledBack)`，随后用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎）。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
+`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`），或读页面文件时 sha256 不一致（§4.4，按 E6 经 `PageSink.error` 上报）时：该包 `failed += version`，`state.installed = null`，`onEvent(RolledBack)`，随后用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎）。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
 
 页面来自 embedded 时的失败走宿主自己的 `error` 槽，与不用 `tinyui-updates` 时相同。
 
