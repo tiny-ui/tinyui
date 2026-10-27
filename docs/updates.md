@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -279,7 +279,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ### 4.5 失败回退
 
-`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：该包 `failed += version`，`state.installed = null`，`onEvent(RolledBack)`，随后用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎）。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
+`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：先用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎），此后新开的页面也立即拿到 embedded；再在包锁内 `failed += version`、`state.installed = null` 并落盘，然后删该 installed 目录，最后 `onEvent(RolledBack)`。页面不等这一步：`check()` 下载期间一直持有包锁，弱网下可能要等十几秒。这一步不随页面离开而取消；`state.json` 写不进去（如磁盘已满）时发 `Failed(storage)`、不抛出，本进程照样留在 embedded。先落盘再删目录：两步之间进程被杀，下次启动按黑名单跳过，不会让 `check()` 把它再装回来。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
 
 页面来自 embedded 时的失败走宿主自己的 `error` 槽，与不用 `tinyui-updates` 时相同。
 

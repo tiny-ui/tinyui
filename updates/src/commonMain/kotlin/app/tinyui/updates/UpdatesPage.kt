@@ -60,8 +60,9 @@ fun UpdatesPage(
             // only the failures that mean the package cannot run here (docs/updates.md §4.5)
             if ((failure.kind == "E2" || failure.kind == "E6") && page.bundle !== updates.embedded(pkg)) {
                 LaunchedEffect(failure) {
-                    updates.rollBack(pkg, page.bundle, page.module.name, failure)
+                    // remount first: the rollback can wait for a check() downloading under the package lock
                     bundle = updates.embedded(pkg)
+                    updates.rollBack(pkg, page.bundle, page.module.name, failure)
                 }
             } else {
                 error(failure)
