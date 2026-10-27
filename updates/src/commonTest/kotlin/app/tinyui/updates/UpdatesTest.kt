@@ -329,9 +329,8 @@ class UpdatesTest {
         publish(manifest())
         updates(embedded()).check("shop")
         val u = updates(embedded())
-        // a directory where the state goes: writing it fails on both platforms
-        fs.delete(dir / "shop/state.json")
-        fs.createDirectories(dir / "shop/state.json/blocked")
+        // a directory where the state is written first: saving fails on both platforms, the old state stays readable
+        fs.createDirectories(dir / "shop/state.json.tmp/blocked")
         events.clear()
         u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E6", "shop/home", "cccccccc", "boom")))
         assertSame(u.embedded("shop"), u.current("shop"))
@@ -340,6 +339,12 @@ class UpdatesTest {
         assertEquals("v1", failed.version)
         assertIs<UpdateEvent.RolledBack>(events[1])
         assertFalse(fs.exists(dir / "shop/installed/v1"), "the bad package goes even when the state does not save")
+
+        // the disk is still full at the next start: the state names a version whose files are gone
+        events.clear()
+        val next = updates(embedded())
+        assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v0", Source.EMBEDDED)), events, "construction does not throw")
+        assertEquals("HOME-v0", pageBytes(next.current("shop")))
     }
 
     @Test

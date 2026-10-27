@@ -212,8 +212,9 @@ class Updates internal constructor(
         private fun dropInstalled() {
             val keep = installed ?: return
             installed = null
-            saveState()
-            fs.deleteRecursively(root / INSTALLED / keep)
+            // a full disk must not fail the host's startup: unsaved, the next start makes the same choice again
+            runCatching { saveState() }
+            runCatching { fs.deleteRecursively(root / INSTALLED / keep) }
         }
 
         suspend fun check(): CheckResult {
