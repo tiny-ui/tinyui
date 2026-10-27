@@ -9,7 +9,9 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,7 +48,7 @@ class UpdatesScheduler(
             if (lock.withLock { started.also { started = true } }) return@launch
             if (run(CheckTrigger.STARTUP) { true }) return@launch
             delay(retryAfter)
-            if (foreground) run(CheckTrigger.RETRY) { failed }
+            run(CheckTrigger.RETRY) { failed && foreground }
         }
     }
 
@@ -70,25 +72,34 @@ class UpdatesScheduler(
         return if (failed) attempt.elapsedNow() >= FAILED_GAP else lastGood?.let { it.elapsedNow() >= interval } ?: true
     }
 
-    /** One check at a time, so a trigger arriving during one decides on its result; true when there is nothing to retry. */
+    /**
+     * One check at a time, so a trigger arriving during one decides on its result; true when there is nothing to retry.
+     * Gaps count from when a check ends, however long it took.
+     */
     private suspend fun run(trigger: CheckTrigger, due: () -> Boolean): Boolean = lock.withLock {
         if (!due()) return@withLock !failed
-        val mark = timeSource.markNow()
-        lastAttempt = mark
         val ok = try {
             updates.check(trigger).values.none { it is CheckResult.Failed && it.stage in RETRYABLE }
         } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+            // a check this one joined was cancelled with its caller's scope: a failed attempt, not the end of ours
+            currentCoroutineContext().ensureActive()
             false
+        } catch (e: Exception) {
+            // not the network: the host's onEvent threw, asking again would only throw again
+            true
         }
+        val mark = timeSource.markNow()
+        lastAttempt = mark
         failed = !ok
         if (ok) lastGood = mark
         ok
     }
 
     private companion object {
-        /** Failures the network may get over; a bad signature or a full disk does not go away by asking again. */
+        /**
+         * Failures the network may get over; a bad signature or a full disk does not go away by asking again. A pointer
+         * or manifest that does not parse stays in: a captive portal or a proxy answers with its own page.
+         */
         val RETRYABLE = setOf(FailStage.POINTER, FailStage.MANIFEST, FailStage.DOWNLOAD)
         val FAILED_GAP = 1.minutes
     }

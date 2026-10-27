@@ -5,6 +5,7 @@ import app.tinyui.Bundle
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -22,6 +23,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -421,6 +423,38 @@ class UpdatesTest {
         s.onForeground()
         runCurrent()
         assertEquals(listOf(CheckTrigger.STARTUP to "SIGNATURE"), checks(), "no retry, and the interval holds")
+    }
+
+    @Test
+    fun theIntervalCountsFromWhenASlowCheckEnds() = runTest {
+        upToDate()
+        val slow: suspend (String) -> ByteArray = { path -> delay(2.hours); fetch(path) }
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", slow, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        val s = UpdatesScheduler(u, backgroundScope, timeSource = testScheduler.timeSource)
+        s.start()
+        advanceTimeBy(2.hours + 1.minutes)
+        s.onForeground()
+        advanceTimeBy(3.hours) // long enough for a second slow check to report
+        assertEquals(listOf(CheckTrigger.STARTUP to "ok"), checks(), "a minute after it ended, not two hours after it began")
+    }
+
+    @Test
+    fun aJoinedCheckCancelledWithItsCallerCountsAsAFailedAttempt() = runTest {
+        upToDate()
+        val gate = CompletableDeferred<Unit>()
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", { path -> gate.await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        val host = launch { u.check() }
+        runCurrent()
+        val s = UpdatesScheduler(u, backgroundScope, timeSource = testScheduler.timeSource)
+        s.onForeground()
+        s.start()
+        runCurrent()
+        host.cancel() // the screen that called check() itself went away
+        runCurrent()
+        gate.complete(Unit)
+        advanceTimeBy(10.seconds)
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.RETRY to "ok"), checks(), "the scheduler keeps going and retries")
     }
 
     @Test
