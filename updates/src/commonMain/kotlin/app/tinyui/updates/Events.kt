@@ -22,6 +22,10 @@ sealed class CheckResult {
 sealed class UpdateEvent {
     abstract val pkg: String
 
+    /**
+     * At construction, the package this process runs, sent before the installed bytes are checked. A corrupted install
+     * is followed by [Failed] (integrity) and a second [Running] for embedded, still at construction: the last one counts.
+     */
     data class Running(override val pkg: String, val version: String, val source: Source) : UpdateEvent()
     data class UpToDate(override val pkg: String, val version: String) : UpdateEvent()
     data class Skipped(override val pkg: String, val version: String, val reason: SkipReason, val mismatch: Set<Mismatch> = emptySet()) : UpdateEvent()

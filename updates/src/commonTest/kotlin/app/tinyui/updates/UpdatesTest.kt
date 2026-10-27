@@ -244,12 +244,27 @@ class UpdatesTest {
         events.clear()
         val u = updates(embedded())
         assertEquals("HOME-v0", pageBytes(u.current("shop")))
-        val failed = assertIs<UpdateEvent.Failed>(events.first())
-        assertEquals(FailStage.INTEGRITY, failed.stage)
-        assertEquals(UpdateEvent.Running("shop", "v0", Source.EMBEDDED), events.last())
+        assertEquals(3, events.size, "$events")
+        assertEquals(UpdateEvent.Running("shop", "v1", Source.INSTALLED), events[0], "selected from its manifest, before the bytes are read")
+        assertEquals(FailStage.INTEGRITY, assertIs<UpdateEvent.Failed>(events[1]).stage)
+        assertEquals(UpdateEvent.Running("shop", "v0", Source.EMBEDDED), events[2], "the last Running counts")
         assertFalse(fs.exists(dir / "shop/installed/v1"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE), u.check("shop"))
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"failed\":[\"v1\"]")
+    }
+
+    @Test
+    fun runningIsSentBeforeTheInstalledBytesAreRead() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        events.clear()
+        // a file that changes once Running is out is still caught: the bytes are read after it
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", fetch, { e ->
+            if (e is UpdateEvent.Running && events.isEmpty()) fs.write(dir / "shop/installed/v1/pages/home.jsb") { writeUtf8("late") }
+            events += e
+        }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        assertEquals(FailStage.INTEGRITY, assertIs<UpdateEvent.Failed>(events[1]).stage)
+        assertEquals("HOME-v0", pageBytes(u.current("shop")))
     }
 
     @Test

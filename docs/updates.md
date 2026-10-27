@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -272,6 +272,8 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
 构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+
+`Running` 在按 manifest 选定之后、读页面文件重算 sha256 之前发出：宿主通常拿它给遥测挂「本进程跑哪个版本」，构造又多在后台协程里，等读完整包再发会晚于宿主启动后的第一条事件（Android 的 `ProcessLifecycleOwner` 在首个 Activity 启动时就触发）。installed 损坏时依次发 `Running(installed)`、`Failed(integrity)`、`Running(embedded)`，以最后一次为准；三者都在构造返回前发出，页面拿到 `Updates` 时已经是校验过的包。
 
 内置包的引擎与宿主不符或 tinyui 不兼容时不抛错（M6 拍板第 14 点）：发 `EmbeddedIncompatible`，该内置包只在名义上是地板——它的页面加载即 E6、走宿主的 `error` 槽，不参与上面的 `createdAt` 比较，也不参与 §4.3 的"等于内置版本"与 older-than-embedded；`check()` 照常跑，装上兼容的版本后下次启动恢复。这只是兜底，发版前由宿主测试（§4.1）拦住。
 

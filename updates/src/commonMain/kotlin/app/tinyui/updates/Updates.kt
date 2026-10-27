@@ -67,8 +67,14 @@ class Updates internal constructor(
         for (p in byName.values) p.selectAtStartup()
         // App upgrades drop packages: their directories go too
         fs.listOrNull(dir)?.filter { it.name !in byName }?.forEach { fs.deleteRecursively(it) }
+        // Running goes out before the bytes are read, so a host tagging its events with it has it on the first one;
+        // a corrupted install sends a second Running for embedded, before any page can get this instance
         for (p in byName.values) {
-            onEvent(UpdateEvent.Running(p.name, p.current.manifest.version, if (p.current === p.embedded) Source.EMBEDDED else Source.INSTALLED))
+            val selected = p.selected
+            onEvent(UpdateEvent.Running(p.name, selected?.version ?: p.embedded.manifest.version, if (selected == null) Source.EMBEDDED else Source.INSTALLED))
+        }
+        for (p in byName.values) {
+            if (!p.verifyAtStartup()) onEvent(UpdateEvent.Running(p.name, p.embedded.manifest.version, Source.EMBEDDED))
         }
     }
 
@@ -147,6 +153,10 @@ class Updates internal constructor(
         }
         private val embeddedCreatedAt: String? get() = embedded.manifest.createdAt.takeIf { unusable.isEmpty() }
 
+        /** The install [selectAtStartup] picked from its manifest, until [verifyAtStartup] has checked its bytes. */
+        var selected: BuildManifest? = null
+            private set
+
         fun selectAtStartup() {
             readState()
             runCatching { fs.deleteRecursively(root / STAGING) }
@@ -154,33 +164,44 @@ class Updates internal constructor(
             val keep = installed
             fs.listOrNull(installedDir)?.filter { it.name != keep }?.forEach { fs.deleteRecursively(it) }
             if (keep == null) return
-            val loaded = loadInstalled(installedDir / keep)
-            if (loaded != null) {
-                current = loaded
-                return
-            }
-            installed = null
-            saveState()
-            fs.deleteRecursively(installedDir / keep)
+            selected = selectInstalled(installedDir / keep)
+            if (selected == null) dropInstalled()
         }
 
-        /** The installed package when it is still the one to run: newer than embedded, this host version and engine, a compatible tinyui, intact. */
-        private fun loadInstalled(dir: Path): Bundle? {
+        /** The installed manifest when it is still the one to run: newer than embedded, this host version and engine, a compatible tinyui. */
+        private fun selectInstalled(dir: Path): BuildManifest? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
             if (manifest.engine != engine || !TinyUI.isCompatible(tinyui, manifest.tinyui)) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
+            return manifest
+        }
+
+        /** Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded. */
+        fun verifyAtStartup(): Boolean {
+            val manifest = selected ?: return true
+            selected = null
+            val dir = root / INSTALLED / manifest.version
             val files = HashMap<String, ByteArray>()
             for ((path, hashKey) in manifest.payload) {
                 val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
                 if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
                     failed += manifest.version
                     onEvent(UpdateEvent.Failed(name, manifest.version, FailStage.INTEGRITY, "$path is missing or does not match manifest.hashes"))
-                    return null
+                    dropInstalled()
+                    return false
                 }
                 files[path] = bytes
             }
-            return Bundle(manifest) { path -> files[path] }
+            current = Bundle(manifest) { path -> files[path] }
+            return true
+        }
+
+        private fun dropInstalled() {
+            val keep = installed ?: return
+            installed = null
+            saveState()
+            fs.deleteRecursively(root / INSTALLED / keep)
         }
 
         suspend fun check(): CheckResult {
