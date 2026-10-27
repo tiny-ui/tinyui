@@ -6,14 +6,12 @@ import app.tinyui.PageFailure
 import app.tinyui.TinyUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.intOrNull
@@ -69,8 +67,14 @@ class Updates internal constructor(
         for (p in byName.values) p.selectAtStartup()
         // App upgrades drop packages: their directories go too
         fs.listOrNull(dir)?.filter { it.name !in byName }?.forEach { fs.deleteRecursively(it) }
+        // Running goes out before the bytes are read, so a host tagging its events with it has it on the first one;
+        // a corrupted install sends a second Running for embedded, before any page can get this instance
         for (p in byName.values) {
-            onEvent(UpdateEvent.Running(p.name, p.current.manifest.version, if (p.current === p.embedded) Source.EMBEDDED else Source.INSTALLED))
+            val selected = p.selected
+            onEvent(UpdateEvent.Running(p.name, selected?.version ?: p.embedded.manifest.version, if (selected == null) Source.EMBEDDED else Source.INSTALLED))
+        }
+        for (p in byName.values) {
+            if (!p.verifyAtStartup()) onEvent(UpdateEvent.Running(p.name, p.embedded.manifest.version, Source.EMBEDDED))
         }
     }
 
@@ -149,6 +153,10 @@ class Updates internal constructor(
         }
         private val embeddedCreatedAt: String? get() = embedded.manifest.createdAt.takeIf { unusable.isEmpty() }
 
+        /** The install [selectAtStartup] picked from its manifest, until [verifyAtStartup] has checked its bytes. */
+        var selected: BuildManifest? = null
+            private set
+
         fun selectAtStartup() {
             readState()
             runCatching { fs.deleteRecursively(root / STAGING) }
@@ -156,38 +164,44 @@ class Updates internal constructor(
             val keep = installed
             fs.listOrNull(installedDir)?.filter { it.name != keep }?.forEach { fs.deleteRecursively(it) }
             if (keep == null) return
-            val loaded = loadInstalled(installedDir / keep)
-            if (loaded != null) {
-                current = loaded
-                return
-            }
-            installed = null
-            saveState()
-            fs.deleteRecursively(installedDir / keep)
+            selected = selectInstalled(installedDir / keep)
+            if (selected == null) dropInstalled()
         }
 
-        /**
-         * The installed package when it is still the one to run: newer than embedded, this host version and engine, a
-         * compatible tinyui. Only the manifest is read here, so [UpdateEvent.Running] goes out as soon as for embedded;
-         * each file is read and checked against `hashes` when a page needs it, a mismatch is an [IntegrityFailure].
-         */
-        private fun loadInstalled(dir: Path): Bundle? {
+        /** The installed manifest when it is still the one to run: newer than embedded, this host version and engine, a compatible tinyui. */
+        private fun selectInstalled(dir: Path): BuildManifest? {
             val manifest = runCatching { BuildManifest.parse(fs.read(dir / MANIFEST) { readUtf8() }) }.getOrNull() ?: return null
             if (manifest.name != name || manifest.hostVersion != hostVersion || manifest.version in failed) return null
             if (manifest.engine != engine || !TinyUI.isCompatible(tinyui, manifest.tinyui)) return null
             if (embeddedCreatedAt?.let { manifest.createdAt <= it } == true) return null
-            val payload = manifest.payload.toMap()
-            return Bundle(manifest) { path ->
-                // a path outside the payload (a page's .js.map) was never downloaded
-                val hashKey = payload[path] ?: return@Bundle null
-                withContext(Dispatchers.Default) {
-                    val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
-                    if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
-                        throw IntegrityFailure("$path is missing or does not match manifest.hashes")
-                    }
-                    bytes
+            return manifest
+        }
+
+        /** Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded. */
+        fun verifyAtStartup(): Boolean {
+            val manifest = selected ?: return true
+            selected = null
+            val dir = root / INSTALLED / manifest.version
+            val files = HashMap<String, ByteArray>()
+            for ((path, hashKey) in manifest.payload) {
+                val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
+                if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
+                    failed += manifest.version
+                    onEvent(UpdateEvent.Failed(name, manifest.version, FailStage.INTEGRITY, "$path is missing or does not match manifest.hashes"))
+                    dropInstalled()
+                    return false
                 }
+                files[path] = bytes
             }
+            current = Bundle(manifest) { path -> files[path] }
+            return true
+        }
+
+        private fun dropInstalled() {
+            val keep = installed ?: return
+            installed = null
+            saveState()
+            fs.deleteRecursively(root / INSTALLED / keep)
         }
 
         suspend fun check(): CheckResult {
@@ -253,9 +267,7 @@ class Updates internal constructor(
                 discard()
                 installed = version
                 saveState()
-                // the running package stays: its pages read their files from it until the process ends, startup drops it
-                val running = current.manifest.version.takeIf { current !== embedded }
-                fs.list(root / INSTALLED).filter { it.name != version && it.name != running }.forEach { fs.deleteRecursively(it) }
+                fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) }
             } catch (e: CancellationException) {
                 discard()
                 throw e
@@ -326,9 +338,6 @@ class Updates internal constructor(
         fun isPathSegment(value: String): Boolean = value.isNotEmpty() && value != "." && value != ".." && value.all { it.isLetterOrDigit() || it == '.' || it == '_' || it == '-' }
     }
 }
-
-/** A file of an installed package no longer matches what was verified when it was installed (docs/updates.md §4.4). */
-internal class IntegrityFailure(message: String) : IllegalStateException(message)
 
 /** okio declares `FileSystem.SYSTEM` per platform, not in common code. */
 internal expect val platformFileSystem: FileSystem

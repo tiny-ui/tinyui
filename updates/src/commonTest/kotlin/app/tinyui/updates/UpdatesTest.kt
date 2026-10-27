@@ -237,49 +237,34 @@ class UpdatesTest {
     }
 
     @Test
-    fun startupReadsOnlyTheManifestAndAPageChecksTheBytesItReads() = runTest {
+    fun startupChecksTheInstalledBytesAndBlacklistsACorruptedPackage() = runTest {
         publish(manifest())
         updates(embedded()).check("shop")
         fs.write(dir / "shop/installed/v1/pages/home.jsb") { writeUtf8("HOME-v1 ") }
         events.clear()
         val u = updates(embedded())
-        assertEquals(listOf<UpdateEvent>(UpdateEvent.Running("shop", "v1", Source.INSTALLED)), events, "running is known before any page file is read")
-        val integrity = assertFailsWith<IntegrityFailure> { pageBytes(u.current("shop")) }
-        assertContains(integrity.message.orEmpty(), "pages/home.jsb")
-
-        // what UpdatesPage does with it
-        u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E6", "shop/home", "", integrity.message.orEmpty())))
         assertEquals("HOME-v0", pageBytes(u.current("shop")))
+        assertEquals(3, events.size, "$events")
+        assertEquals(UpdateEvent.Running("shop", "v1", Source.INSTALLED), events[0], "selected from its manifest, before the bytes are read")
+        assertEquals(FailStage.INTEGRITY, assertIs<UpdateEvent.Failed>(events[1]).stage)
+        assertEquals(UpdateEvent.Running("shop", "v0", Source.EMBEDDED), events[2], "the last Running counts")
         assertFalse(fs.exists(dir / "shop/installed/v1"))
         assertEquals(CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE), u.check("shop"))
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"failed\":[\"v1\"]")
     }
 
     @Test
-    fun aMissingInstalledFileIsAnIntegrityFailureNotAPageMissingFromThePackage() = runTest {
+    fun runningIsSentBeforeTheInstalledBytesAreRead() = runTest {
         publish(manifest())
         updates(embedded()).check("shop")
-        fs.delete(dir / "shop/installed/v1/pages/home.jsb")
-        val u = updates(embedded())
-        assertFailsWith<IntegrityFailure> { pageBytes(u.current("shop")) }
-        assertFailsWith<IllegalArgumentException> { u.current("shop").page("shop/nowhere") }
-    }
-
-    @Test
-    fun anInstallDoesNotDeleteThePackageTheProcessIsRunning() = runTest {
-        publish(manifest())
-        updates(embedded()).check("shop")
-        val u = updates(embedded())
-        publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z"))
-        assertEquals(CheckResult.Installed("v2"), u.check("shop"))
-        assertEquals("HOME-v1", pageBytes(u.current("shop")), "pages opened after the install still read v1")
-        publish(manifest(version = "v3", createdAt = "2026-09-22T12:00:00Z"))
-        assertEquals(CheckResult.Installed("v3"), u.check("shop"))
-        assertTrue(fs.exists(dir / "shop/installed/v1"))
-        assertFalse(fs.exists(dir / "shop/installed/v2"), "an install nobody runs goes")
-
-        updates(embedded())
-        assertEquals(listOf("v3"), fs.list(dir / "shop/installed").map { it.name }, "the next start drops the old one")
+        events.clear()
+        // a file that changes once Running is out is still caught: the bytes are read after it
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", fetch, { e ->
+            if (e is UpdateEvent.Running && events.isEmpty()) fs.write(dir / "shop/installed/v1/pages/home.jsb") { writeUtf8("late") }
+            events += e
+        }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        assertEquals(FailStage.INTEGRITY, assertIs<UpdateEvent.Failed>(events[1]).stage)
+        assertEquals("HOME-v0", pageBytes(u.current("shop")))
     }
 
     @Test
