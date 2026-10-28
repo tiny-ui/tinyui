@@ -322,7 +322,7 @@ final class app.tinyui/HostException : kotlin/Exception { // app.tinyui/HostExce
 }
 
 final class app.tinyui/HttpRequest { // app.tinyui/HttpRequest|null[0]
-    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String?, kotlin/Long?) // app.tinyui/HttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?;kotlin.Long?){}[0]
+    constructor <init>(kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String?, kotlin/Long?, kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // app.tinyui/HttpRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String?;kotlin.Long?;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
     final val body // app.tinyui/HttpRequest.body|{}body[0]
         final fun <get-body>(): kotlin/String? // app.tinyui/HttpRequest.body.<get-body>|<get-body>(){}[0]
@@ -330,6 +330,8 @@ final class app.tinyui/HttpRequest { // app.tinyui/HttpRequest|null[0]
         final fun <get-headers>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/HttpRequest.headers.<get-headers>|<get-headers>(){}[0]
     final val method // app.tinyui/HttpRequest.method|{}method[0]
         final fun <get-method>(): kotlin/String // app.tinyui/HttpRequest.method.<get-method>|<get-method>(){}[0]
+    final val tags // app.tinyui/HttpRequest.tags|{}tags[0]
+        final fun <get-tags>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui/HttpRequest.tags.<get-tags>|<get-tags>(){}[0]
     final val timeoutMs // app.tinyui/HttpRequest.timeoutMs|{}timeoutMs[0]
         final fun <get-timeoutMs>(): kotlin/Long? // app.tinyui/HttpRequest.timeoutMs.<get-timeoutMs>|<get-timeoutMs>(){}[0]
     final val url // app.tinyui/HttpRequest.url|{}url[0]

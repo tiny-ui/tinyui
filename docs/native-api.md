@@ -1,6 +1,6 @@
 # `tinyui-native` 与宿主接口
 
-- 状态：已定（2026-09-16）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
+- 状态：已定（2026-09-16）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、会话、事件）、ADR-004 §3.1（连续事件阈值）、ADR-007（职责边界）
 - 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 侧宿主给页面的东西只有 App 级的 `TinyUIHost`（§1），启动时建一次，交给每个 `TinyUIPage`
 
@@ -92,7 +92,7 @@ const api = http.client("app");      // 宿主注册的通道
 await api.post(`${BASE}/api/billing/checkout`, { plan });
 ```
 
-J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout? }`；`http.get` / `post` / `request` 走 `channel: "default"`。URL 由页面给全，框架不拼 base。
+J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout?, tags? }`；`http.get` / `post` / `request` 走 `channel: "default"`。URL 由页面给全，框架不拼 base。
 
 | 通道 | 实现 | 用途 |
 |---|---|---|
@@ -105,7 +105,7 @@ J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout? }`
 fun interface HttpChannel {
     suspend fun request(request: HttpRequest): HttpResponse
 }
-class HttpRequest(val method: String, val url: String, val headers: Map<String, String>, val body: String?, val timeoutMs: Long?)
+class HttpRequest(val method: String, val url: String, val headers: Map<String, String>, val body: String?, val timeoutMs: Long?, val tags: Map<String, String> = emptyMap())
 class HttpResponse(val status: Int, val headers: Map<String, String>, val body: String)
 
 KtorChannel(client: io.ktor.client.HttpClient)   // 把宿主已有的 client 包成通道
@@ -114,7 +114,23 @@ KtorChannel(client: io.ktor.client.HttpClient)   // 把宿主已有的 client �
 - 请求体：对象按 JSON 编码并设 `Content-Type: application/json`，字符串原样发送
 - 响应体：`Content-Type` 为 JSON 时解析成对象，否则为文本
 - 2xx resolve `{ status, headers, body }`；非 2xx 以 `E_HTTP` reject，`HostError` 带 `status`、`headers`、`body`（解析规则同上）
+- `tags`：页面写给宿主通道的备注，**任何通道都不把它发上网**（2026-10-28 加，注册流程触发：页面经通道发的验证码请求要告诉宿主"这个要过极验、场景是哪个"）。值只能是字符串，否则 `E_INVALID`；含义由页面与那个宿主的通道约定，框架不定义任何键，`default` 与 `KtorChannel` 忽略它；不进 manifest（不是宿主契约，宿主不认识的键照常发请求）。HTTP 本身没有这个概念，这是客户端库的惯例：OkHttp `Request.tag()`、Retrofit `@Tag`、Ktor `attributes`。`KtorChannel` 暂不把它转成 ktor `attributes`（宿主插件读不到）：现有宿主都自写通道，等第一个需要的再加，不破坏接口
 - 通道名 `default` 保留，宿主不能注册；页面用了宿主没注册的名字 → `E_UNSUPPORTED`。`http.client` 的参数必须是字符串字面量（build-chain.md §5.1），通道名随 `requires` 进 manifest、发布前对照快照核对
+
+```ts
+await api.post("/api/app/v1/auth/send-code", { phone }, { tags: { captchaScene: "USER_REGISTER" } });
+```
+
+```kotlin
+class AppChannel(…) : HttpChannel {
+    override suspend fun request(request: HttpRequest): HttpResponse {
+        val scene = request.tags["captchaScene"]   // 交给宿主自己的极验拦截，标签本身不上网
+        …
+    }
+}
+```
+
+**通道是身份边界**（最佳实践，2026-10-28）：建立或撤销身份的响应在宿主通道里消费，页面永远只见会话状态（§9）。登录 / 注册接口返回的 token 由通道写进宿主的会话存储，交给页面的 body 先剥掉凭证字段；之后 `session.state()` 变成已登录，宿主的导航自己切走，页面什么都不用做。临时的"注册中"凭证同理：通道收下、后续请求自动带上，页面看不见。这样包被热下发、被调试器看到时都不含凭证。
 
 `setTimeout` / `clearTimeout` 是 core 提供的全局，经 J3 `timer.schedule` / J4 `timer.cancel`，宿主侧由 `PageHost` 实现，随页面关闭取消。
 
@@ -283,3 +299,18 @@ await ui.toast(i18n.t("copied"))   // 要不要提示由页面决定
 - 没给 `text` → `E_INVALID`；页面不在屏幕上（`TinyUIPage` 不在组合里）→ `E_UNSUPPORTED`
 - Android 13 起系统会自己弹"已复制"浮层，页面再 toast 会重复；这是平台行为，框架不判断
 - 2026-10-12 加（第一个需要的业务页面触发：复制订单号）
+
+## 16. `crypto`
+
+```ts
+const cipher = await crypto.rsaEncrypt(password, { publicKey })   // base64 进，base64 出
+await api.post("/api/app/v1/auth/register", { email, password: cipher })
+```
+
+- J3 `crypto.rsaEncrypt`，参数 `{ text, publicKey }`：RSA 公钥加密，PKCS#1 v1.5 填充，`text` 按 UTF-8 编码；resolve 密文的 base64。框架实现（Android `Cipher("RSA/ECB/PKCS1Padding")`，iOS `SecKeyCreateEncryptedData`），宿主不参与
+- `publicKey` 是 X.509 SubjectPublicKeyInfo 的 DER 的 base64，即 `-----BEGIN PUBLIC KEY-----` 里那段（换行可留）；裸 PKCS#1 `RSAPublicKey` 不收。iOS 只认 PKCS#1，框架从 X.509 里取出来再交给系统，两端同一个入参
+- `text` 最多「密钥字节数 − 11」字节（2048 位密钥 245 字节），超长、公钥读不出或不是 RSA → `E_INVALID`；两端在同一处检查，报错一致
+- 填充带随机数：同一输入每次密文都不同，不能拿密文比对是否相等；验证只能用私钥解回来
+- 为什么是框架能力而不是 `host.call`：加密是通用原生能力，第二个宿主一样要；在 QuickJS 里跑 JS 的 RSA 库既慢，又把加密实现放进了可热下发的包里。公钥由页面经自己的通道取、页内缓存，换钥只改页面
+- 只做 RSA 公钥加密一项；OAEP、`sha256`、`hmac`、对称加密等第一个需要的页面出现时再加，参数对象为它们留了位置
+- 2026-10-28 加（注册流程触发：密码在第一步就转成密文，明文不离开那一页）
