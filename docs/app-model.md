@@ -47,9 +47,39 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 - **顺序只在单页内保证**：每个引擎串行，同一页收到的 K5 严格有序；跨页无顺序承诺
 - **同名页面多实例**：detail 跳 detail 是两个引擎，Kotlin 以页面实例 id 寻址而不是页面名；回传目标、订阅登记都挂在实例上
 
-## 5. 返回栈回收
+## 5. 页面随导航条目存活与返回栈回收
 
-ADR-002 遗留的"栈深页引擎回收策略"归 Kotlin 侧路由器：栈深超过 N 关引擎，返回时用保存的 props 重新 `__mount`。推论是页面必须能从 props + store 重建，页内临时状态丢失由业务经 store 自救。N 等 roadmap B 组真机内存数据出来后定。
+2026-10-28 定（PingPong 注册流程触发：从第二步返回第一步，填好的邮箱密码不能没了）。**页面实例跟着导航条目活，和原生页一样**：条目在栈里，引擎、节点树、组件里用户输入的东西都在；条目出栈才关。不让业务把表单草稿塞进 `store` 自救——那是业务替框架补课。
+
+机制是 Compose 官方的 `retain`（`androidx.compose.runtime:runtime-retain`，就是为"在返回栈里、此刻没被组合的导航页"设计的）：
+
+| 层 | 做什么 |
+|---|---|
+| `TinyUIPage` | `PageHost` 用 `retain` 持有；离开组合只算不可见（`pageVisible()` 为 false，`uriHandler` / 剪贴板摘掉，期间开链接、写剪贴板答 `E_UNSUPPORTED`），回来按生命周期恢复可见；保留它的存储放手时才 `close()` |
+| 内置组件 | 用户做出来的状态 `retain`：`TextField` 文本、`CodeField` 数字、`Column` / `Row` / `LazyColumn` 滚动位置；焦点、展开中的下拉菜单 `remember`，回来重新开始 |
+| `UpdatesPage` | 当前包与已加载的页面也 `retain`：回来的是用户离开时那一页、打开时那个包，期间装了新包也不换；第一帧就组合出被保留的页面（否则存储会当它没被取回而放手） |
+| 宿主 | 给每个导航条目一个保留离开值的存储，条目出栈时清掉；不给就是 Compose 的缺省存储（离开组合即丢），行为与以前完全一样 |
+
+宿主用 Navigation 3 时是一个 decorator（框架不依赖任何导航库，写法放文档，不进库）：
+
+```kotlin
+@Composable
+fun <T : Any> rememberRetainedValuesNavEntryDecorator(): NavEntryDecorator<T> {
+    val registry = retainRetainedValuesStoreRegistry()
+    return remember(registry) {
+        NavEntryDecorator(
+            onPop = { key -> registry.clearChild(key) },   // 出栈：放手，页面 close()
+            decorate = { entry -> registry.LocalRetainedValuesStoreProvider(entry.contentKey) { entry.Content() } },
+        )
+    }
+}
+```
+
+sample 的四个 tab 各给一个存储（`App.kt`），切走再切回，表单内容与列表滚动位置都在。
+
+**栈深回收**仍归宿主：栈深超过 N 时对最深的条目 `clearChild`，那一页关引擎，返回时用保存的 props 重新 `__mount`——只有被回收的页才需要能从 props + store 重建。N 等 roadmap B 组真机内存数据出来后定；注册流程最多 4 层，不触发。被保留的页面一直占着引擎内存，这正是回收要管的。
+
+与"页面预载"的关系：预载（导航前先 `start()` 到挂载完成）同样需要 `PageHost` 独立于组合，`retain` 已经把它从 `remember` 里拿出来了；等首屏实测超预算再加，不另起机制。
 
 ## 6. 对构建链的影响
 

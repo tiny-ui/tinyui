@@ -33,6 +33,7 @@ kotlin {
         commonMain.dependencies {
             api(libs.quickjs.kmp)
             implementation(compose.runtime)
+            implementation(libs.compose.runtime.retain)
             implementation(compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.kotlinx.coroutines.core)

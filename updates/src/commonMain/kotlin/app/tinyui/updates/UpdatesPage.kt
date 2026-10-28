@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -22,6 +22,9 @@ import kotlinx.coroutines.CancellationException
  * [TinyUIPage] for a page of one of [updates]' packages: [name] is the module name, the part before the first
  * `/` names the package. A page from an installed package that fails with E2 / E6 is remounted from the
  * embedded package, which the whole package falls back to (docs/updates.md §4.5).
+ *
+ * The bundle and the loaded page are retained with the page (see [TinyUIPage]): a page coming back from the back
+ * stack is the one the user left, from the bundle it was opened with, even if a newer one was installed meanwhile.
  */
 @Composable
 fun UpdatesPage(
@@ -35,9 +38,12 @@ fun UpdatesPage(
     onHost: (PageHost) -> Unit = {},
 ) {
     val pkg = name.substringBefore('/')
-    var bundle by remember(updates, name) { mutableStateOf(updates.current(pkg)) }
-    val loaded by produceState<Result<LoadedPage>?>(null, bundle, name) {
-        value = try {
+    var bundle by retain(updates, name) { mutableStateOf(updates.current(pkg)) }
+    // already loaded when it comes back: the first frame must compose the retained page, or its store lets it go
+    val loadedState = retain(bundle, name) { mutableStateOf<Result<LoadedPage>?>(null) }
+    LaunchedEffect(loadedState) {
+        if (loadedState.value != null) return@LaunchedEffect
+        loadedState.value = try {
             Result.success(bundle.page(name))
         } catch (e: CancellationException) {
             throw e
@@ -45,7 +51,7 @@ fun UpdatesPage(
             Result.failure(t)
         }
     }
-    val result = loaded ?: return
+    val result = loadedState.value ?: return
     // a page the package cannot load (e.g. not in it) is not the package failing to run: no fallback
     val page = result.getOrElse { t ->
         val failure = remember(t) {

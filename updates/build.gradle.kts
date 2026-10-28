@@ -18,6 +18,7 @@ kotlin {
             implementation(libs.quickjs.kmp)
             api(libs.okio)
             implementation(compose.runtime)
+            implementation(libs.compose.runtime.retain)
             implementation(compose.foundation)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
