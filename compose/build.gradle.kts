@@ -33,7 +33,8 @@ kotlin {
         commonMain.dependencies {
             api(libs.quickjs.kmp)
             implementation(compose.runtime)
-            implementation(libs.compose.runtime.retain)
+            // hosts give each navigation entry a store from it (docs/app-model.md §5)
+            api(libs.compose.runtime.retain)
             implementation(compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.kotlinx.coroutines.core)

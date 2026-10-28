@@ -422,16 +422,17 @@ private fun LazyColumnComponent(scope: NodeScope) {
     scope.Commands { command ->
         if (command.name == "scrollTo") state.animateScrollToItem(((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1)))
     }
+    // with the scroll position: a list coming back still at its end has already reported that length
+    val reachedEnd = retain { ReachedEnd() }
     if (scope.has("onReachEnd")) {
         // fires on each arrival at the last row and when the list grows while there; re-arms once the user scrolls away
         LaunchedEffect(state, node) {
-            var firedFor = -1
             snapshotFlow { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to node.children.size }
                 .distinctUntilChanged()
                 .collect { (last, size) ->
                     val atEnd = size > 0 && last >= size - 1
-                    if (!atEnd) firedFor = -1
-                    else if (firedFor != size) { firedFor = size; scope.dispatch("onReachEnd") }
+                    if (!atEnd) reachedEnd.size = -1
+                    else if (reachedEnd.size != size) { reachedEnd.size = size; scope.dispatch("onReachEnd") }
                 }
         }
     }
@@ -449,6 +450,9 @@ private fun LazyColumnComponent(scope: NodeScope) {
         items(node.children, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
     }
 }
+
+/** The list length `onReachEnd` last fired for; -1 once the user is away from the end. */
+private class ReachedEnd(var size: Int = -1)
 
 private fun payload(key: String, value: String) = buildJsonObject { put(key, value) }.toString()
 

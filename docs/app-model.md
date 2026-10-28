@@ -75,6 +75,8 @@ fun <T : Any> rememberRetainedValuesNavEntryDecorator(): NavEntryDecorator<T> {
 }
 ```
 
+被保留的页面**照常在后台运行**，和原生页留在返回栈里时它的 ViewModel 协程照跑一样：计时器、`http`、`host.call` 都不停，`pageVisible()` 为 false，页面据此自己决定停什么（轮询、动画）。挂载时交给 `host.call` 能力的 `locals` 随页面保留，所以它们应与导航条目同寿（条目级 ViewModel 之类），不要传组合级的东西。宿主的保留存储由 `tinyui-compose` 以 `api` 依赖带出，宿主不用另加。
+
 sample 的四个 tab 各给一个存储（`App.kt`），切走再切回，表单内容与列表滚动位置都在。
 
 **栈深回收**仍归宿主：栈深超过 N 时对最深的条目 `clearChild`，那一页关引擎，返回时用保存的 props 重新 `__mount`——只有被回收的页才需要能从 props + store 重建。N 等 roadmap B 组真机内存数据出来后定；注册流程最多 4 层，不触发。被保留的页面一直占着引擎内存，这正是回收要管的。

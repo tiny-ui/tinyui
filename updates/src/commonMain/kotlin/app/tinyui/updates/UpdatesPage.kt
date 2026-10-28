@@ -39,10 +39,11 @@ fun UpdatesPage(
 ) {
     val pkg = name.substringBefore('/')
     var bundle by retain(updates, name) { mutableStateOf(updates.current(pkg)) }
-    // already loaded when it comes back: the first frame must compose the retained page, or its store lets it go
+    // already loaded when it comes back: the first frame must compose the retained page, or its store lets it go.
+    // A failure is not kept: coming back tries again, the read may well work now
     val loadedState = retain(bundle, name) { mutableStateOf<Result<LoadedPage>?>(null) }
     LaunchedEffect(loadedState) {
-        if (loadedState.value != null) return@LaunchedEffect
+        if (loadedState.value?.isSuccess == true) return@LaunchedEffect
         loadedState.value = try {
             Result.success(bundle.page(name))
         } catch (e: CancellationException) {
