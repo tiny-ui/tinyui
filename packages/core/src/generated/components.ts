@@ -282,6 +282,8 @@ export interface PinFieldProps extends LayoutProps {
     enabled?: boolean;
     /** error colour on the cell outlines */
     error?: boolean;
+    /** oneTimeCode lets the system offer a code it just received by SMS; none keeps it from offering anything, saved passwords included */
+    autofill?: "none" | "oneTimeCode";
     onChange?: (e: PinFieldChangePayload) => void;
     onComplete?: (e: PinFieldCompletePayload) => void;
     ref?: Ref<PinFieldCommands>;

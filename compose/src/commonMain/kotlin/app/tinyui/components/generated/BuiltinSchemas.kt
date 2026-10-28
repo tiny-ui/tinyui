@@ -246,6 +246,7 @@ object BuiltinSchemas {
             "secure" to PropSpec.Bool(default = false, required = false, initial = false),
             "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
             "error" to PropSpec.Bool(default = false, required = false, initial = false),
+            "autofill" to PropSpec.Enum(values = setOf("none", "oneTimeCode"), default = "none", required = false, initial = false),
         ),
         events = mapOf(
             "onChange" to mapOf("text" to FieldSpec.Str),

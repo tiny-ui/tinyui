@@ -74,7 +74,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
-| `PinField` | `length`（默认 6）、`secure`、`enabled`、`error` | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
+| `PinField` | `length`（默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
@@ -90,7 +90,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 `TextField` 的外观与通知（2026-10-28 加，注册流程触发）：`error` 把描边、`supportingText` 染成错误色，`supportingText` 是字段下方一行提示或错误文案；`secure` 不设时跟 `keyboard="password"`，显隐切换就是页面翻转它，配 `trailingIcon` + `onTrailingClick`（清除按钮同理：`trailingIcon` + `setText("")`，不另加组件）。`prefixText` 是输入前的固定文字（区号），画在 leading 槽而不是 M3 `prefix`——后者在空且未聚焦时隐藏、也不能点；`onPrefixClick` 让它可点（打开区号选择）。`imeAction="next"` 时键盘动作先 `onCommit` 再把焦点移到下一个可聚焦项。`maxLength` 超长截断而不是拒绝。`onFocusChange` 只在焦点真的变化时发，首次组合的"未聚焦"不算，所以 `onCommit` 也不会在首帧被误发（此前会）。文本仍归 Kotlin（ADR-004），这些都只是外观与通知。
 
-`PinField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）：焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`onComplete` 每次填满最后一格时发，`clear` / `setText` 与 `TextField.setText` 一样会触发 `onChange`——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
+`PinField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）：焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`autofill="oneTimeCode"` 让系统把刚收到的短信验证码作为建议（Android 自动填充 `SmsOtpCode`、iOS 键盘上方「来自信息」）；缺省 `none` 时明确告诉系统什么都别建议——iOS 不设内容类型会按 `NumberPassword` 键盘把它当密码框、弹钥匙串，交易密码不该这样。iOS 只从 `PlatformImeOptions` 读内容类型、不看 semantics，所以两端各走各的路，平台差异在框架里消化。`onComplete` 每次填满最后一格时发，`clear` / `setText` 与 `TextField.setText` 一样会触发 `onChange`——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
 
 ```tsx
 const pin = ref<PinFieldCommands>();

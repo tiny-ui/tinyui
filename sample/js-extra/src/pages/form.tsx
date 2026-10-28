@@ -36,6 +36,8 @@ export default function Form() {
                 <Option value="en" text="English" />
                 <Option value="zh" text="中文" />
             </Select>
+            <Text text="SMS code" style="titleSmall" />
+            <PinField width="fill" autofill="oneTimeCode" onComplete={(e) => void ui.toast(`code ${e.text}`)} />
             <Text text="Transaction PIN (1234 is wrong)" style="titleSmall" />
             <PinField
                 width="fill" secure error={pinError()} ref={pin}

@@ -1,6 +1,7 @@
 package app.tinyui
 
 import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.text.input.PlatformImeOptions
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update
@@ -145,3 +146,9 @@ internal expect fun systemTimeZone(): String
 internal expect fun zoneOffsetMinutes(zone: String, epochMs: Long): Int?
 
 internal expect fun plainTextClipEntry(text: String): ClipEntry
+
+/**
+ * iOS reads the text content type only from here, never from semantics, and otherwise derives it from the keyboard:
+ * NumberPassword would make a code field a password field. Null where the platform has nothing to say (Android).
+ */
+internal expect fun oneTimeCodeImeOptions(oneTimeCode: Boolean): PlatformImeOptions?

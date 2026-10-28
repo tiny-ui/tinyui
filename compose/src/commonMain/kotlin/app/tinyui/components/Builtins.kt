@@ -56,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -63,6 +64,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -84,6 +87,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
+import app.tinyui.oneTimeCodeImeOptions
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
 import app.tinyui.schema.IconValue
@@ -298,15 +302,17 @@ private fun PinFieldComponent(scope: NodeScope) {
     }
     val secure = scope.get<Boolean>("secure") == true
     val error = scope.get<Boolean>("error") == true
+    val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
     val colors = MaterialTheme.colorScheme
     BasicTextField(
         value = value,
         onValueChange = { update(it.text) },
         enabled = scope.get<Boolean>("enabled") ?: true,
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done, platformImeOptions = oneTimeCodeImeOptions(oneTimeCode)),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { focused = it.isFocused },
+        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { focused = it.isFocused }
+            .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier),
         decorationBox = { inner ->
             Box {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
