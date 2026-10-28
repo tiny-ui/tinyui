@@ -1,25 +1,38 @@
 package app.tinyui.components
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LoadingIndicatorDefaults
 import androidx.compose.material3.LocalContentColor
@@ -43,15 +56,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,8 +114,12 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     }
     register(BuiltinSchemas.Text) { scope ->
         val maxLines = scope.get<Double>("maxLines")?.toInt()?.takeIf { it > 0 } ?: Int.MAX_VALUE
+        val raw = scope.get<String>("text") ?: ""
+        val primary = MaterialTheme.colorScheme.primary
+        // without a handler the brackets are just text: a page that never asked for links never gets them
+        val text = if (scope.has("onLinkClick")) remember(raw, primary) { linkedText(raw, primary) { id -> scope.dispatch("onLinkClick", payload("id", id)) } } else AnnotatedString(raw)
         Text(
-            text = scope["text"] ?: "",
+            text = text,
             style = scope.get<String>("style")?.let { Theme.textStyle(MaterialTheme.typography, it) } ?: LocalTextStyle.current,
             color = scope.color("color") ?: Color.Unspecified,
             fontSize = scope["fontSize"] ?: TextUnit.Unspecified,
@@ -123,7 +149,19 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
             modifier = scope.modifier(clickable = false),
         )
     }
+    register(BuiltinSchemas.Checkbox) { scope ->
+        Checkbox(
+            checked = scope.get<Boolean>("checked") == true,
+            onCheckedChange = if (scope.has("onClick")) ({ scope.dispatch("onClick") }) else null,
+            enabled = scope.get<Boolean>("enabled") ?: true,
+            modifier = scope.modifier(clickable = false),
+        )
+    }
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
+    register(BuiltinSchemas.PinField) { scope -> PinFieldComponent(scope) }
+    register(BuiltinSchemas.Select) { scope -> SelectComponent(scope) }
+    // data for its Select, never drawn
+    register(BuiltinSchemas.Option) { }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
     register(BuiltinSchemas.Icon) { scope ->
@@ -171,16 +209,22 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
     else -> Alignment.TopStart
 }
 
-/** Text and cursor stay here; JS gets `onChange` / `onCommit` and sends `setText` / `focus` / `blur` (docs/adr-004 §3.3). */
+/**
+ * Text and cursor stay here; JS gets `onChange` / `onCommit` / `onFocusChange` and sends `setText` / `focus` / `blur`
+ * (docs/adr-004 §3.3). Error, supporting text, prefix and trailing icon are looks the page drives through props.
+ */
 @Composable
 private fun TextFieldComponent(scope: NodeScope) {
-    var text by remember { mutableStateOf(scope.get<String>("initialText") ?: "") }
+    val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
+    fun clip(t: String) = if (maxLength != null && t.length > maxLength) t.take(maxLength) else t
+    var text by remember { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
+    var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", text)) }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> { text = command.args["text"] as? String ?: ""; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
+            "setText" -> { text = clip(command.args["text"] as? String ?: ""); if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -189,16 +233,144 @@ private fun TextFieldComponent(scope: NodeScope) {
         "number" -> KeyboardType.Number; "email" -> KeyboardType.Email; "phone" -> KeyboardType.Phone; "password" -> KeyboardType.Password
         else -> KeyboardType.Text
     }
+    val secure = scope.get<Boolean>("secure") ?: (keyboard == KeyboardType.Password)
+    val next = scope.get<String>("imeAction") == "next"
+    val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
+    val trailing = scope.get<IconValue>("trailingIcon")
     OutlinedTextField(
         value = text,
-        onValueChange = { text = it; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", it)) },
+        onValueChange = { val t = clip(it); if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } },
         placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+        // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
+        leadingIcon = prefix?.let { p ->
+            {
+                val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
+                Text(p, modifier = tap.padding(start = 16.dp, end = 8.dp))
+            }
+        },
+        trailingIcon = trailing?.let { icon ->
+            {
+                if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
+                else Icon(icon.vector, contentDescription = null)
+            }
+        },
+        isError = scope.get<Boolean>("error") == true,
+        supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         singleLine = scope.get<Boolean>("singleLine") ?: true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { commit() }),
-        visualTransformation = if (keyboard == KeyboardType.Password) PasswordVisualTransformation() else VisualTransformation.None,
-        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { if (!it.isFocused) commit() },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { commit(); focusManager.moveFocus(FocusDirection.Next) }),
+        visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
+        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged {
+            // the first callback reports the initial unfocused state: not a change, not a focus loss
+            if (it.isFocused == focused) return@onFocusChanged
+            focused = it.isFocused
+            if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
+            if (!focused) commit()
+        },
     )
+}
+
+/**
+ * Digit cells drawn over one invisible input, so focus and the IME never hop between fields across the bridge
+ * (docs/adr-004 §3.3); `onComplete` fires each time the last cell gets filled.
+ */
+@Composable
+private fun PinFieldComponent(scope: NodeScope) {
+    val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, 12)
+    var value by remember { mutableStateOf(TextFieldValue("")) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var focused by remember { mutableStateOf(false) }
+    fun update(raw: String) {
+        val t = raw.filter { it in '0'..'9' }.take(length)
+        val changed = t != value.text
+        value = TextFieldValue(t, selection = TextRange(t.length))
+        if (!changed) return
+        if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t))
+        if (t.length == length && scope.has("onComplete")) scope.dispatch("onComplete", payload("text", t))
+    }
+    scope.Commands { command ->
+        when (command.name) {
+            "setText" -> update(command.args["text"] as? String ?: "")
+            "clear" -> update("")
+            "focus" -> focusRequester.requestFocus()
+        }
+    }
+    val secure = scope.get<Boolean>("secure") == true
+    val error = scope.get<Boolean>("error") == true
+    val colors = MaterialTheme.colorScheme
+    BasicTextField(
+        value = value,
+        onValueChange = { update(it.text) },
+        enabled = scope.get<Boolean>("enabled") ?: true,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { focused = it.isFocused },
+        decorationBox = { inner ->
+            Box {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (i in 0 until length) {
+                        val digit = value.text.getOrNull(i)
+                        val current = focused && i == minOf(value.text.length, length - 1)
+                        val outline = when { error -> colors.error; current -> colors.primary; else -> colors.outline }
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.weight(1f).height(56.dp).border(if (current || error) 2.dp else 1.dp, outline, RoundedCornerShape(8.dp)),
+                        ) {
+                            if (digit != null) Text(if (secure) "\u2022" else digit.toString(), style = MaterialTheme.typography.headlineSmall)
+                        }
+                    }
+                }
+                // the real input stays composed (iOS keeps its text session on it) but never shows
+                Box(Modifier.matchParentSize().alpha(0f)) { inner() }
+            }
+        },
+    )
+}
+
+/** Choices are the `Option` children, read as data; the selection is the page's prop. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectComponent(scope: NodeScope) {
+    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val selected = scope.get<String>("value")
+    val enabled = scope.get<Boolean>("enabled") ?: true
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = it }, modifier = scope.modifier(clickable = false)) {
+        OutlinedTextField(
+            value = options.firstOrNull { it.first == selected }?.second ?: "",
+            onValueChange = {},
+            readOnly = true,
+            enabled = enabled,
+            singleLine = true,
+            label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+            placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            for ((value, text) in options) {
+                DropdownMenuItem(text = { Text(text) }, onClick = { expanded = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
+            }
+        }
+    }
+}
+
+private val LINK = Regex("""\[([^\]]+)]\(([^)\s]+)\)""")
+
+/** The `[label](id)` spans of [text] as links in [color]; everything else, stray brackets included, stays literal. */
+internal fun linkedText(text: String, color: Color, onClick: (String) -> Unit): AnnotatedString = buildAnnotatedString {
+    var at = 0
+    for (m in LINK.findAll(text)) {
+        append(text.substring(at, m.range.first))
+        val id = m.groupValues[2]
+        pushLink(LinkAnnotation.Clickable(tag = id, styles = TextLinkStyles(SpanStyle(color = color))) { onClick(id) })
+        append(m.groupValues[1])
+        pop()
+        at = m.range.last + 1
+    }
+    append(text.substring(at))
 }
 
 /** Rows are the node's children; virtualisation only in composition (docs/adr-003 §3.6). */

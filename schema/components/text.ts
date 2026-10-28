@@ -1,8 +1,8 @@
-import { color, defineComponent, enumOf, number, sp, string, TEXT_STYLES } from "tinyui-cli/schema";
+import { color, defineComponent, enumOf, field, number, sp, string, TEXT_STYLES } from "tinyui-cli/schema";
 
 export default defineComponent("Text", {
     props: {
-        text: string({ required: true }),
+        text: string({ required: true, doc: "with onLinkClick set, `[label](id)` spans render as links" }),
         style: enumOf(TEXT_STYLES, { doc: "Material 3 text style; fontSize / fontWeight override its fields" }),
         color: color(),
         fontSize: sp(),
@@ -10,5 +10,8 @@ export default defineComponent("Text", {
         maxLines: number({ doc: "0 = unlimited", default: 0 }),
         align: enumOf(["start", "center", "end"], { default: "start" }),
     },
-    events: { onClick: {} },
+    events: {
+        onClick: {},
+        onLinkClick: { id: field.string("the `(id)` of the tapped link") },
+    },
 });

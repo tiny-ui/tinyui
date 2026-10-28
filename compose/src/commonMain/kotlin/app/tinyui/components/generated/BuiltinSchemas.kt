@@ -67,6 +67,7 @@ object BuiltinSchemas {
         ),
         events = mapOf(
             "onClick" to emptyMap(),
+            "onLinkClick" to mapOf("id" to FieldSpec.Str),
         ),
         commands = mapOf(
         ),
@@ -112,10 +113,20 @@ object BuiltinSchemas {
             "placeholder" to PropSpec.Str(default = "", required = false, initial = false),
             "singleLine" to PropSpec.Bool(default = true, required = false, initial = false),
             "keyboard" to PropSpec.Enum(values = setOf("text", "number", "email", "phone", "password"), default = "text", required = false, initial = false),
+            "secure" to PropSpec.Bool(default = null, required = false, initial = false),
+            "error" to PropSpec.Bool(default = false, required = false, initial = false),
+            "supportingText" to PropSpec.Str(default = null, required = false, initial = false),
+            "prefixText" to PropSpec.Str(default = null, required = false, initial = false),
+            "trailingIcon" to PropSpec.IconSpec(required = false, initial = false),
+            "imeAction" to PropSpec.Enum(values = setOf("done", "next"), default = "done", required = false, initial = false),
+            "maxLength" to PropSpec.Num(default = 0.0, required = false, initial = false),
         ),
         events = mapOf(
             "onChange" to mapOf("text" to FieldSpec.Str),
             "onCommit" to mapOf("text" to FieldSpec.Str),
+            "onFocusChange" to mapOf("focused" to FieldSpec.Bool),
+            "onTrailingClick" to emptyMap(),
+            "onPrefixClick" to emptyMap(),
         ),
         commands = mapOf(
             "setText" to mapOf("text" to FieldSpec.Str),
@@ -213,7 +224,74 @@ object BuiltinSchemas {
         layout = true,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider)
+    val Checkbox = ComponentSchema(
+        type = "Checkbox",
+        props = mapOf(
+            "checked" to PropSpec.Bool(default = null, required = true, initial = false),
+            "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
+        ),
+        events = mapOf(
+            "onClick" to emptyMap(),
+        ),
+        commands = mapOf(
+        ),
+        children = false,
+        layout = true,
+    )
+
+    val PinField = ComponentSchema(
+        type = "PinField",
+        props = mapOf(
+            "length" to PropSpec.Num(default = 6.0, required = false, initial = false),
+            "secure" to PropSpec.Bool(default = false, required = false, initial = false),
+            "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
+            "error" to PropSpec.Bool(default = false, required = false, initial = false),
+        ),
+        events = mapOf(
+            "onChange" to mapOf("text" to FieldSpec.Str),
+            "onComplete" to mapOf("text" to FieldSpec.Str),
+        ),
+        commands = mapOf(
+            "setText" to mapOf("text" to FieldSpec.Str),
+            "focus" to emptyMap(),
+            "clear" to emptyMap(),
+        ),
+        children = false,
+        layout = true,
+    )
+
+    val Select = ComponentSchema(
+        type = "Select",
+        props = mapOf(
+            "value" to PropSpec.Str(default = null, required = false, initial = false),
+            "placeholder" to PropSpec.Str(default = "", required = false, initial = false),
+            "label" to PropSpec.Str(default = null, required = false, initial = false),
+            "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
+        ),
+        events = mapOf(
+            "onSelect" to mapOf("value" to FieldSpec.Str),
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = true,
+    )
+
+    val Option = ComponentSchema(
+        type = "Option",
+        props = mapOf(
+            "value" to PropSpec.Str(default = null, required = true, initial = false),
+            "text" to PropSpec.Str(default = null, required = true, initial = false),
+        ),
+        events = mapOf(
+        ),
+        commands = mapOf(
+        ),
+        children = false,
+        layout = false,
+    )
+
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, PinField, Select, Option)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")

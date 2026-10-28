@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`PinField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -69,10 +69,14 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|---|
 | `Column` / `Row` | `gap`、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
-| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick` | | |
+| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick`、`onLinkClick{id}`（给了它，`text` 里的 `[文案](id)` 渲染成链接） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
-| `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard` | `onChange{text}`、`onCommit{text}`（IME Done 或失焦） | `setText{text}`、`focus`、`blur` | |
+| `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
+| `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
+| `PinField` | `length`（默认 6）、`secure`、`enabled`、`error` | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
+| `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
+| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
@@ -81,6 +85,23 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
+
+`Checkbox` 与 `RadioButton` 同一模式（2026-10-28 加）：只报点击，勾没勾是页面状态。勾选框带一句文案时，把两者包进 `<Row role="checkbox" selected={…} onClick={…}>`，整行一个读屏节点，`Checkbox` 本身不给 `onClick`。
+
+`TextField` 的外观与通知（2026-10-28 加，注册流程触发）：`error` 把描边、`supportingText` 染成错误色，`supportingText` 是字段下方一行提示或错误文案；`secure` 不设时跟 `keyboard="password"`，显隐切换就是页面翻转它，配 `trailingIcon` + `onTrailingClick`（清除按钮同理：`trailingIcon` + `setText("")`，不另加组件）。`prefixText` 是输入前的固定文字（区号），画在 leading 槽而不是 M3 `prefix`——后者在空且未聚焦时隐藏、也不能点；`onPrefixClick` 让它可点（打开区号选择）。`imeAction="next"` 时键盘动作先 `onCommit` 再把焦点移到下一个可聚焦项。`maxLength` 超长截断而不是拒绝。`onFocusChange` 只在焦点真的变化时发，首次组合的"未聚焦"不算，所以 `onCommit` 也不会在首帧被误发（此前会）。文本仍归 Kotlin（ADR-004），这些都只是外观与通知。
+
+`PinField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）：焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`onComplete` 每次填满最后一格时发，`clear` / `setText` 与 `TextField.setText` 一样会触发 `onChange`——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
+
+```tsx
+const pin = ref<PinFieldCommands>();
+<PinField secure error={wrong()} ref={pin}
+    onChange={(e) => { if (e.text) setWrong(false) }}
+    onComplete={(e) => verify(e.text).catch(() => { setWrong(true); pin.cmd("clear", {}) })} />
+```
+
+`Select` 是 M3 `ExposedDropdownMenuBox`（2026-10-28 加）。选项不能做成数组 prop（prop 只过标量，patch-protocol.md §4），所以是 `Option` children：`Select` 像 `Row` 读 child 的 `weight` 一样读 `Option` 的 `value` / `text`，`Option` 自己什么都不画。选中值叫 `value` 而不是 `selected`，因为后者是公共布局 prop（可选中容器）。选中态归页面：`onSelect` 报选了哪个，页面把它写回 `value`。
+
+`Text` 内联链接（2026-10-28 加）：给了 `onLinkClick`，`text` 里的 `[文案](id)` 渲染成 primary 色链接，点击报 `{id}`；没给时按字面显示。协议句"我同意 [隐私政策](privacy) 及 [服务协议](terms)"要行内折行，`Row` 拼几个 `Text` 做不到；markdown 链接子集是最小够用的标记，i18n 文案里直接写。只认 `[` `]` `(` `)` 紧挨、id 不含空白的形式，其余方括号原样显示；不支持嵌套与转义。
 
 `Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
 
