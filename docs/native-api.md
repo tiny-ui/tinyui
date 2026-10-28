@@ -54,21 +54,27 @@ navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJs
 navigation.onResult((result, from) => …);       // 渲染期调用；K5 topic navigation.result
 ```
 
-宿主实现 `Navigator` 接口，交给 `TinyUIHost`。两个方法都带 `from: PageContext`，即发起调用的那次挂载：留在返回栈里的页面照常运行（[app-model.md](./app-model.md) §5），页面也可能分在几个栈里（各 tab、弹层），所以宿主**按调用方操作，不按栈顶**。宿主挂载页面时经 `locals` 给它一个指向自己导航条目的句柄，在这里用 `from[local]` 取回：
+宿主实现 `Navigator` 接口，交给 `TinyUIHost`。两个方法都带 `from: PageContext`，即发起调用的那次挂载：留在返回栈里的页面照常运行（[app-model.md](./app-model.md) §5），页面也可能分在几个栈里（各 tab、弹层），所以宿主**按调用方操作，不按栈顶**。宿主挂载页面时经 `locals` 给它一个指向自己导航条目的句柄，在这里用 `from[local]` 取回。**要在调用里同步取**：`locals` 跟着页面最近一次组合走，切线程之后再取，可能已是别的值：
 
 ```kotlin
-val NavEntryLocal = PageLocal<NavEntry>()          // 宿主自己的类型：所在的栈 + 本页的条目
+class NavEntry(val stack: MutableList<NavEntry>) { var pageHost: PageHost? = null }   // 宿主自己的类型
+val NavEntryLocal = PageLocal<NavEntry>()
 
 TinyUIPage(page, host, props, locals = listOf(NavEntryLocal provides entry), onHost = { entry.pageHost = it })
 
 override fun pop(resultJson: String?, from: PageContext) {
-    val entry = from[NavEntryLocal] ?: return
-    val below = entry.stack.remove(entry)          // 关的是调用方，哪怕它不在栈顶
-    if (resultJson != null) below?.pageHost?.emit("navigation.result", """{"result":$resultJson,"from":"${from.name}"}""")
+    val entry = from[NavEntryLocal] ?: return       // 同步取，再切到主线程动栈
+    mainScope.launch {
+        val index = entry.stack.indexOf(entry)
+        if (index <= 0) return@launch               // 已出栈，或是栈底
+        val below = entry.stack[index - 1]
+        entry.stack.removeAt(index)                 // 关的是调用方，哪怕它不在栈顶
+        if (resultJson != null) below.pageHost?.emit("navigation.result", """{"result":$resultJson,"from":"${from.name}"}""")
+    }
 }
 ```
 
-- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`
+- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载（如被回收后按 props 重建）时结果会等它挂载完再送达，不会丢
 - `push` 从不在栈顶的页面发起时由宿主定，通常忽略并经 `PageSink` 上报：被盖住的页面不该把用户带去别处
 - 缺省 `Navigator.None`（调用无效果）跳原生页的路由名由 `Navigator` 解释，不进快照；`push` 是 J4，页面拿不到结果，认不出的名字由 `Navigator` 忽略并经 `PageSink` 上报。
 

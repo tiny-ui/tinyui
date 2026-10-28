@@ -19,7 +19,8 @@ import kotlinx.serialization.serializer
  *
  * [from] is the mount that called. A page kept in the back stack keeps running, and pages may live in several
  * stacks, so the host acts on the caller, not on whatever is on top: it mounts each page with a [PageLocal] naming
- * its own entry and reads it back here.
+ * its own entry and reads it back here, within the call: `locals` follow the page's latest composition, and a read
+ * after hopping threads may see a newer value.
  *
  * - [pop] closes the caller, wherever it is in its stack, and hands [resultJson] (when there is one) to the page
  *   below it, as Android's `finish()` or SwiftUI's `dismiss` do

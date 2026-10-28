@@ -182,6 +182,16 @@ class PageHostTest {
     }
 
     @Test
+    fun aResultEmittedBeforeTheMountArrivesAfterIt() = runTest {
+        val host = host()
+        // a page remounted from its props gets navigation.result while it is still loading
+        host.emit("navigation.result", """{"result":{"saved":true},"from":"pages/detail"}""")
+        host.start()
+        host.await { host.tree.node(1)?.props?.get("text") == """navigation.result {"result":{"saved":true},"from":"pages/detail"} #1""" }
+        host.close()
+    }
+
+    @Test
     fun rsaEncryptGoesThroughTheBridge() = runTest {
         val host = host()
         host.start()
