@@ -55,4 +55,6 @@ internal actual fun platformRsaEncrypt(plain: ByteArray, key: RsaPublicKey): Byt
 
 @OptIn(ExperimentalForeignApi::class)
 private fun cfData(bytes: ByteArray): CFDataRef =
-    bytes.usePinned { CFDataCreate(null, it.addressOf(0).reinterpret(), bytes.size.toLong()) }!!
+    // an empty array has no element 0 to point at; an empty text is still a valid plaintext
+    if (bytes.isEmpty()) CFDataCreate(null, null, 0)!!
+    else bytes.usePinned { CFDataCreate(null, it.addressOf(0).reinterpret(), bytes.size.toLong()) }!!

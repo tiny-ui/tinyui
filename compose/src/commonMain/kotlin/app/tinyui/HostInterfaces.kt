@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
+import kotlin.jvm.JvmOverloads
 
 /** J4 `navigation.push` / `navigation.pop`; results travel back as K5 `navigation.result` (docs/app-model.md). */
 interface Navigator {
@@ -63,7 +64,7 @@ internal class InMemoryStore : Store {
 
 /** One request of J3 `http.request`; [body] is the text to send, its `Content-Type` among [headers]. */
 /** [tags]: the page's notes for this channel (`captchaScene`), never sent; the built-in channels ignore them (docs/native-api.md §6). */
-class HttpRequest(
+class HttpRequest @JvmOverloads constructor(
     val method: String,
     val url: String,
     val headers: Map<String, String>,

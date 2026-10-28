@@ -7,6 +7,9 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
 class CryptoTest {
+    // a 512-bit X.509 key: well-formed, too weak
+    private val SMALL_512 = "MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAN5UihI8MN9+9ZkgS8SQlYI+EM59bKPwPlygh9x+0pl9zXneileSgZ5SxjxwdOjynS0xTsHvgpB0w1y0Tv3cqDkCAwEAAQ=="
+
     private fun invalid(block: () -> Unit) = assertEquals("E_INVALID", assertFailsWith<HostException> { block() }.code)
 
     @Test
@@ -32,6 +35,20 @@ class CryptoTest {
         // UTF-8 bytes count, not characters: 82 × 3 bytes = 246
         invalid { rsaEncrypt("密".repeat(82), RsaTestKeys.PUBLIC) }
     }
+
+    @Test
+    fun rejectsTrailingDataAndAMissingExponent() {
+        val spki = Base64.decode(RsaTestKeys.PUBLIC)
+        invalid { RsaPublicKey.parse(Base64.encode(spki + byteArrayOf(0))) }
+        // cut the exponent off the end: the inner lengths no longer add up
+        invalid { RsaPublicKey.parse(Base64.encode(spki.copyOf(spki.size - 5))) }
+    }
+
+    @Test
+    fun rejectsKeysTooSmallToProtectAnything() = invalid { RsaPublicKey.parse(SMALL_512) }
+
+    @Test
+    fun anEmptyTextIsStillEncrypted() = assertEquals(256, Base64.decode(rsaEncrypt("", RsaTestKeys.PUBLIC)).size)
 
     @Test
     fun paddingIsRandom() = assertNotEquals(rsaEncrypt("s3cret", RsaTestKeys.PUBLIC), rsaEncrypt("s3cret", RsaTestKeys.PUBLIC))

@@ -359,8 +359,9 @@ class PageHost internal constructor(
                 if (name == "ui.confirm") confirmed.toString() else ""
             }
             "crypto.rsaEncrypt" -> settle(cbId) {
-                val text = a.str("text") ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs text")
-                val key = a.str("publicKey") ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs a publicKey")
+                // strings only: a number would be encrypted as its decimal text, which is not what the page holds
+                val text = (a["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs text as a string")
+                val key = (a["publicKey"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs a publicKey string")
                 // off the engine's lane: RSA is cheap but not free on a slow phone
                 JsonPrimitive(withContext(Dispatchers.Default) { rsaEncrypt(text, key) }).toString()
             }
