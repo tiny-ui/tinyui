@@ -438,8 +438,8 @@ class PageHost internal constructor(
         val a = args(argsJson)
         when (name) {
             "timer.cancel" -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
-            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}")
-            "navigation.pop" -> host.navigator.pop(a["result"]?.toString())
+            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
+            "navigation.pop" -> host.navigator.pop(a["result"]?.toString(), context)
             "store.set" -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
             // one host listener per key / topic; JS fans out to its own handlers
             "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }

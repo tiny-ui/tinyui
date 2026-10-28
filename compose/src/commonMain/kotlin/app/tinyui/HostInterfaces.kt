@@ -14,14 +14,25 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 
-/** J4 `navigation.push` / `navigation.pop`; results travel back as K5 `navigation.result` (docs/app-model.md). */
+/**
+ * J4 `navigation.push` / `navigation.pop`; results travel back as K5 `navigation.result` (docs/native-api.md §3).
+ *
+ * [from] is the mount that called. A page kept in the back stack keeps running, and pages may live in several
+ * stacks, so the host acts on the caller, not on whatever is on top: it mounts each page with a [PageLocal] naming
+ * its own entry and reads it back here.
+ *
+ * - [pop] closes the caller, wherever it is in its stack, and hands [resultJson] (when there is one) to the page
+ *   below it, as Android's `finish()` or SwiftUI's `dismiss` do
+ * - [push] from a page that is not on top is the host's call; ignoring it and reporting through [PageSink] is the
+ *   usual choice, a covered page should not take the user elsewhere
+ */
 interface Navigator {
-    fun push(page: String, paramsJson: String)
-    fun pop(resultJson: String?)
+    fun push(page: String, paramsJson: String, from: PageContext)
+    fun pop(resultJson: String?, from: PageContext)
 
     object None : Navigator {
-        override fun push(page: String, paramsJson: String) {}
-        override fun pop(resultJson: String?) {}
+        override fun push(page: String, paramsJson: String, from: PageContext) {}
+        override fun pop(resultJson: String?, from: PageContext) {}
     }
 }
 
