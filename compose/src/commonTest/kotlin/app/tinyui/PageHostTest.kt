@@ -61,7 +61,7 @@ class PageHostTest {
                 // 2026-01-01 and 2026-07-01 UTC: either side of daylight saving
                 if (event === "onZone") patches.push(["p",1,"text", [__host_query("i18n.timeZone", "{}"), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1767225600000 })), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1782864000000 }))].join("|")]);
                 if (event === "onI18nSubscribe") { __host_send("i18n.subscribe", "{}"); patches.push(["p",1,"text","subscribed"]); }
-                if (event === "onTagged") { __host_call("http.request", 21, JSON.stringify({ channel: "app", method: "POST", url: "/code", body: {}, tags: { captchaScene: "USER_REGISTER" } })); __host_call("http.request", 22, JSON.stringify({ channel: "app", method: "GET", url: "/code", tags: { n: 1 } })); }
+                if (event === "onTagged") { __host_call("http.request", 21, JSON.stringify({ channel: "app", method: "POST", url: "/code", body: {}, tags: { captchaScene: "signup" } })); __host_call("http.request", 22, JSON.stringify({ channel: "app", method: "GET", url: "/code", tags: { n: 1 } })); }
                 if (event === "onEncrypt") { __host_call("crypto.rsaEncrypt", 23, JSON.stringify({ text: "s3cret", publicKey: payloadJson })); __host_call("crypto.rsaEncrypt", 24, JSON.stringify({ text: "s3cret", publicKey: "bm9wZQ==" })); }
                 if (event === "onSeq") { seq.push(JSON.parse(payloadJson).i); patches.push(["p",1,"text","seq " + seq.length + " " + (seq.every((v, i) => v === i) ? "ordered" : "shuffled")]); }
             },
@@ -155,7 +155,7 @@ class PageHostTest {
         host.dispatch(2, "onTagged", "{}")
         host.await { (host.tree.node(1)!!.props["text"] as String).count { it == ';' } == 1 }
         val text = host.tree.node(1)!!.props["text"] as String
-        assertTrue(text.contains("ok 21") && text.contains("USER_REGISTER"), text)
+        assertTrue(text.contains("ok 21") && text.contains("signup"), text)
         assertTrue(text.contains("rejected 22") && text.contains("E_INVALID"), text)
         host.close()
     }

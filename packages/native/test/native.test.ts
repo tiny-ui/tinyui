@@ -32,8 +32,8 @@ describe("tinyui-native", () => {
     });
 
     it("tags ride along for the host's channel", () => {
-        void http.client("app").post("/api/app/v1/code", { phone: "1" }, { tags: { captchaScene: "USER_REGISTER" } });
-        assert.deepEqual(bridge.calls.at(-1)!.args, { channel: "app", method: "POST", url: "/api/app/v1/code", body: { phone: "1" }, tags: { captchaScene: "USER_REGISTER" } });
+        void http.client("app").post("/api/v1/code", { phone: "1" }, { tags: { captchaScene: "signup" } });
+        assert.deepEqual(bridge.calls.at(-1)!.args, { channel: "app", method: "POST", url: "/api/v1/code", body: { phone: "1" }, tags: { captchaScene: "signup" } });
     });
 
     it("storage reads and writes through J2; a returned code throws", () => {
