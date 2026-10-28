@@ -1,6 +1,6 @@
 # `tinyui-native` 与宿主接口
 
-- 状态：已定（2026-09-16）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
+- 状态：已定（2026-09-16）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16），同日 `Navigator` 带调用方 `from`、`pop` 定为关闭调用方（§3）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、会话、事件）、ADR-004 §3.1（连续事件阈值）、ADR-007（职责边界）
 - 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 侧宿主给页面的东西只有 App 级的 `TinyUIHost`（§1），启动时建一次，交给每个 `TinyUIPage`
 
@@ -49,12 +49,34 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 ## 3. `navigation`
 
 ```ts
-navigation.push("subscription/detail", { id: 42 });   // J4 → Navigator.push(page, paramsJson)；页面名含包名
-navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJson)
+navigation.push("subscription/detail", { id: 42 });   // J4 → Navigator.push(page, paramsJson, from)；页面名含包名
+navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJson, from)：关闭本页
 navigation.onResult((result, from) => …);       // 渲染期调用；K5 topic navigation.result
 ```
 
-宿主实现 `Navigator` 接口，交给 `TinyUIHost`；把结果送回上一页时，宿主持有该页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `host.emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。缺省 `Navigator.None`（调用无效果）。跳原生页的路由名由 `Navigator` 解释，不进快照；`push` 是 J4，页面拿不到结果，认不出的名字由 `Navigator` 忽略并经 `PageSink` 上报。
+宿主实现 `Navigator` 接口，交给 `TinyUIHost`。两个方法都带 `from: PageContext`，即发起调用的那次挂载：留在返回栈里的页面照常运行（[app-model.md](./app-model.md) §5），页面也可能分在几个栈里（各 tab、弹层），所以宿主**按调用方操作，不按栈顶**。宿主挂载页面时经 `locals` 给它一个指向自己导航条目的句柄，在这里用 `from[local]` 取回。**要在调用里同步取**：`locals` 跟着页面最近一次组合走，切线程之后再取，可能已是别的值：
+
+```kotlin
+class NavEntry(val stack: MutableList<NavEntry>) { var pageHost: PageHost? = null }   // 宿主自己的类型
+val NavEntryLocal = PageLocal<NavEntry>()
+
+TinyUIPage(page, host, props, locals = listOf(NavEntryLocal provides entry), onHost = { entry.pageHost = it })
+
+override fun pop(resultJson: String?, from: PageContext) {
+    val entry = from[NavEntryLocal] ?: return       // 同步取，再切到主线程动栈
+    mainScope.launch {
+        val index = entry.stack.indexOf(entry)
+        if (index <= 0) return@launch               // 已出栈，或是栈底
+        val below = entry.stack[index - 1]
+        entry.stack.removeAt(index)                 // 关的是调用方，哪怕它不在栈顶
+        if (resultJson != null) below.pageHost?.emit("navigation.result", """{"result":$resultJson,"from":"${from.name}"}""")
+    }
+}
+```
+
+- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载（如被回收后按 props 重建）时结果会等它挂载完再送达，不会丢
+- `push` 从不在栈顶的页面发起时由宿主定，通常忽略并经 `PageSink` 上报：被盖住的页面不该把用户带去别处
+- 缺省 `Navigator.None`（调用无效果）跳原生页的路由名由 `Navigator` 解释，不进快照；`push` 是 J4，页面拿不到结果，认不出的名字由 `Navigator` 忽略并经 `PageSink` 上报。
 
 ## 4. `store`
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.concurrent.Volatile
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -139,6 +140,8 @@ class PageHost internal constructor(
         jsThread,
     )
     private var entries: Entries? = null
+    /** Settles once the mount is over, whether it worked or not: K entries that arrive earlier wait for it instead of being dropped. */
+    private val mountSettled = CompletableDeferred<Unit>()
     /** The last [visible]; one that arrives before the mount is applied right after it. */
     @Volatile private var wantVisible = true
 
@@ -175,6 +178,8 @@ class PageHost internal constructor(
                 fail("E6", IllegalStateException("page load exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
                 fail("E6", t)
+            } finally {
+                mountSettled.complete(Unit)
             }
         }
     }
@@ -203,12 +208,19 @@ class PageHost internal constructor(
 
     private fun reject(cbId: Int, code: String, message: String, details: JsonObject?) =
         entry("reject", JsValue.Num(cbId), JsValue.Str(JsonObject((details ?: JsonObject(emptyMap())) + mapOf("code" to JsonPrimitive(code), "message" to JsonPrimitive(message))).toString()))
-    /** K5. The host calls this for `navigation.result`; bus topics arrive through the page's own subscriptions. */
+    /**
+     * K5. The host calls this for `navigation.result`; bus topics arrive through the page's own subscriptions.
+     * Before the page has mounted it waits for the mount; a page that failed or closed meanwhile drops it.
+     */
     fun emit(topic: String, payloadJson: String) = entry("emit", JsValue.Str(topic), JsValue.Str(payloadJson))
 
     private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}, skipWhen: () -> Boolean = { false }) {
         if (failure != null) return
         scope.launch(entryLane) {
+            // a host emit (navigation.result to a page being remounted) can beat the mount to the engine lock
+            mountSettled.await()
+            // the mount may have failed after entries were set: a failed page takes no more entries
+            if (failure != null) return@launch
             try {
                 withTimeout(entryTimeoutMs) {
                     runtime.withEngine {
@@ -438,8 +450,8 @@ class PageHost internal constructor(
         val a = args(argsJson)
         when (name) {
             "timer.cancel" -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
-            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}")
-            "navigation.pop" -> host.navigator.pop(a["result"]?.toString())
+            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
+            "navigation.pop" -> host.navigator.pop(a["result"]?.toString(), context)
             "store.set" -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
             // one host listener per key / topic; JS fans out to its own handlers
             "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }

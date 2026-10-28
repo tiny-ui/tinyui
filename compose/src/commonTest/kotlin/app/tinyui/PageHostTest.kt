@@ -63,9 +63,10 @@ class PageHostTest {
                 if (event === "onI18nSubscribe") { __host_send("i18n.subscribe", "{}"); patches.push(["p",1,"text","subscribed"]); }
                 if (event === "onTagged") { __host_call("http.request", 21, JSON.stringify({ channel: "app", method: "POST", url: "/code", body: {}, tags: { captchaScene: "signup" } })); __host_call("http.request", 22, JSON.stringify({ channel: "app", method: "GET", url: "/code", tags: { n: 1 } })); }
                 if (event === "onEncrypt") { __host_call("crypto.rsaEncrypt", 23, JSON.stringify({ text: "s3cret", publicKey: payloadJson })); __host_call("crypto.rsaEncrypt", 24, JSON.stringify({ text: "s3cret", publicKey: "bm9wZQ==" })); }
+                if (event === "onNavigate") { __host_send("navigation.push", JSON.stringify({ page: "pages/detail", params: { id: 42 } })); __host_send("navigation.pop", JSON.stringify({ result: { saved: true } })); patches.push(["p",1,"text","navigated"]); }
                 if (event === "onSeq") { seq.push(JSON.parse(payloadJson).i); patches.push(["p",1,"text","seq " + seq.length + " " + (seq.every((v, i) => v === i) ? "ordered" : "shuffled")]); }
             },
-            emit(topic, json) { emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
+            emit(topic, json) { if (topic === "probe") __host_send("navigation.pop", JSON.stringify({ result: "probe" })); emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
         };
         export const VERSION = "stub";
@@ -90,8 +91,13 @@ class PageHostTest {
         locale = MutableStateFlow("en"),
         timeZone = zoneFlow,
         analytics = AnalyticsSink { name, props, page -> tracked += "${page.name} $name $props" },
+        navigator = object : Navigator {
+            override fun push(page: String, paramsJson: String, from: PageContext) { navigated += "push $page $paramsJson from ${from.name}/${from[Merchant]}" }
+            override fun pop(resultJson: String?, from: PageContext) { navigated += "pop $resultJson from ${from.name}/${from[Merchant]}" }
+        },
     ).apply { store.setJson("cart", """{"n":2}""") }
     private val tracked = mutableListOf<String>()
+    private val navigated = mutableListOf<String>()
     private val store = tinyui.store
 
     private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY, app: TinyUIHost = tinyui) =
@@ -157,6 +163,43 @@ class PageHostTest {
         val text = host.tree.node(1)!!.props["text"] as String
         assertTrue(text.contains("ok 21") && text.contains("signup"), text)
         assertTrue(text.contains("rejected 22") && text.contains("E_INVALID"), text)
+        host.close()
+    }
+
+    @Test
+    fun navigationTellsTheNavigatorWhichMountCalled() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        host.dispatch(2, "onNavigate", "{}")
+        host.await { host.tree.node(1)!!.props["text"] == "navigated" }
+        // the locals the page was mounted with come back: that is how a host finds the caller's own entry
+        assertEquals(
+            listOf("""push pages/detail {"id":42} from pages/counter/acme""", """pop {"saved":true} from pages/counter/acme"""),
+            navigated,
+        )
+        host.close()
+    }
+
+    @Test
+    fun aResultEmittedBeforeTheMountArrivesAfterIt() = runTest {
+        val host = host()
+        // a page remounted from its props gets navigation.result while it is still loading
+        host.emit("navigation.result", """{"result":{"saved":true},"from":"pages/detail"}""")
+        host.start()
+        host.await { host.tree.node(1)?.props?.get("text") == """navigation.result {"result":{"saved":true},"from":"pages/detail"} #1""" }
+        host.close()
+    }
+
+    @Test
+    fun aPageWhoseMountFailedTakesNoWaitingEntry() = runTest {
+        val host = host("not json") // the stub's mount parses props: it throws once entries are already set
+        host.emit("probe", "{}") // the stub answers it with navigation.pop: visible if it reaches the engine
+        host.start()
+        host.await { host.failure != null }
+        delay(200)
+        assertEquals("E6", host.failure!!.kind)
+        assertEquals(emptyList(), navigated)
         host.close()
     }
 

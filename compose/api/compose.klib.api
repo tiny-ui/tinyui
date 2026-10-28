@@ -67,12 +67,12 @@ abstract interface app.tinyui.schema/NodeScope { // app.tinyui.schema/NodeScope|
 }
 
 abstract interface app.tinyui/Navigator { // app.tinyui/Navigator|null[0]
-    abstract fun pop(kotlin/String?) // app.tinyui/Navigator.pop|pop(kotlin.String?){}[0]
-    abstract fun push(kotlin/String, kotlin/String) // app.tinyui/Navigator.push|push(kotlin.String;kotlin.String){}[0]
+    abstract fun pop(kotlin/String?, app.tinyui/PageContext) // app.tinyui/Navigator.pop|pop(kotlin.String?;app.tinyui.PageContext){}[0]
+    abstract fun push(kotlin/String, kotlin/String, app.tinyui/PageContext) // app.tinyui/Navigator.push|push(kotlin.String;kotlin.String;app.tinyui.PageContext){}[0]
 
     final object None : app.tinyui/Navigator { // app.tinyui/Navigator.None|null[0]
-        final fun pop(kotlin/String?) // app.tinyui/Navigator.None.pop|pop(kotlin.String?){}[0]
-        final fun push(kotlin/String, kotlin/String) // app.tinyui/Navigator.None.push|push(kotlin.String;kotlin.String){}[0]
+        final fun pop(kotlin/String?, app.tinyui/PageContext) // app.tinyui/Navigator.None.pop|pop(kotlin.String?;app.tinyui.PageContext){}[0]
+        final fun push(kotlin/String, kotlin/String, app.tinyui/PageContext) // app.tinyui/Navigator.None.push|push(kotlin.String;kotlin.String;app.tinyui.PageContext){}[0]
     }
 }
 
