@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -102,7 +103,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Column) { scope ->
         val scroll = scope.get<Boolean>("scroll") == true
         Column(
-            modifier = scope.modifier().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+            modifier = scope.modifier().then(if (scroll) Modifier.verticalScroll(retainScrollState()) else Modifier),
             verticalArrangement = verticalArrangement(scope["justify"], scope["gap"]),
             horizontalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterHorizontally; "end" -> Alignment.End; else -> Alignment.Start },
         ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
@@ -110,7 +111,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Row) { scope ->
         val scroll = scope.get<Boolean>("scroll") == true
         Row(
-            modifier = scope.modifier().then(if (scroll) Modifier.horizontalScroll(rememberScrollState()) else Modifier),
+            modifier = scope.modifier().then(if (scroll) Modifier.horizontalScroll(retainScrollState()) else Modifier),
             horizontalArrangement = horizontalArrangement(scope["justify"], scope["gap"]),
             verticalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterVertically; "end" -> Alignment.Bottom; else -> Alignment.Top },
         ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
@@ -185,6 +186,14 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     }
 }
 
+/**
+ * What a user did to a component that a retained page must come back with (docs/app-model.md §5): typed text, code
+ * digits and scroll positions are `retain`ed, so they live as long as the page; focus and an open menu are
+ * `remember`ed and start over. Under the default store `retain` is `remember`.
+ */
+@Composable
+private fun retainScrollState(): ScrollState = retain { ScrollState(0) }
+
 // a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
 private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)?.toFloat()?.takeIf { it > 0f }
 
@@ -223,7 +232,7 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
 private fun TextFieldComponent(scope: NodeScope) {
     val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
     fun clip(t: String) = clipTo(t, maxLength)
-    var text by remember { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
+    var text by retain { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
@@ -289,7 +298,7 @@ private fun TextFieldComponent(scope: NodeScope) {
 @Composable
 private fun CodeFieldComponent(scope: NodeScope) {
     val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, MAX_CODE_LENGTH)
-    var value by remember { mutableStateOf(TextFieldValue("")) }
+    var value by retain { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
@@ -408,21 +417,22 @@ internal fun linkedText(text: String, color: Color, onClick: (String) -> Unit): 
 /** Rows are the node's children; virtualisation only in composition (docs/adr-003 §3.6). */
 @Composable
 private fun LazyColumnComponent(scope: NodeScope) {
-    val state = rememberLazyListState()
+    val state = retain { LazyListState() }
     val node = scope.node
     scope.Commands { command ->
         if (command.name == "scrollTo") state.animateScrollToItem(((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1)))
     }
+    // with the scroll position: a list coming back still at its end has already reported that length
+    val reachedEnd = retain { ReachedEnd() }
     if (scope.has("onReachEnd")) {
         // fires on each arrival at the last row and when the list grows while there; re-arms once the user scrolls away
         LaunchedEffect(state, node) {
-            var firedFor = -1
             snapshotFlow { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to node.children.size }
                 .distinctUntilChanged()
                 .collect { (last, size) ->
                     val atEnd = size > 0 && last >= size - 1
-                    if (!atEnd) firedFor = -1
-                    else if (firedFor != size) { firedFor = size; scope.dispatch("onReachEnd") }
+                    if (!atEnd) reachedEnd.size = -1
+                    else if (reachedEnd.size != size) { reachedEnd.size = size; scope.dispatch("onReachEnd") }
                 }
         }
     }
@@ -440,6 +450,9 @@ private fun LazyColumnComponent(scope: NodeScope) {
         items(node.children, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
     }
 }
+
+/** The list length `onReachEnd` last fired for; -1 once the user is away from the end. */
+private class ReachedEnd(var size: Int = -1)
 
 private fun payload(key: String, value: String) = buildJsonObject { put(key, value) }.toString()
 

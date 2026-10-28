@@ -16,17 +16,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okio.Path
-import org.jetbrains.compose.resources.ExperimentalResourceApi
-import org.jetbrains.compose.resources.MissingResourceException
 import app.tinyui.Bundle
 import app.tinyui.TinyUI
 import app.tinyui.sample.res.Res
@@ -34,9 +31,14 @@ import app.tinyui.updates.Updates
 import app.tinyui.updates.UpdatesPage
 import app.tinyui.updates.UpdatesScheduler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import okio.Path
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.MissingResourceException
 
 /** The two packages the App embeds, each under its own resource directory (docs/updates.md §3). */
 private val packages = listOf("sample", "sample-extra")
@@ -83,6 +85,9 @@ fun App(updatesDir: Path) {
     var page by remember { mutableStateOf(pages.first()) }
     val host = remember(updatesDir) { sampleHost(updatesDir.parent!! / "tinyui-data") }
     val locale by sampleLocale.collectAsState()
+    // one store per tab that keeps what leaves composition: a page switched away from stays alive, form input and
+    // all; a navigation host does the same per back stack entry and clears an entry's store when it is popped
+    val retained = retainRetainedValuesStoreRegistry()
     // pages name theme tokens only (docs/components.md §6); flipping the scheme here restyles them with no patch
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
         Surface(Modifier.fillMaxSize()) {
@@ -92,7 +97,8 @@ fun App(updatesDir: Path) {
                     TextButton(onClick = { sampleLocale.value = if (locale == "en") "zh" else "en" }) { Text(if (locale == "en") "中文" else "EN") }
                 }
                 val u = updates
-                if (u == null) Text("loading…", Modifier.padding(16.dp)) else UpdatesPage(u, page, host, modifier = Modifier.fillMaxSize())
+                if (u == null) Text("loading…", Modifier.padding(16.dp))
+                else key(page) { retained.LocalRetainedValuesStoreProvider(page) { UpdatesPage(u, page, host, modifier = Modifier.fillMaxSize()) } }
             }
         }
     }

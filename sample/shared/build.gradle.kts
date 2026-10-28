@@ -24,6 +24,7 @@ kotlin {
             implementation(project(":updates"))
             implementation(libs.okio)
             implementation(compose.runtime)
+            implementation(libs.compose.runtime.retain)
             implementation(compose.foundation)
             implementation(libs.compose.material3)
             implementation(compose.ui)
