@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -64,6 +65,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -220,12 +222,17 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
 @Composable
 private fun TextFieldComponent(scope: NodeScope) {
     val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
-    fun clip(t: String) = if (maxLength != null && t.length > maxLength) t.take(maxLength) else t
+    fun clip(t: String) = clipTo(t, maxLength)
     var text by remember { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", text)) }
+    // a lowered limit applies to what is already there, reported like any other change
+    LaunchedEffect(maxLength) {
+        val t = clip(text)
+        if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) }
+    }
     scope.Commands { command ->
         when (command.name) {
             "setText" -> { text = clip(command.args["text"] as? String ?: ""); if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
@@ -262,7 +269,8 @@ private fun TextFieldComponent(scope: NodeScope) {
         supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         singleLine = scope.get<Boolean>("singleLine") ?: true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { commit(); focusManager.moveFocus(FocusDirection.Next) }),
+        // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
+        keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { if (!focusManager.moveFocus(FocusDirection.Next)) commit() }),
         visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
         modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -280,23 +288,26 @@ private fun TextFieldComponent(scope: NodeScope) {
  */
 @Composable
 private fun CodeFieldComponent(scope: NodeScope) {
-    val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, 12)
+    val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, MAX_CODE_LENGTH)
     var value by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
-    fun update(raw: String) {
+    // [force]: commands report onChange even when nothing changed, like TextField.setText
+    fun update(raw: String, force: Boolean = false) {
         val t = raw.filter { it in '0'..'9' }.take(length)
         val changed = t != value.text
         value = TextFieldValue(t, selection = TextRange(t.length))
-        if (!changed) return
+        if (!changed && !force) return
         if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t))
-        if (t.length == length && scope.has("onComplete")) scope.dispatch("onComplete", payload("text", t))
+        if (changed && t.length == length && scope.has("onComplete")) scope.dispatch("onComplete", payload("text", t))
     }
+    // fewer cells drop the digits that no longer fit at once, rather than keeping them hidden until the next edit
+    LaunchedEffect(length) { if (value.text.length > length) update(value.text) }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> update(command.args["text"] as? String ?: "")
-            "clear" -> update("")
+            "setText" -> update(command.args["text"] as? String ?: "", force = true)
+            "clear" -> update("", force = true)
             "focus" -> focusRequester.requestFocus()
         }
     }
@@ -311,18 +322,22 @@ private fun CodeFieldComponent(scope: NodeScope) {
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done, platformImeOptions = oneTimeCodeImeOptions(oneTimeCode)),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        // invisible, but its semantics are what a screen reader reads: masked like the cells
+        visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
         modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { focused = it.isFocused }
             .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier),
         decorationBox = { inner ->
             Box {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // the field below is the one accessible node; the cells would read the code a second time
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.clearAndSetSemantics {}) {
                     for (i in 0 until length) {
                         val digit = value.text.getOrNull(i)
                         val current = focused && i == minOf(value.text.length, length - 1)
                         val outline = when { error -> colors.error; current -> colors.primary; else -> colors.outline }
                         Box(
                             contentAlignment = Alignment.Center,
-                            modifier = Modifier.weight(1f).height(56.dp).border(if (current || error) 2.dp else 1.dp, outline, RoundedCornerShape(8.dp)),
+                            // the minimum keeps cells usable where weight has no space to share (a scrolling Row)
+                            modifier = Modifier.weight(1f).widthIn(min = 40.dp).height(56.dp).border(if (current || error) 2.dp else 1.dp, outline, RoundedCornerShape(8.dp)),
                         ) {
                             if (digit != null) Text(if (secure) "\u2022" else digit.toString(), style = MaterialTheme.typography.headlineSmall)
                         }
@@ -343,6 +358,8 @@ private fun SelectComponent(scope: NodeScope) {
     val selected = scope.get<String>("value")
     val enabled = scope.get<Boolean>("enabled") ?: true
     var expanded by remember { mutableStateOf(false) }
+    // disabled while open: the menu goes, so nothing can be picked from it any more
+    if (!enabled && expanded) expanded = false
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = it }, modifier = scope.modifier(clickable = false)) {
         OutlinedTextField(
             value = options.firstOrNull { it.first == selected }?.second ?: "",
@@ -357,10 +374,19 @@ private fun SelectComponent(scope: NodeScope) {
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for ((value, text) in options) {
-                DropdownMenuItem(text = { Text(text) }, onClick = { expanded = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
+                DropdownMenuItem(text = { Text(text) }, enabled = enabled, onClick = { expanded = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
             }
         }
     }
+}
+
+private const val MAX_CODE_LENGTH = 12
+
+/** At most [max] UTF-16 units, never ending inside a surrogate pair (an emoji keeps both halves or neither). */
+internal fun clipTo(text: String, max: Int?): String {
+    if (max == null || text.length <= max) return text
+    val end = if (text[max - 1].isHighSurrogate()) max - 1 else max
+    return text.substring(0, end)
 }
 
 private val LINK = Regex("""\[([^\]]+)]\(([^)\s]+)\)""")

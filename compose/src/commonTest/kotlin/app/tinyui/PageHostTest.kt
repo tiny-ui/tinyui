@@ -28,7 +28,7 @@ class PageHostTest {
     private val zoneFlow = MutableStateFlow("America/New_York")
 
     private val core = module("tinyui-core", """
-        let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
+        let patches = [], seq = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
             mount(p, props, host) {
                 page = p; const name = JSON.parse(props).name ?? "world";
@@ -61,6 +61,7 @@ class PageHostTest {
                 // 2026-01-01 and 2026-07-01 UTC: either side of daylight saving
                 if (event === "onZone") patches.push(["p",1,"text", [__host_query("i18n.timeZone", "{}"), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1767225600000 })), __host_query("i18n.zoneOffset", JSON.stringify({ ms: 1782864000000 }))].join("|")]);
                 if (event === "onI18nSubscribe") { __host_send("i18n.subscribe", "{}"); patches.push(["p",1,"text","subscribed"]); }
+                if (event === "onSeq") { seq.push(JSON.parse(payloadJson).i); patches.push(["p",1,"text","seq " + seq.length + " " + (seq.every((v, i) => v === i) ? "ordered" : "shuffled")]); }
             },
             emit(topic, json) { emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
@@ -128,6 +129,18 @@ class PageHostTest {
         host.dispatch(2, "onClick", "{}")
         host.await { host.tree.node(1)!!.props["text"] == "count 2" }
         assertNull(host.failure)
+        host.close()
+    }
+
+    @Test
+    fun eventsReachThePageInTheOrderTheyWereDispatched() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        // onChange then onComplete from one keystroke: the page must never see them swapped
+        withContext(Dispatchers.Default) { repeat(500) { host.dispatch(2, "onSeq", """{"i":$it}""") } }
+        host.await { (host.tree.node(1)!!.props["text"] as String).startsWith("seq 500") }
+        assertEquals("seq 500 ordered", host.tree.node(1)!!.props["text"])
         host.close()
     }
 

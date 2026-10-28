@@ -3,7 +3,7 @@ import { boolean, defineComponent, enumOf, field, number } from "tinyui-cli/sche
 export default defineComponent("CodeField", {
     doc: "A row of digit cells over one input; text, focus and the IME stay on the Kotlin side like TextField (docs/adr-004 §3.3).",
     props: {
-        length: number({ default: 6, doc: "number of cells; input stops there" }),
+        length: number({ default: 6, doc: "number of cells, 1 to 12; input stops there" }),
         secure: boolean({ default: false, doc: "shows a dot instead of each digit" }),
         enabled: boolean({ default: true }),
         error: boolean({ default: false, doc: "error colour on the cell outlines" }),

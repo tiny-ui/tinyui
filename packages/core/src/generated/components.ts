@@ -275,7 +275,7 @@ export type CodeFieldCommands = {
 
 /** A row of digit cells over one input; text, focus and the IME stay on the Kotlin side like TextField (docs/adr-004 §3.3). */
 export interface CodeFieldProps extends LayoutProps {
-    /** number of cells; input stops there */
+    /** number of cells, 1 to 12; input stops there */
     length?: number;
     /** shows a dot instead of each digit */
     secure?: boolean;

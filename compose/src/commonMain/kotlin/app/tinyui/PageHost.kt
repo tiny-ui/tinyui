@@ -125,6 +125,9 @@ class PageHost internal constructor(
         private set
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // the engine lock is fair, but entries launched on a multi-threaded pool can reach it out of order: one lane keeps
+    // them in call order up to the lock (onChange before onComplete, onFocusChange before onCommit)
+    private val entryLane = Dispatchers.Default.limitedParallelism(1)
     private val timers = HashMap<Int, Job>()
     private val subscriptions = HashMap<String, AutoCloseable>()
     private val storeVersions = HashMap<String, Long>()
@@ -205,7 +208,7 @@ class PageHost internal constructor(
 
     private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}, skipWhen: () -> Boolean = { false }) {
         if (failure != null) return
-        scope.launch {
+        scope.launch(entryLane) {
             try {
                 withTimeout(entryTimeoutMs) {
                     runtime.withEngine {

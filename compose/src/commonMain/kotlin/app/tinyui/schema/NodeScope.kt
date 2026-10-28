@@ -3,6 +3,8 @@ package app.tinyui.schema
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,11 +48,13 @@ interface NodeScope {
 @Composable
 fun NodeScope.Commands(handler: suspend (Command) -> Unit) {
     val node = node
+    // the effect outlives recompositions: without this it would keep the first handler and the props it closed over
+    val current by rememberUpdatedState(handler)
     LaunchedEffect(node) {
         snapshotFlow { node.commands.toList() }.collect { pending ->
             if (pending.isEmpty()) return@collect
             node.commands.removeAll(pending)
-            for (c in pending) handler(c)
+            for (c in pending) current(c)
         }
     }
 }
