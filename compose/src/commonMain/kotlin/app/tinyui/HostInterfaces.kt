@@ -62,7 +62,15 @@ internal class InMemoryStore : Store {
 }
 
 /** One request of J3 `http.request`; [body] is the text to send, its `Content-Type` among [headers]. */
-class HttpRequest(val method: String, val url: String, val headers: Map<String, String>, val body: String?, val timeoutMs: Long?)
+/** [tags]: the page's notes for this channel (`captchaScene`), never sent; the built-in channels ignore them (docs/native-api.md §6). */
+class HttpRequest(
+    val method: String,
+    val url: String,
+    val headers: Map<String, String>,
+    val body: String?,
+    val timeoutMs: Long?,
+    val tags: Map<String, String> = emptyMap(),
+)
 
 class HttpResponse(val status: Int, val headers: Map<String, String>, val body: String)
 
@@ -114,7 +122,7 @@ internal val FrameworkNames = setOf(
     "device.info", "store.get", "store.set", "store.subscribe", "storage.get", "storage.set", "storage.remove", "storage.clear",
     "i18n.t", "i18n.locale", "i18n.timeZone", "i18n.zoneOffset", "i18n.subscribe", "session.get", "session.subscribe", "session.signIn",
     "navigation.push", "navigation.pop", "events.emit", "events.subscribe", "http.request", "timer.schedule", "timer.cancel",
-    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "clipboard.setText", "analytics.track",
+    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "clipboard.setText", "analytics.track", "crypto.rsaEncrypt",
 )
 
 /** What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a session. */

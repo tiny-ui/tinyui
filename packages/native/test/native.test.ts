@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { Column, h, Text, thunk } from "tinyui-core";
-import { analytics, cached, clipboard, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
+import { analytics, cached, clipboard, crypto, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
 const tinyui = (): Entries => (globalThis as Record<string, unknown>)["__tinyui"] as Entries;
@@ -29,6 +29,11 @@ describe("tinyui-native", () => {
         ((globalThis as Record<string, unknown>)["__tinyui"] as { reject(id: number, json: string): void })
             .reject(call.cbId, JSON.stringify({ code: "E_HTTP", message: "409", status: 409, headers: { a: "b" }, body: { error: "dup" } }));
         await rejected;
+    });
+
+    it("tags ride along for the host's channel", () => {
+        void http.client("app").post("/api/app/v1/code", { phone: "1" }, { tags: { captchaScene: "USER_REGISTER" } });
+        assert.deepEqual(bridge.calls.at(-1)!.args, { channel: "app", method: "POST", url: "/api/app/v1/code", body: { phone: "1" }, tags: { captchaScene: "USER_REGISTER" } });
     });
 
     it("storage reads and writes through J2; a returned code throws", () => {
@@ -139,6 +144,8 @@ describe("tinyui-native", () => {
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["linking.openUrl", { url: "https://x" }]);
         void clipboard.setText("ORD-1024");
         assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["clipboard.setText", { text: "ORD-1024" }]);
+        void crypto.rsaEncrypt("s3cret", { publicKey: "MIIB" });
+        assert.deepEqual([bridge.calls.at(-1)!.name, bridge.calls.at(-1)!.args], ["crypto.rsaEncrypt", { text: "s3cret", publicKey: "MIIB" }]);
         analytics.track("checkout_step", { step: "plan_selected", plan: "annual" });
         assert.deepEqual(bridge.sent.at(-1), { name: "analytics.track", args: { name: "checkout_step", props: { step: "plan_selected", plan: "annual" } } });
         assert.throws(() => analytics.track("x", { nested: {} as unknown as string }), (e: HostError) => e.code === "E_INVALID");

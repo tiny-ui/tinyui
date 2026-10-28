@@ -358,6 +358,13 @@ class PageHost internal constructor(
                 )
                 if (name == "ui.confirm") confirmed.toString() else ""
             }
+            "crypto.rsaEncrypt" -> settle(cbId) {
+                // strings only: a number would be encrypted as its decimal text, which is not what the page holds
+                val text = (a["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs text as a string")
+                val key = (a["publicKey"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs a publicKey string")
+                // off the engine's lane: RSA is cheap but not free on a slow phone
+                JsonPrimitive(withContext(Dispatchers.Default) { rsaEncrypt(text, key) }).toString()
+            }
             "clipboard.setText" -> settle(cbId) {
                 context.copy(a.str("text") ?: throw HostException("E_INVALID", "clipboard.setText needs text"))
                 ""
@@ -393,6 +400,11 @@ class PageHost internal constructor(
             headers = headers,
             body = body,
             timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
+            tags = when (val t = a["tags"]) {
+                null, JsonNull -> emptyMap()
+                is JsonObject -> t.mapValues { (k, v) -> (v as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "http tag \"$k\" must be a string") }
+                else -> throw HostException("E_INVALID", "http tags must be an object of strings")
+            },
         )
         val response = request.timeoutMs?.let { ms ->
             withTimeoutOrNull(ms) { channel.request(request) } ?: throw HostException("E_TIMEOUT", "${request.method} ${request.url} took longer than $ms ms")

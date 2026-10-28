@@ -67,6 +67,9 @@
 | 大数据存储（SQLite / 文件 API） | ADR-007 §3.4 | 第一个要缓存大量数据的页面 |
 | 声明式 `Dialog` | ADR-007 §3.6 | 第一个需要自定义内容对话框的页面。`BottomSheet` 已完成（2026-10-12，第一个需要的业务页面触发，[components.md](./components.md) §3） |
 | 分享、震动、选图等通用能力（均按"框架默认实现、宿主可接管"） | ADR-007 §3.6 | 第一个需要的页面。剪贴板写入已完成（2026-10-12，第一个需要的业务页面触发，[native-api.md](./native-api.md) §15；只写不读，宿主不接管） |
+| 加密的其余算法（OAEP、`sha256`、`hmac`、对称加密） | native-api.md §16 | 第一个需要的页面。RSA PKCS#1 v1.5 公钥加密已完成（2026-10-28，注册流程触发：`crypto.rsaEncrypt`） |
+| `KtorChannel` 把 http `tags` 转成 ktor `attributes`，宿主的 ktor 插件可读 | native-api.md §6 | 第一个用 `KtorChannel` 又要读 tags 的宿主（现有宿主都自写通道）。`tags` 本身已完成（2026-10-28，注册流程触发） |
+| 服务端拒绝建名为 `host` 等保留词的包 | — | 不做：2026-10-28 曾拟保留包名 `host` 给原生路由，因是潜规则撤销；页面要原生页的结果走 `host.call`（launch-for-result），只跳不要结果走 deep link（`linking.openUrl`） |
 | `openUrl` 的打开方式提示（`mode`） | ADR-007 §3.6 | 页面确实要求应用内或外部打开 |
 | 流式响应 / SSE、上传下载、请求缓存 | ADR-007 §3.1 | 第一个需要的页面 |
 | 会话之外的身份模型（多账号等） | ADR-007 §3.5 | 出现这类宿主 |
