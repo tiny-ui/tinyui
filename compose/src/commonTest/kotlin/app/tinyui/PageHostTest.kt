@@ -66,7 +66,7 @@ class PageHostTest {
                 if (event === "onNavigate") { __host_send("navigation.push", JSON.stringify({ page: "pages/detail", params: { id: 42 } })); __host_send("navigation.pop", JSON.stringify({ result: { saved: true } })); patches.push(["p",1,"text","navigated"]); }
                 if (event === "onSeq") { seq.push(JSON.parse(payloadJson).i); patches.push(["p",1,"text","seq " + seq.length + " " + (seq.every((v, i) => v === i) ? "ordered" : "shuffled")]); }
             },
-            emit(topic, json) { emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
+            emit(topic, json) { if (topic === "probe") __host_send("navigation.pop", JSON.stringify({ result: "probe" })); emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
         };
         export const VERSION = "stub";
@@ -188,6 +188,18 @@ class PageHostTest {
         host.emit("navigation.result", """{"result":{"saved":true},"from":"pages/detail"}""")
         host.start()
         host.await { host.tree.node(1)?.props?.get("text") == """navigation.result {"result":{"saved":true},"from":"pages/detail"} #1""" }
+        host.close()
+    }
+
+    @Test
+    fun aPageWhoseMountFailedTakesNoWaitingEntry() = runTest {
+        val host = host("not json") // the stub's mount parses props: it throws once entries are already set
+        host.emit("probe", "{}") // the stub answers it with navigation.pop: visible if it reaches the engine
+        host.start()
+        host.await { host.failure != null }
+        delay(200)
+        assertEquals("E6", host.failure!!.kind)
+        assertEquals(emptyList(), navigated)
         host.close()
     }
 

@@ -219,6 +219,8 @@ class PageHost internal constructor(
         scope.launch(entryLane) {
             // a host emit (navigation.result to a page being remounted) can beat the mount to the engine lock
             mountSettled.await()
+            // the mount may have failed after entries were set: a failed page takes no more entries
+            if (failure != null) return@launch
             try {
                 withTimeout(entryTimeoutMs) {
                     runtime.withEngine {
