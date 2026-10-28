@@ -67,7 +67,13 @@ export interface BoxProps extends LayoutProps {
 export interface TextClickPayload {
 }
 
+export interface TextLinkClickPayload {
+    /** the `(id)` of the tapped link */
+    id: string;
+}
+
 export interface TextProps extends LayoutProps {
+    /** with onLinkClick set, `[label](id)` spans render as links */
     text: string;
     /** Material 3 text style; fontSize / fontWeight override its fields */
     style?: "displayLarge" | "displayMedium" | "displaySmall" | "headlineLarge" | "headlineMedium" | "headlineSmall" | "titleLarge" | "titleMedium" | "titleSmall" | "bodyLarge" | "bodyMedium" | "bodySmall" | "labelLarge" | "labelMedium" | "labelSmall";
@@ -78,6 +84,7 @@ export interface TextProps extends LayoutProps {
     maxLines?: number;
     align?: "start" | "center" | "end";
     onClick?: (e: TextClickPayload) => void;
+    onLinkClick?: (e: TextLinkClickPayload) => void;
 }
 
 export interface ButtonClickPayload {
@@ -111,6 +118,16 @@ export interface TextFieldCommitPayload {
     text: string;
 }
 
+export interface TextFieldFocusChangePayload {
+    focused: boolean;
+}
+
+export interface TextFieldTrailingClickPayload {
+}
+
+export interface TextFieldPrefixClickPayload {
+}
+
 export interface TextFieldSetTextArgs {
     text: string;
 }
@@ -133,8 +150,25 @@ export interface TextFieldProps extends LayoutProps {
     placeholder?: string;
     singleLine?: boolean;
     keyboard?: "text" | "number" | "email" | "phone" | "password";
+    /** masks the text; unset follows keyboard="password", so a visibility toggle just flips it */
+    secure?: boolean;
+    /** error colours on the outline, label and supportingText */
+    error?: boolean;
+    /** one line under the field: a hint, or the error message while error is true */
+    supportingText?: string;
+    /** fixed text before the input, such as a calling code */
+    prefixText?: string;
+    /** icon at the end, such as show / hide or clear; tappable when onTrailingClick is set */
+    trailingIcon?: string;
+    /** next moves focus to the following field */
+    imeAction?: "done" | "next";
+    /** 0 = unlimited; longer input is cut, not rejected */
+    maxLength?: number;
     onChange?: (e: TextFieldChangePayload) => void;
     onCommit?: (e: TextFieldCommitPayload) => void;
+    onFocusChange?: (e: TextFieldFocusChangePayload) => void;
+    onTrailingClick?: (e: TextFieldTrailingClickPayload) => void;
+    onPrefixClick?: (e: TextFieldPrefixClickPayload) => void;
     ref?: Ref<TextFieldCommands>;
 }
 
@@ -204,6 +238,78 @@ export interface DividerProps extends LayoutProps {
     color?: ColorValue;
 }
 
+export interface CheckboxClickPayload {
+}
+
+/** Same model as RadioButton: `onClick` reports the tap, `checked` is a plain prop the page owns. */
+export interface CheckboxProps extends LayoutProps {
+    checked: boolean;
+    enabled?: boolean;
+    onClick?: (e: CheckboxClickPayload) => void;
+}
+
+export interface CodeFieldChangePayload {
+    text: string;
+}
+
+export interface CodeFieldCompletePayload {
+    /** when the last cell is filled */
+    text: string;
+}
+
+export interface CodeFieldSetTextArgs {
+    text: string;
+}
+
+export interface CodeFieldFocusArgs {
+}
+
+export interface CodeFieldClearArgs {
+}
+
+export type CodeFieldCommands = {
+    setText: CodeFieldSetTextArgs;
+    focus: CodeFieldFocusArgs;
+    clear: CodeFieldClearArgs;
+};
+
+/** A row of digit cells over one input; text, focus and the IME stay on the Kotlin side like TextField (docs/adr-004 §3.3). */
+export interface CodeFieldProps extends LayoutProps {
+    /** number of cells, 1 to 12; input stops there */
+    length?: number;
+    /** shows a dot instead of each digit */
+    secure?: boolean;
+    enabled?: boolean;
+    /** error colour on the cell outlines */
+    error?: boolean;
+    /** oneTimeCode lets the system offer a code it just received by SMS; none keeps it from offering anything, saved passwords included */
+    autofill?: "none" | "oneTimeCode";
+    onChange?: (e: CodeFieldChangePayload) => void;
+    onComplete?: (e: CodeFieldCompletePayload) => void;
+    ref?: Ref<CodeFieldCommands>;
+}
+
+export interface SelectSelectPayload {
+    value: string;
+}
+
+/** M3 exposed dropdown; the choices are its `Option` children. The selection is the page's: `onSelect` reports the pick, `value` shows it. */
+export interface SelectProps extends LayoutProps {
+    /** value of the chosen Option; unset or unmatched shows the placeholder (not `selected`, the common selectable-container prop) */
+    value?: string;
+    placeholder?: string;
+    label?: string;
+    enabled?: boolean;
+    onSelect?: (e: SelectSelectPayload) => void;
+    children?: Node | Node[];
+}
+
+/** One choice of its parent Select, which reads these props; renders nothing anywhere else. */
+export interface OptionProps {
+    value: string;
+    text: string;
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -218,6 +324,10 @@ export interface IntrinsicElements {
     Loading: LoadingProps;
     BottomSheet: BottomSheetProps;
     Divider: DividerProps;
+    Checkbox: CheckboxProps;
+    CodeField: CodeFieldProps;
+    Select: SelectProps;
+    Option: OptionProps;
 }
 
 export const Column = "Column";
@@ -233,3 +343,7 @@ export const Icon = "Icon";
 export const Loading = "Loading";
 export const BottomSheet = "BottomSheet";
 export const Divider = "Divider";
+export const Checkbox = "Checkbox";
+export const CodeField = "CodeField";
+export const Select = "Select";
+export const Option = "Option";

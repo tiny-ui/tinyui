@@ -2,6 +2,7 @@ package app.tinyui
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.text.input.PlatformImeOptions
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import okio.FileSystem
@@ -16,6 +17,12 @@ import platform.Foundation.localeIdentifier
 import platform.Foundation.preferredLanguages
 import platform.Foundation.timeZoneWithName
 import platform.UIKit.UIDevice
+import platform.UIKit.UITextContentTypeOneTimeCode
+
+// explicit either way: unset, NumberPassword would be announced as a password and offered keychain entries
+@OptIn(ExperimentalComposeUiApi::class)
+internal actual fun oneTimeCodeImeOptions(oneTimeCode: Boolean): PlatformImeOptions? =
+    PlatformImeOptions { textContentType(if (oneTimeCode) UITextContentTypeOneTimeCode else null) }
 
 internal actual fun platformInfo(): Map<String, String> = mapOf(
     "os" to "ios",

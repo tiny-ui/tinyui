@@ -6,6 +6,7 @@ import Box from "./components/box.ts";
 import Text from "./components/text.ts";
 import Button from "./components/button.ts";
 import RadioButton from "./components/radio-button.ts";
+import Checkbox from "./components/checkbox.ts";
 import TextField from "./components/text-field.ts";
 import LazyColumn from "./components/lazy-column.ts";
 import Spacer from "./components/spacer.ts";
@@ -13,5 +14,8 @@ import Icon from "./components/icon.ts";
 import Loading from "./components/loading.ts";
 import BottomSheet from "./components/bottom-sheet.ts";
 import Divider from "./components/divider.ts";
+import CodeField from "./components/code-field.ts";
+import Select from "./components/select.ts";
+import Option from "./components/option.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option];

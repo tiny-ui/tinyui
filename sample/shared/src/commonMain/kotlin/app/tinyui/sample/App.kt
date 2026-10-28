@@ -41,7 +41,7 @@ import kotlinx.coroutines.sync.withLock
 /** The two packages the App embeds, each under its own resource directory (docs/updates.md §3). */
 private val packages = listOf("sample", "sample-extra")
 
-private val pages = listOf("sample/todos", "sample-extra/hello", "sample-extra/features")
+private val pages = listOf("sample/todos", "sample-extra/hello", "sample-extra/features", "sample-extra/form")
 
 /**
  * One [Updates] and one [UpdatesScheduler] per process, whatever happens to the composition: a recreated Activity
