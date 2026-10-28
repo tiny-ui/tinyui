@@ -114,17 +114,17 @@ KtorChannel(client: io.ktor.client.HttpClient)   // 把宿主已有的 client �
 - 请求体：对象按 JSON 编码并设 `Content-Type: application/json`，字符串原样发送
 - 响应体：`Content-Type` 为 JSON 时解析成对象，否则为文本
 - 2xx resolve `{ status, headers, body }`；非 2xx 以 `E_HTTP` reject，`HostError` 带 `status`、`headers`、`body`（解析规则同上）
-- `tags`：页面写给宿主通道的备注，**任何通道都不把它发上网**（2026-10-28 加，注册流程触发：页面经通道发的验证码请求要告诉宿主"这个要过极验、场景是哪个"）。值只能是字符串，否则 `E_INVALID`；含义由页面与那个宿主的通道约定，框架不定义任何键，`default` 与 `KtorChannel` 忽略它；不进 manifest（不是宿主契约，宿主不认识的键照常发请求）。HTTP 本身没有这个概念，这是客户端库的惯例：OkHttp `Request.tag()`、Retrofit `@Tag`、Ktor `attributes`。`KtorChannel` 暂不把它转成 ktor `attributes`（宿主插件读不到）：现有宿主都自写通道，等第一个需要的再加，不破坏接口
+- `tags`：页面写给宿主通道的备注，**任何通道都不把它发上网**（2026-10-28 加，注册流程触发：页面经通道发的验证码请求要告诉宿主"这个要过人机验证、场景是哪个"）。值只能是字符串，否则 `E_INVALID`；含义由页面与那个宿主的通道约定，框架不定义任何键，`default` 与 `KtorChannel` 忽略它；不进 manifest（不是宿主契约，宿主不认识的键照常发请求）。HTTP 本身没有这个概念，这是客户端库的惯例：OkHttp `Request.tag()`、Retrofit `@Tag`、Ktor `attributes`。`KtorChannel` 暂不把它转成 ktor `attributes`（宿主插件读不到）：现有宿主都自写通道，等第一个需要的再加，不破坏接口
 - 通道名 `default` 保留，宿主不能注册；页面用了宿主没注册的名字 → `E_UNSUPPORTED`。`http.client` 的参数必须是字符串字面量（build-chain.md §5.1），通道名随 `requires` 进 manifest、发布前对照快照核对
 
 ```ts
-await api.post("/api/app/v1/auth/send-code", { phone }, { tags: { captchaScene: "USER_REGISTER" } });
+await api.post("/api/v1/auth/send-code", { phone }, { tags: { captchaScene: "signup" } });
 ```
 
 ```kotlin
 class AppChannel(…) : HttpChannel {
     override suspend fun request(request: HttpRequest): HttpResponse {
-        val scene = request.tags["captchaScene"]   // 交给宿主自己的极验拦截，标签本身不上网
+        val scene = request.tags["captchaScene"]   // 交给宿主自己的人机验证拦截，标签本身不上网
         …
     }
 }
@@ -304,7 +304,7 @@ await ui.toast(i18n.t("copied"))   // 要不要提示由页面决定
 
 ```ts
 const cipher = await crypto.rsaEncrypt(password, { publicKey })   // base64 进，base64 出
-await api.post("/api/app/v1/auth/register", { email, password: cipher })
+await api.post("/api/v1/auth/register", { email, password: cipher })
 ```
 
 - J3 `crypto.rsaEncrypt`，参数 `{ text, publicKey }`：RSA 公钥加密，PKCS#1 v1.5 填充，`text` 按 UTF-8 编码；resolve 密文的 base64。框架实现（Android `Cipher("RSA/ECB/PKCS1Padding")`，iOS `SecKeyCreateEncryptedData`），宿主不参与
@@ -312,7 +312,7 @@ await api.post("/api/app/v1/auth/register", { email, password: cipher })
 - `text` 最多「密钥字节数 − 11」字节（2048 位密钥 245 字节），超长、公钥读不出或不是 RSA → `E_INVALID`；两端在同一处检查，报错一致
 - 填充带随机数：同一输入每次密文都不同，不能拿密文比对是否相等；验证只能用私钥解回来
 - 公钥须是完整合法的 X.509（各层无多余字节、带指数），且不少于 1024 位（512 / 768 位已被分解）；不合格一律 `E_INVALID`，不交给平台再报别的码
-- 选 PKCS#1 v1.5 是为了兼容现有后端（PingPong 现网密码加密即此）。它的已知风险在解密端：服务端若让人分辨出「填充错误」与其他错误，就可能被 Bleichenbacher 式选择密文攻击；解密接口要对所有失败回同一个响应。后端支持后改用 OAEP（新增参数，不改默认）
+- 选 PKCS#1 v1.5 是为了兼容仍在用它的后端。它的已知风险在解密端：服务端若让人分辨出「填充错误」与其他错误，就可能被 Bleichenbacher 式选择密文攻击；解密接口要对所有失败回同一个响应。后端支持后改用 OAEP（新增参数，不改默认）
 - 为什么是框架能力而不是 `host.call`：加密是通用原生能力，第二个宿主一样要；在 QuickJS 里跑 JS 的 RSA 库既慢，又把加密实现放进了可热下发的包里。公钥由页面经自己的通道取、页内缓存，换钥只改页面
 - 只做 RSA 公钥加密一项；OAEP、`sha256`、`hmac`、对称加密等第一个需要的页面出现时再加，参数对象为它们留了位置
 - 2026-10-28 加（注册流程触发：密码在第一步就转成密文，明文不离开那一页）

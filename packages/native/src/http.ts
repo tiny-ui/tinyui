@@ -6,7 +6,7 @@ export interface HttpOptions {
     /** ms; rejects with E_TIMEOUT */
     timeout?: number;
     /**
-     * Notes for the host's channel, never sent: no channel puts them on the wire (`{ captchaScene: "USER_REGISTER" }`).
+     * Notes for the host's channel, never sent: no channel puts them on the wire (`{ captchaScene: "signup" }`).
      * What a tag means is between the page and that host's channel; the built-in `default` channel ignores them.
      */
     tags?: Record<string, string>;
