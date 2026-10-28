@@ -1,4 +1,4 @@
-import { Checkbox, Column, Option, PinField, ref, Row, Select, signal, Text, TextField, type PinFieldCommands } from "tinyui-core";
+import { Checkbox, Column, Option, CodeField, ref, Row, Select, signal, Text, TextField, type CodeFieldCommands } from "tinyui-core";
 import { ui } from "tinyui-native";
 import visibility from "@material-symbols/svg-400/outlined/visibility.svg";
 import visibilityOff from "@material-symbols/svg-400/outlined/visibility_off.svg";
@@ -11,7 +11,7 @@ export default function Form() {
     const [agreed, setAgreed] = signal(false);
     const [voice, setVoice] = signal("");
     const [pinError, setPinError] = signal(false);
-    const pin = ref<PinFieldCommands>();
+    const pin = ref<CodeFieldCommands>();
     const emailError = () => email() !== "" && !email().includes("@");
 
     return (
@@ -37,9 +37,9 @@ export default function Form() {
                 <Option value="zh" text="中文" />
             </Select>
             <Text text="SMS code" style="titleSmall" />
-            <PinField width="fill" autofill="oneTimeCode" onComplete={(e) => void ui.toast(`code ${e.text}`)} />
+            <CodeField width="fill" autofill="oneTimeCode" onComplete={(e) => void ui.toast(`code ${e.text}`)} />
             <Text text="Transaction PIN (1234 is wrong)" style="titleSmall" />
-            <PinField
+            <CodeField
                 width="fill" secure error={pinError()} ref={pin}
                 onChange={(e) => { if (e.text) setPinError(false) }}
                 onComplete={(e) => { if (e.text.startsWith("1234")) { setPinError(true); pin.cmd("clear", {}); } else void ui.toast("PIN set") }}

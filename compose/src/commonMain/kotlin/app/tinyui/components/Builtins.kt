@@ -162,7 +162,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         )
     }
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
-    register(BuiltinSchemas.PinField) { scope -> PinFieldComponent(scope) }
+    register(BuiltinSchemas.CodeField) { scope -> CodeFieldComponent(scope) }
     register(BuiltinSchemas.Select) { scope -> SelectComponent(scope) }
     // data for its Select, never drawn
     register(BuiltinSchemas.Option) { }
@@ -279,7 +279,7 @@ private fun TextFieldComponent(scope: NodeScope) {
  * (docs/adr-004 §3.3); `onComplete` fires each time the last cell gets filled.
  */
 @Composable
-private fun PinFieldComponent(scope: NodeScope) {
+private fun CodeFieldComponent(scope: NodeScope) {
     val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, 12)
     var value by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }

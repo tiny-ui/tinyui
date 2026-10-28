@@ -248,33 +248,33 @@ export interface CheckboxProps extends LayoutProps {
     onClick?: (e: CheckboxClickPayload) => void;
 }
 
-export interface PinFieldChangePayload {
+export interface CodeFieldChangePayload {
     text: string;
 }
 
-export interface PinFieldCompletePayload {
+export interface CodeFieldCompletePayload {
     /** when the last cell is filled */
     text: string;
 }
 
-export interface PinFieldSetTextArgs {
+export interface CodeFieldSetTextArgs {
     text: string;
 }
 
-export interface PinFieldFocusArgs {
+export interface CodeFieldFocusArgs {
 }
 
-export interface PinFieldClearArgs {
+export interface CodeFieldClearArgs {
 }
 
-export type PinFieldCommands = {
-    setText: PinFieldSetTextArgs;
-    focus: PinFieldFocusArgs;
-    clear: PinFieldClearArgs;
+export type CodeFieldCommands = {
+    setText: CodeFieldSetTextArgs;
+    focus: CodeFieldFocusArgs;
+    clear: CodeFieldClearArgs;
 };
 
 /** A row of digit cells over one input; text, focus and the IME stay on the Kotlin side like TextField (docs/adr-004 §3.3). */
-export interface PinFieldProps extends LayoutProps {
+export interface CodeFieldProps extends LayoutProps {
     /** number of cells; input stops there */
     length?: number;
     /** shows a dot instead of each digit */
@@ -284,9 +284,9 @@ export interface PinFieldProps extends LayoutProps {
     error?: boolean;
     /** oneTimeCode lets the system offer a code it just received by SMS; none keeps it from offering anything, saved passwords included */
     autofill?: "none" | "oneTimeCode";
-    onChange?: (e: PinFieldChangePayload) => void;
-    onComplete?: (e: PinFieldCompletePayload) => void;
-    ref?: Ref<PinFieldCommands>;
+    onChange?: (e: CodeFieldChangePayload) => void;
+    onComplete?: (e: CodeFieldCompletePayload) => void;
+    ref?: Ref<CodeFieldCommands>;
 }
 
 export interface SelectSelectPayload {
@@ -325,7 +325,7 @@ export interface IntrinsicElements {
     BottomSheet: BottomSheetProps;
     Divider: DividerProps;
     Checkbox: CheckboxProps;
-    PinField: PinFieldProps;
+    CodeField: CodeFieldProps;
     Select: SelectProps;
     Option: OptionProps;
 }
@@ -344,6 +344,6 @@ export const Loading = "Loading";
 export const BottomSheet = "BottomSheet";
 export const Divider = "Divider";
 export const Checkbox = "Checkbox";
-export const PinField = "PinField";
+export const CodeField = "CodeField";
 export const Select = "Select";
 export const Option = "Option";

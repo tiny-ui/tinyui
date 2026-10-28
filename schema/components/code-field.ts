@@ -1,6 +1,6 @@
 import { boolean, defineComponent, enumOf, field, number } from "tinyui-cli/schema";
 
-export default defineComponent("PinField", {
+export default defineComponent("CodeField", {
     doc: "A row of digit cells over one input; text, focus and the IME stay on the Kotlin side like TextField (docs/adr-004 §3.3).",
     props: {
         length: number({ default: 6, doc: "number of cells; input stops there" }),
