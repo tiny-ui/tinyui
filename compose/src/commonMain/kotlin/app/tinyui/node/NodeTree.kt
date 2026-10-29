@@ -29,6 +29,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     val root = UINode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
     private val born = ArrayList<UINode>()
+    // commands of the flush being applied, sent after it is: a component never gets one ahead of the props it came with
+    private val sent = ArrayList<Pair<UINode, Command>>()
 
     val size: Int get() = nodes.size
 
@@ -42,6 +44,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             report(PatchProblem(json.take(200), "message is not a JSON array (${e.message})"))
             return
         }
+        // a flush that failed to apply sends nothing
+        sent.clear()
         Snapshot.withMutableSnapshot {
             for (op in ops) applyOp(op)
             for (node in born) {
@@ -52,6 +56,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             }
             born.clear()
         }
+        for ((node, command) in sent) node.queue.trySend(command)
+        sent.clear()
     }
 
     fun clear() {
@@ -158,7 +164,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             if (!spec.accepts(v)) return report(PatchProblem(op.toString(), "command $name: $field must be $spec"))
             args[field] = v.scalar()
         }
-        node.commands.add(Command(name, args))
+        sent += node to Command(name, args)
     }
 
     private fun forget(node: UINode) {

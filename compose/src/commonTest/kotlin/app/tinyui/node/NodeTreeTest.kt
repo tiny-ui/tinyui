@@ -1,5 +1,6 @@
 package app.tinyui.node
 
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.graphics.Color
 import app.tinyui.schema.ColorValue
 import androidx.compose.ui.unit.dp
@@ -82,10 +83,38 @@ class NodeTreeTest {
         assertEquals(1, problems.size); assertTrue("initial prop" in problems.single().reason)
         problems.clear()
         tree.apply("""[["x",1,"setText",{"text":"z"}],["x",1,"setText",{}],["x",1,"setText",{"text":3}],["x",1,"focus",{}]]""")
-        assertEquals(listOf("setText", "focus"), tree.node(1)!!.commands.map { it.name })
-        assertEquals("z", tree.node(1)!!.commands[0].args["text"])
+        val sent = received(tree.node(1)!!)
+        assertEquals(listOf("setText", "focus"), sent.map { it.name })
+        assertEquals("z", sent[0].args["text"])
         assertEquals(2, problems.size)
     }
+
+    @Test
+    fun receivingCommandsNeverConflictsWithAFlushBeingApplied() {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0],["x",1,"setText",{"text":"a"}]]""")
+        val node = tree.node(1)!!
+        // the main thread takes a command inside its own snapshot while the engine thread applies the next flush:
+        // with commands as snapshot state both wrote the same list, and the later apply failed with a conflict
+        val main = Snapshot.takeMutableSnapshot()
+        val first = main.enter { node.commands.tryReceive().getOrNull() }
+        tree.apply("""[["x",1,"focus",{}]]""")
+        main.apply().check()
+        main.dispose()
+        assertEquals("setText", first?.name)
+        assertEquals(listOf("focus"), received(node).map { it.name })
+    }
+
+    @Test
+    fun aFlushSendsItsCommandsOnlyOnceItIsApplied() {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        val node = tree.node(1)!!
+        tree.apply("""[["x",1,"focus",{}],["p",1,"placeholder","hint"]]""")
+        // what a component sees when the command arrives: the props of the same flush are already there
+        assertEquals("hint", node.props["placeholder"])
+        assertEquals(listOf("focus"), received(node).map { it.name })
+    }
+
+    private fun received(node: UINode): List<Command> = generateSequence { node.commands.tryReceive().getOrNull() }.toList()
 
     @Test
     fun requiredPropsAreCheckedWhenTheCreatingFlushEnds() {
