@@ -121,7 +121,8 @@ class PageHost internal constructor(
     internal val context = PageContext(page.name, locals.associate { it.local to it.value })
     private val storage by lazy { host.storages.of(page.pkg) }
     internal val ui = PageUI()
-    internal val back = PageBack { host.navigator.pop(null, context) }
+    /** Closes this page as `navigation.pop()` would, from Kotlin. */
+    internal val closeFromHost: () -> Unit = { host.navigator.pop(null, context) }
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set

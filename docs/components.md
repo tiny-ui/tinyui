@@ -146,9 +146,9 @@ const [focused, setFocused] = signal(false);
 
 `TopAppBar` 是 M3 小顶栏（2026-10-29 加，注册流程触发：每一步的返回、帮助入口与语言切换不一样，放在页面里才能随页面热下发）。children 进右侧操作槽，用现有组件拼（文字按钮、`Row` + `Icon` + `Text` 的语言触发器）；`title` 可选，标题写在内容区大字里的页面不设。它自己让出状态栏：状态栏的内边距在公共 modifier 之外，所以 `height` 是栏本身的高度（缺省 M3 的 64dp），宿主已经消费过的 inset（如 `Scaffold` 的 innerPadding 配 `consumeWindowInsets`）不会再加一遍。底色缺省 `surface`，`background` 同时染状态栏那一段。
 
-返回按钮只有设了 `backIcon` 才出现（流程第一页不设），图标照常由页面从包里引入。它**没有自己的事件**：点它与系统返回走同一个去处——本页最后挂载、启用着的 `BackHandler` 收到 `onBack`，没有就关闭本页（`Navigator.pop(null, from)`，同 `navigation.pop()`）。要改返回行为只在 `BackHandler` 一处写，顶栏与系统返回不会分叉。
+返回按钮只有设了 `backIcon` 才出现（流程第一页不设），图标照常由页面从包里引入。它**没有自己的事件**：点它就是往系统返回的 dispatcher 注入一次返回，同 Android 工具栏调 `onBackPressedDispatcher.onBackPressed()`——启用着的 `BackHandler` 先收到，没有就到宿主的导航（Navigation 3 弹出栈顶；宿主没接返回时 Android 结束 Activity，与按返回键一样）。要改返回行为只在 `BackHandler` 一处写，顶栏与系统返回是同一条路，优先级只有 dispatcher 那一份。宿主没提供 dispatcher 时（测试、自绘导航）按钮退回到关闭本页（`Navigator.pop(null, from)`，同 `navigation.pop()`）。
 
-`BackHandler` 是返回的拦截声明（2026-10-29 加）：不画任何东西，`enabled` 时把系统返回（Android 返回键与预测性返回手势、iOS 侧滑，经 `navigationevent` 的 dispatcher，与 Navigation 3 同一个）和顶栏返回按钮都交给 `onBack`，页面在里面决定做什么，比如先确认再 `navigation.pop()`。按 ADR-002，拦不拦必须作为 prop 预先声明，宿主没法在手势发生时同步问 JS。多个启用着的以最后挂载的为准（同 Compose）；打开着的 `BottomSheet` 先于它收到返回（M3 弹层自带）。宿主没提供 dispatcher 时（测试、自绘导航）只有顶栏按钮到得了它。
+`BackHandler` 是返回的拦截声明（2026-10-29 加）：不画任何东西，`enabled` 时把系统返回（Android 返回键与预测性返回手势、iOS 侧滑，经 `navigationevent` 的 dispatcher，与 Navigation 3 同一个；顶栏返回按钮也注入到这里）交给 `onBack`，页面在里面决定做什么，比如先确认再 `navigation.pop()`。按 ADR-002，拦不拦必须作为 prop 预先声明，宿主没法在手势发生时同步问 JS。多个启用着的以最后组合的为准（dispatcher 的规则）；打开着的 `BottomSheet` 先于它收到返回（M3 弹层自带）。宿主没提供 dispatcher 时它不起作用。
 
 ```tsx
 import chevronLeft from "../icons/chevron-left.svg";

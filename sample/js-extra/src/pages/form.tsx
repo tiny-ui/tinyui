@@ -36,7 +36,7 @@ export default function Form() {
 
     return (
         <Column width="fill" height="fill">
-            {/* back goes where system back goes: the guard below when it is on, otherwise the page closes */}
+            {/* back is a system back: the guard below takes it when on; otherwise this tab-only sample has no navigation and Android leaves the App */}
             <TopAppBar backIcon={chevronLeft} backLabel="Back" height={48}>
                 <Button variant="text" text="Help" onClick={() => void ui.toast("open help")} />
                 <Row role="button" onClick={() => setMenuOpen(true)} align="center" gap={4} paddingHorizontal={8}>

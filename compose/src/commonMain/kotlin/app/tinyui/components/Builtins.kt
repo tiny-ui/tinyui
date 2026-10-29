@@ -109,6 +109,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import androidx.navigationevent.DirectNavigationEventInput
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
@@ -117,8 +118,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
-import app.tinyui.LocalPageBack
-import app.tinyui.PageBack
+import app.tinyui.LocalClosePage
 import app.tinyui.oneTimeCodeImeOptions
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
@@ -578,20 +578,32 @@ private val POPOVER_GAP = 8.dp
 /**
  * M3 small top app bar under the status bar; the children are the actions. The status bar padding sits outside the
  * common modifier, so `height` sizes the bar itself; inset padding consumed by the host already (a Scaffold) is not
- * added again. The back button goes through the page's [PageBack], the same place system back ends up.
+ * added again. The back button injects a back into the system dispatcher, as a toolbar calls
+ * `onBackPressedDispatcher.onBackPressed()`: whatever would take system back takes it (a `BackHandler`, the host's
+ * navigation). Without a dispatcher it closes the page.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarComponent(scope: NodeScope) {
     val container = scope.color("background") ?: MaterialTheme.colorScheme.surface
-    val back = LocalPageBack.current
     val backIcon = scope.get<IconValue>("backIcon")
+    val dispatcher = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+    val closePage = LocalClosePage.current
+    val input = remember { DirectNavigationEventInput() }
+    if (dispatcher != null) {
+        DisposableEffect(dispatcher, input) {
+            dispatcher.addInput(input)
+            onDispose { dispatcher.removeInput(input) }
+        }
+    }
     Box(Modifier.background(container).windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
         TopAppBar(
             title = { scope.get<String>("title")?.takeIf { it.isNotEmpty() }?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
             navigationIcon = {
                 if (backIcon != null) {
-                    IconButton(onClick = { back?.back() }) { Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel")) }
+                    IconButton(onClick = { if (dispatcher != null) input.backCompleted() else closePage?.invoke() }) {
+                        Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"))
+                    }
                 }
             },
             actions = { scope.Children() },
@@ -604,25 +616,13 @@ private fun TopAppBarComponent(scope: NodeScope) {
     }
 }
 
-/**
- * Takes system back while enabled and registers with the page's [PageBack] for the `TopAppBar` button; both end in
- * `onBack`. Without a dispatcher (a host without one, a test) only the button reaches it.
- */
+/** Takes back from the system dispatcher while enabled, which is also where the `TopAppBar` button sends it. */
 @Composable
 private fun BackHandlerComponent(scope: NodeScope) {
+    // without a dispatcher there is no back to take: the top bar button then closes the page directly
+    if (LocalNavigationEventDispatcherOwner.current == null) return
     val enabled = (scope.get<Boolean>("enabled") ?: true) && scope.has("onBack")
-    val onBack = { scope.dispatch("onBack") }
-    val page = LocalPageBack.current
-    val handler = remember { PageBack.Handler() }
-    handler.enabled = enabled
-    handler.onBack = onBack
-    DisposableEffect(page, handler) {
-        page?.add(handler)
-        onDispose { page?.remove(handler) }
-    }
-    if (LocalNavigationEventDispatcherOwner.current != null) {
-        NavigationBackHandler(state = rememberNavigationEventState(NavigationEventInfo.None), isBackEnabled = enabled, onBackCompleted = onBack)
-    }
+    NavigationBackHandler(state = rememberNavigationEventState(NavigationEventInfo.None), isBackEnabled = enabled, onBackCompleted = { scope.dispatch("onBack") })
 }
 
 /**

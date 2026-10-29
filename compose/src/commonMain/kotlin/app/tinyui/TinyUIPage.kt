@@ -89,7 +89,7 @@ fun TinyUIPage(
         if (failure != null) {
             error(failure)
         } else {
-            CompositionLocalProvider(LocalPageBack provides pageHost.back) {
+            CompositionLocalProvider(LocalClosePage provides pageHost.closeFromHost) {
                 for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
             }
         }
