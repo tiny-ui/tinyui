@@ -17,5 +17,6 @@ import Divider from "./components/divider.ts";
 import CodeField from "./components/code-field.ts";
 import Select from "./components/select.ts";
 import Option from "./components/option.ts";
+import Popover from "./components/popover.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover];
