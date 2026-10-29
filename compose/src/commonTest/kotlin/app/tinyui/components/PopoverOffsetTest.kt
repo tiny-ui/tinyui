@@ -42,4 +42,12 @@ class PopoverOffsetTest {
         val pastRightEdge = IntRect(350, 300, 390, 340)
         assertEquals(IntOffset(300, 242), popoverOffset(pastRightEdge, window, narrow, above = true, gap = 8, rtl = false))
     }
+
+    @Test
+    fun aFullWidthAnchorGetsAFullWidthCardFlushWithTheEdges() {
+        // Popup measures its content against the window, so the card is never wider than the window
+        val edgeToEdge = IntRect(0, 300, 400, 356)
+        assertEquals(IntOffset(0, 92), popoverOffset(edgeToEdge, window, IntSize(400, 200), above = true, gap = 8, rtl = false))
+        assertEquals(IntOffset(0, 92), popoverOffset(edgeToEdge, window, IntSize(400, 200), above = true, gap = 8, rtl = true))
+    }
 }

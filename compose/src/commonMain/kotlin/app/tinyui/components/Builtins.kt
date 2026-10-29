@@ -530,13 +530,11 @@ private fun PopoverComponent(scope: NodeScope) {
         if (anchorWidth == null) return
     }
     val gap = with(LocalDensity.current) { POPOVER_GAP.roundToPx() }
-    val margin = with(LocalDensity.current) { POPOVER_SHADOW_ROOM.roundToPx() }
     val above = scope.get<String>("placement") == "above"
-    val position = remember(above, gap, margin) {
+    val position = remember(above, gap) {
         object : PopupPositionProvider {
-            // the window is the card plus its margin all round: place that so the card itself lines up with the anchor
             override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize) =
-                popoverOffset(anchorBounds.inflate(margin), windowSize, popupContentSize, above, gap - 2 * margin, layoutDirection == LayoutDirection.Rtl)
+                popoverOffset(anchorBounds, windowSize, popupContentSize, above, gap, layoutDirection == LayoutDirection.Rtl)
         }
     }
     val width = anchorWidth?.takeIf { matchWidth }?.let { with(LocalDensity.current) { it.toDp() } }
@@ -547,8 +545,7 @@ private fun PopoverComponent(scope: NodeScope) {
     ) {
         AnimatedVisibility(visibleState = visible, enter = fadeIn(), exit = fadeOut()) {
             Surface(
-                // the popup window clips to its content: leave the shadow room to fall
-                modifier = Modifier.padding(POPOVER_SHADOW_ROOM).then(if (width != null) Modifier.width(width) else Modifier),
+                modifier = if (width != null) Modifier.width(width) else Modifier,
                 shape = MaterialTheme.shapes.medium,
                 // explicit: contentColorFor would guess from the container and can land on a muted colour
                 color = MaterialTheme.colorScheme.surface,
@@ -560,7 +557,6 @@ private fun PopoverComponent(scope: NodeScope) {
 }
 
 private val POPOVER_GAP = 8.dp
-private val POPOVER_SHADOW_ROOM = 8.dp
 
 /**
  * Where a popover of [content] size goes: on the [above] / below side of [anchor] with [gap] px between, start edges
