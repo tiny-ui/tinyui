@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -29,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -52,8 +56,11 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -102,6 +109,11 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import androidx.navigationevent.DirectNavigationEventInput
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -112,6 +124,7 @@ import app.tinyui.schema.Commands
 import app.tinyui.schema.IconValue
 import app.tinyui.schema.ComponentRegistry
 import app.tinyui.schema.NodeScope
+import app.tinyui.schema.SizeValue
 import app.tinyui.schema.Theme
 
 /** First batch of built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. */
@@ -194,6 +207,9 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
     register(BuiltinSchemas.BottomSheet) { scope -> BottomSheetComponent(scope) }
     register(BuiltinSchemas.Popover) { scope -> PopoverComponent(scope) }
+    register(BuiltinSchemas.TopAppBar) { scope -> TopAppBarComponent(scope) }
+    register(BuiltinSchemas.BackHandler) { scope -> BackHandlerComponent(scope) }
+    register(BuiltinSchemas.Menu) { scope -> MenuComponent(scope) }
     register(BuiltinSchemas.Divider) { scope ->
         HorizontalDivider(
             modifier = scope.modifier(),
@@ -557,6 +573,73 @@ private fun PopoverComponent(scope: NodeScope) {
 }
 
 private val POPOVER_GAP = 8.dp
+
+/**
+ * M3 small top app bar under the status bar; the children are the actions. The status bar padding sits outside the
+ * common modifier, so `height` sizes the bar itself; inset padding consumed by the host already (a Scaffold) is not
+ * added again. The back button injects a back into the system dispatcher, as a toolbar calls
+ * `onBackPressedDispatcher.onBackPressed()`: whatever would take system back takes it (a `BackHandler`, the host's
+ * navigation). Without a dispatcher there is no system back, so it does nothing, like a `BackHandler`.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopAppBarComponent(scope: NodeScope) {
+    val container = scope.color("background") ?: MaterialTheme.colorScheme.surface
+    val backIcon = scope.get<IconValue>("backIcon")
+    val dispatcher = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+    val input = remember { DirectNavigationEventInput() }
+    if (dispatcher != null) {
+        DisposableEffect(dispatcher, input) {
+            dispatcher.addInput(input)
+            onDispose { dispatcher.removeInput(input) }
+        }
+    }
+    Box(Modifier.background(container).windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
+        TopAppBar(
+            title = { scope.get<String>("title")?.takeIf { it.isNotEmpty() }?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+            navigationIcon = {
+                if (backIcon != null) {
+                    IconButton(onClick = { if (dispatcher != null) input.backCompleted() }) {
+                        Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"))
+                    }
+                }
+            },
+            actions = { scope.Children() },
+            // the insets are padded above, outside the height the page gives
+            windowInsets = WindowInsets(0),
+            expandedHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp ?: TopAppBarDefaults.TopAppBarExpandedHeight,
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = container),
+            modifier = scope.modifier(),
+        )
+    }
+}
+
+/** Takes back from the system dispatcher while enabled, which is also where the `TopAppBar` button sends it. */
+@Composable
+private fun BackHandlerComponent(scope: NodeScope) {
+    // without a dispatcher there is no system back to take, from the gesture or the top bar button
+    if (LocalNavigationEventDispatcherOwner.current == null) return
+    val enabled = (scope.get<Boolean>("enabled") ?: true) && scope.has("onBack")
+    NavigationBackHandler(state = rememberNavigationEventState(NavigationEventInfo.None), isBackEnabled = enabled, onBackCompleted = { scope.dispatch("onBack") })
+}
+
+/**
+ * M3 dropdown menu anchored to the parent node, like [PopoverComponent]; the items are the `Option` children, read as
+ * data. `open` is the page's, but a pick or a tap outside closes it here at once and is then reported, as
+ * [BottomSheetComponent] does: it stays closed until `open` goes false and true again.
+ */
+@Composable
+private fun MenuComponent(scope: NodeScope) {
+    val open = scope.get<Boolean>("open") == true
+    var showing by remember { mutableStateOf(false) }
+    LaunchedEffect(open) { showing = open }
+    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    DropdownMenu(expanded = showing, onDismissRequest = { showing = false; if (scope.has("onDismiss")) scope.dispatch("onDismiss") }) {
+        for ((value, text) in options) {
+            DropdownMenuItem(text = { Text(text) }, onClick = { showing = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
+        }
+    }
+}
 
 /**
  * Where a popover of [content] size goes: on the [above] / below side of [anchor] with [gap] px between, start edges

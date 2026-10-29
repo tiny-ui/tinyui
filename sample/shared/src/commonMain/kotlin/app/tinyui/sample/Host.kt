@@ -3,6 +3,8 @@ package app.tinyui.sample
 import app.tinyui.AnalyticsSink
 import app.tinyui.HttpChannel
 import app.tinyui.HttpResponse
+import app.tinyui.Navigator
+import app.tinyui.PageContext
 import app.tinyui.PageError
 import app.tinyui.PageSink
 import app.tinyui.Session
@@ -42,6 +44,11 @@ internal fun sampleHost(dataDir: Path? = null) = TinyUIHost(
     channels = mapOf("todos" to fakeTodos),
     locale = sampleLocale,
     session = SessionSource(signedIn) { delay(500); signedIn.value = Session(true, "demo") },
+    // tabs, no stack: a page closing itself (navigation.pop, top bar back) only shows up in the log
+    navigator = object : Navigator {
+        override fun push(page: String, paramsJson: String, from: PageContext) = println("TinyUI navigation.push $page from ${from.name}")
+        override fun pop(resultJson: String?, from: PageContext) = println("TinyUI navigation.pop from ${from.name}")
+    },
     analytics = AnalyticsSink { name, props, page -> println("TinyUI analytics ${page.name} $name $props") },
     dataDir = dataDir,
 )

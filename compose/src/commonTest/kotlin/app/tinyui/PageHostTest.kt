@@ -123,7 +123,7 @@ class PageHostTest {
         val host = host("""{"name":"tinyui"}""")
         host.start()
         host.await { host.tree.root.children.isNotEmpty() }
-        assertEquals("hello tinyui / 18", host.tree.node(1)!!.props["text"])
+        assertEquals("hello tinyui / 21", host.tree.node(1)!!.props["text"])
         assertNull(host.failure)
         host.close()
     }

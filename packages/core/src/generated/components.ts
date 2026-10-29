@@ -304,7 +304,7 @@ export interface SelectProps extends LayoutProps {
     children?: Node | Node[];
 }
 
-/** One choice of its parent Select, which reads these props; renders nothing anywhere else. */
+/** One choice of its parent Select or Menu, which reads these props; renders nothing anywhere else. */
 export interface OptionProps {
     value: string;
     text: string;
@@ -321,6 +321,40 @@ export interface PopoverProps {
     /** as wide as the anchor instead of its content */
     matchAnchorWidth?: boolean;
     onDismiss?: (e: PopoverDismissPayload) => void;
+    children?: Node | Node[];
+}
+
+/** M3 top app bar at the top of the page; children go in its trailing actions slot. It pads itself below the status bar; `height` is the bar's own height, the status bar not included. Its back button sends a system back: an enabled `BackHandler` or the host's navigation takes it; in a host without a back dispatcher it does nothing. */
+export interface TopAppBarProps extends LayoutProps {
+    title?: string;
+    /** shows a back button with this icon; unset, no back button (the first page of a flow) */
+    backIcon?: string;
+    /** what a screen reader says for the back button */
+    backLabel?: string;
+    children?: Node | Node[];
+}
+
+export interface BackHandlerBackPayload {
+}
+
+/** While `enabled`, system back (the `TopAppBar` back button sends one too) fires `onBack` instead of reaching the host's navigation; draws nothing. Declared up front because the host cannot ask JS at the moment of the gesture. Of several enabled ones, the last composed wins. Inert in a host without a back dispatcher. */
+export interface BackHandlerProps {
+    enabled?: boolean;
+    onBack?: (e: BackHandlerBackPayload) => void;
+}
+
+export interface MenuSelectPayload {
+    value: string;
+}
+
+export interface MenuDismissPayload {
+}
+
+/** M3 dropdown menu next to its parent, which is the anchor; the items are its `Option` children. Shown while `open`; a pick (`onSelect`) or a tap outside (`onDismiss`) has already closed it when reported, and it stays closed until `open` goes false and true again. */
+export interface MenuProps {
+    open: boolean;
+    onSelect?: (e: MenuSelectPayload) => void;
+    onDismiss?: (e: MenuDismissPayload) => void;
     children?: Node | Node[];
 }
 
@@ -343,6 +377,9 @@ export interface IntrinsicElements {
     Select: SelectProps;
     Option: OptionProps;
     Popover: PopoverProps;
+    TopAppBar: TopAppBarProps;
+    BackHandler: BackHandlerProps;
+    Menu: MenuProps;
 }
 
 export const Column = "Column";
@@ -363,3 +400,6 @@ export const CodeField = "CodeField";
 export const Select = "Select";
 export const Option = "Option";
 export const Popover = "Popover";
+export const TopAppBar = "TopAppBar";
+export const BackHandler = "BackHandler";
+export const Menu = "Menu";

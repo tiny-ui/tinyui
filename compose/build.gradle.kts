@@ -37,6 +37,8 @@ kotlin {
             api(libs.compose.runtime.retain)
             implementation(compose.foundation)
             implementation(libs.compose.material3)
+            // BackHandler takes system back through the same dispatcher as the host's navigation
+            implementation(libs.navigationevent.compose)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             api(libs.okio)
