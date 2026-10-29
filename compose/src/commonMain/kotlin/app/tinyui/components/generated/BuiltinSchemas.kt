@@ -308,7 +308,51 @@ object BuiltinSchemas {
         layout = false,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover)
+    val TopAppBar = ComponentSchema(
+        type = "TopAppBar",
+        props = mapOf(
+            "title" to PropSpec.Str(default = null, required = false, initial = false),
+            "backIcon" to PropSpec.IconSpec(required = false, initial = false),
+            "backLabel" to PropSpec.Str(default = null, required = false, initial = false),
+        ),
+        events = mapOf(
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = true,
+    )
+
+    val BackHandler = ComponentSchema(
+        type = "BackHandler",
+        props = mapOf(
+            "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
+        ),
+        events = mapOf(
+            "onBack" to emptyMap(),
+        ),
+        commands = mapOf(
+        ),
+        children = false,
+        layout = false,
+    )
+
+    val Menu = ComponentSchema(
+        type = "Menu",
+        props = mapOf(
+            "open" to PropSpec.Bool(default = null, required = true, initial = false),
+        ),
+        events = mapOf(
+            "onSelect" to mapOf("value" to FieldSpec.Str),
+            "onDismiss" to emptyMap(),
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = false,
+    )
+
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")

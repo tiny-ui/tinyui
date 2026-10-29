@@ -76,13 +76,16 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
-| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop | | | |
+| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select` 与 `Menu` 读它 | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 | `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
 | `Popover` | `open`（必填）、`placement`（above / below，默认 below）、`matchAnchorWidth`；不接受布局 prop | `onDismiss`（点了弹层外面） | | 是：卡片的内容 |
+| `TopAppBar` | `title`、`backIcon`（`icon` 类型，设了才有返回按钮）、`backLabel`（返回按钮的读屏名） | | | 是：右侧的操作 |
+| `BackHandler` | `enabled`（默认 true）；不接受布局 prop | `onBack` | | |
+| `Menu` | `open`（必填）；不接受布局 prop | `onSelect{value}`、`onDismiss`（点了菜单外面） | | 是：`Option` |
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
@@ -140,6 +143,35 @@ const [focused, setFocused] = signal(false);
 ```
 
 叫 `Popover` 而不叫 `Tooltip`：M3 里最接近的是 rich tooltip，但 M3 的 tooltip 由框架在长按、悬停时自己触发，偏短文字，宽度上限 320dp；这里是页面掌握开关、内容不限的锚定浮层，与 Web（Radix、MUI 的 `Popover` / `Tooltip` 并存）和 iOS 的 popover 同义。`Tooltip` 这个名字留给将来按 M3 语义实现的那个（图标按钮长按出一句说明）。
+
+`TopAppBar` 是 M3 小顶栏（2026-10-29 加，注册流程触发：每一步的返回、帮助入口与语言切换不一样，放在页面里才能随页面热下发）。children 进右侧操作槽，用现有组件拼（文字按钮、`Row` + `Icon` + `Text` 的语言触发器）；`title` 可选，标题写在内容区大字里的页面不设。它自己让出状态栏：状态栏的内边距在公共 modifier 之外，所以 `height` 是栏本身的高度（缺省 M3 的 64dp），宿主已经消费过的 inset（如 `Scaffold` 的 innerPadding 配 `consumeWindowInsets`）不会再加一遍。底色缺省 `surface`，`background` 同时染状态栏那一段。
+
+返回按钮只有设了 `backIcon` 才出现（流程第一页不设），图标照常由页面从包里引入。它**没有自己的事件**：点它与系统返回走同一个去处——本页最后挂载、启用着的 `BackHandler` 收到 `onBack`，没有就关闭本页（`Navigator.pop(null, from)`，同 `navigation.pop()`）。要改返回行为只在 `BackHandler` 一处写，顶栏与系统返回不会分叉。
+
+`BackHandler` 是返回的拦截声明（2026-10-29 加）：不画任何东西，`enabled` 时把系统返回（Android 返回键与预测性返回手势、iOS 侧滑，经 `navigationevent` 的 dispatcher，与 Navigation 3 同一个）和顶栏返回按钮都交给 `onBack`，页面在里面决定做什么，比如先确认再 `navigation.pop()`。按 ADR-002，拦不拦必须作为 prop 预先声明，宿主没法在手势发生时同步问 JS。多个启用着的以最后挂载的为准（同 Compose）；打开着的 `BottomSheet` 先于它收到返回（M3 弹层自带）。宿主没提供 dispatcher 时（测试、自绘导航）只有顶栏按钮到得了它。
+
+```tsx
+import chevronLeft from "../icons/chevron-left.svg";
+const [leaving, setLeaving] = signal(false);
+<TopAppBar backIcon={chevronLeft} backLabel={t("common.back")} height={48}>
+    <Button variant="text" text={t("help")} onClick={openHelp} />
+</TopAppBar>
+<BackHandler enabled={dirty()} onBack={async () => { if (await ui.confirm({ message: t("leave") })) navigation.pop(); }} />
+```
+
+`Menu` 是锚在父节点上的 M3 下拉菜单（2026-10-29 加，注册流程的语言切换触发）。锚点规则同 `Popover`：放进触发它的那个节点里。菜单项是 `Option` children，与 `Select` 同一份数据写法；`Select` 是表单字段（输入框外观、显示选中值），`Menu` 是点了才出现的一组动作或选项，触发器长什么样由页面写。开关归页面，但选中一项或点外面时菜单当场收起再上报，与 `BottomSheet` 同一模式：之后要 `open` 先变 false 再变 true 才会再打开，所以两个事件里都把 `open` 置回 false。不做：图标、分组、勾选标记、子菜单。
+
+```tsx
+const [open, setOpen] = signal(false);
+<Row role="button" onClick={() => setOpen(true)} align="center" gap={4}>
+    <Icon icon={globe} size={20} />
+    <Text text={languageName()} />
+    <Menu open={open()} onDismiss={() => setOpen(false)} onSelect={(e) => { setOpen(false); setLanguage(e.value); }}>
+        <Option value="en" text="English" />
+        <Option value="zh" text="简体中文" />
+    </Menu>
+</Row>
+```
 
 `Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
 

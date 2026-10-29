@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
@@ -88,7 +89,9 @@ fun TinyUIPage(
         if (failure != null) {
             error(failure)
         } else {
-            for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
+            CompositionLocalProvider(LocalPageBack provides pageHost.back) {
+                for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
+            }
         }
         pageHost.ui.Overlay(Modifier.align(Alignment.BottomCenter))
     }
