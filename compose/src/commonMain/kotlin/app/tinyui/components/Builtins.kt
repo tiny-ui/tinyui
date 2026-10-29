@@ -118,7 +118,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
-import app.tinyui.LocalClosePage
 import app.tinyui.oneTimeCodeImeOptions
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
@@ -580,7 +579,7 @@ private val POPOVER_GAP = 8.dp
  * common modifier, so `height` sizes the bar itself; inset padding consumed by the host already (a Scaffold) is not
  * added again. The back button injects a back into the system dispatcher, as a toolbar calls
  * `onBackPressedDispatcher.onBackPressed()`: whatever would take system back takes it (a `BackHandler`, the host's
- * navigation). Without a dispatcher it closes the page.
+ * navigation). Without a dispatcher there is no system back, so it does nothing, like a `BackHandler`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -588,7 +587,6 @@ private fun TopAppBarComponent(scope: NodeScope) {
     val container = scope.color("background") ?: MaterialTheme.colorScheme.surface
     val backIcon = scope.get<IconValue>("backIcon")
     val dispatcher = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
-    val closePage = LocalClosePage.current
     val input = remember { DirectNavigationEventInput() }
     if (dispatcher != null) {
         DisposableEffect(dispatcher, input) {
@@ -601,7 +599,7 @@ private fun TopAppBarComponent(scope: NodeScope) {
             title = { scope.get<String>("title")?.takeIf { it.isNotEmpty() }?.let { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
             navigationIcon = {
                 if (backIcon != null) {
-                    IconButton(onClick = { if (dispatcher != null) input.backCompleted() else closePage?.invoke() }) {
+                    IconButton(onClick = { if (dispatcher != null) input.backCompleted() }) {
                         Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"))
                     }
                 }
@@ -619,7 +617,7 @@ private fun TopAppBarComponent(scope: NodeScope) {
 /** Takes back from the system dispatcher while enabled, which is also where the `TopAppBar` button sends it. */
 @Composable
 private fun BackHandlerComponent(scope: NodeScope) {
-    // without a dispatcher there is no back to take: the top bar button then closes the page directly
+    // without a dispatcher there is no system back to take, from the gesture or the top bar button
     if (LocalNavigationEventDispatcherOwner.current == null) return
     val enabled = (scope.get<Boolean>("enabled") ?: true) && scope.has("onBack")
     NavigationBackHandler(state = rememberNavigationEventState(NavigationEventInfo.None), isBackEnabled = enabled, onBackCompleted = { scope.dispatch("onBack") })
