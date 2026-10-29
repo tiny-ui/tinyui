@@ -705,6 +705,8 @@ final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.comp
         final fun <get-Loading>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Loading.<get-Loading>|<get-Loading>(){}[0]
     final val Option // app.tinyui.components.generated/BuiltinSchemas.Option|{}Option[0]
         final fun <get-Option>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Option.<get-Option>|<get-Option>(){}[0]
+    final val Popover // app.tinyui.components.generated/BuiltinSchemas.Popover|{}Popover[0]
+        final fun <get-Popover>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Popover.<get-Popover>|<get-Popover>(){}[0]
     final val RadioButton // app.tinyui.components.generated/BuiltinSchemas.RadioButton|{}RadioButton[0]
         final fun <get-RadioButton>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
     final val Row // app.tinyui.components.generated/BuiltinSchemas.Row|{}Row[0]

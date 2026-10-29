@@ -82,6 +82,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 | `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
+| `Popover` | `open`（必填）、`placement`（above / below，默认 below）、`matchAnchorWidth`；不接受布局 prop | `onDismiss`（点了弹层外面） | | 是：卡片的内容 |
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
@@ -123,6 +124,22 @@ const [open, setOpen] = signal(false);
     <Column paddingHorizontal={24} paddingVertical={16} gap={12}>…</Column>
 </BottomSheet>
 ```
+
+`Popover` 是锚在父节点上的浮动卡片（2026-10-29 加，注册流程触发：密码框聚焦时在它上方浮出规则清单，盖住上面的内容而不推开布局）。锚点就是父节点，不另设 ref：Compose `Popup` 本来就锚在调用处的父布局上，内置组件渲染 children 也不加包装。所以写法是用 `Box` 把锚元素和它包在一起；直接放进带 `gap` 的 `Column` 会锚到整列，而且它在组合里占一个零尺寸的位置，打开时会多出一份 `gap`。`placement` 是首选的一侧，那一侧放不下就翻到另一侧，两侧都放不下取空间大的一侧；水平方向与锚点起始边对齐，两个方向都不出窗口，页面滚动时跟着锚点走。`matchAnchorWidth` 让卡片与锚点同宽（输入框下的说明），不设就按内容宽（图标按钮旁的提示）。
+
+它**永不获取焦点**：锚在聚焦输入框上的提示不能把键盘收走。显隐完全跟 `open`（淡入淡出）；点卡片外面只报 `onDismiss`、不自己收起，因为用户刚点的那个输入框也算"外面"——要不要关由页面决定，密码规则这种场景只跟焦点走、不监听它。外观归框架：`surface` 底、`onSurface` 字（显式给出，不靠 `contentColorFor` 从容器色推）、medium 圆角、3dp 阴影；内边距与内容由页面用 children 写。不做：箭头、背景色 prop、左右两侧弹出。
+
+```tsx
+const [focused, setFocused] = signal(false);
+<Box width="fill">
+    <TextField width="fill" keyboard="password" onFocusChange={(e) => setFocused(e.focused)} … />
+    <Popover open={focused()} placement="above" matchAnchorWidth>
+        <Column width="fill" padding={16} gap={8}>…</Column>
+    </Popover>
+</Box>
+```
+
+叫 `Popover` 而不叫 `Tooltip`：M3 里最接近的是 rich tooltip，但 M3 的 tooltip 由框架在长按、悬停时自己触发，偏短文字，宽度上限 320dp；这里是页面掌握开关、内容不限的锚定浮层，与 Web（Radix、MUI 的 `Popover` / `Tooltip` 并存）和 iOS 的 popover 同义。`Tooltip` 这个名字留给将来按 M3 语义实现的那个（图标按钮长按出一句说明）。
 
 `Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
 

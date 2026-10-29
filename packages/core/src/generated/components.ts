@@ -310,6 +310,20 @@ export interface OptionProps {
     text: string;
 }
 
+export interface PopoverDismissPayload {
+}
+
+/** Card floating next to its parent, which is the anchor; children are its content. Shown while `open`; it never takes focus, so the keyboard stays up. `onDismiss` reports a tap outside, the page decides whether to close. */
+export interface PopoverProps {
+    open: boolean;
+    /** preferred side of the anchor; flips when that side has no room */
+    placement?: "above" | "below";
+    /** as wide as the anchor instead of its content */
+    matchAnchorWidth?: boolean;
+    onDismiss?: (e: PopoverDismissPayload) => void;
+    children?: Node | Node[];
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -328,6 +342,7 @@ export interface IntrinsicElements {
     CodeField: CodeFieldProps;
     Select: SelectProps;
     Option: OptionProps;
+    Popover: PopoverProps;
 }
 
 export const Column = "Column";
@@ -347,3 +362,4 @@ export const Checkbox = "Checkbox";
 export const CodeField = "CodeField";
 export const Select = "Select";
 export const Option = "Option";
+export const Popover = "Popover";

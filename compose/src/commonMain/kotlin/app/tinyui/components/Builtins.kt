@@ -1,5 +1,9 @@
 package app.tinyui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
@@ -44,6 +49,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
@@ -65,6 +71,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentType
@@ -86,6 +95,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -177,6 +193,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     }
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
     register(BuiltinSchemas.BottomSheet) { scope -> BottomSheetComponent(scope) }
+    register(BuiltinSchemas.Popover) { scope -> PopoverComponent(scope) }
     register(BuiltinSchemas.Divider) { scope ->
         HorizontalDivider(
             modifier = scope.modifier(),
@@ -490,4 +507,76 @@ private fun BottomSheetComponent(scope: NodeScope) {
             sheetState = state,
         ) { scope.Children() }
     }
+}
+
+/**
+ * A card next to the parent node, which is the anchor: Compose's `Popup` anchors to the layout it is called in, and
+ * built-ins render their children without wrappers. Visibility follows `open` (faded); a tap outside is only reported,
+ * since the field the user just tapped is "outside" too. Never focusable: a hint under a focused field must not take
+ * the keyboard away.
+ */
+@Composable
+private fun PopoverComponent(scope: NodeScope) {
+    val visible = remember { MutableTransitionState(false) }
+    visible.targetState = scope.get<Boolean>("open") == true
+    // stays composed while fading out
+    if (!visible.currentState && !visible.targetState) return
+    val matchWidth = scope.get<Boolean>("matchAnchorWidth") == true
+    var anchorWidth by remember { mutableStateOf<Int?>(null) }
+    if (matchWidth) {
+        // the same zero-size probe Popup itself uses to find its parent
+        Layout(content = {}, modifier = Modifier.onGloballyPositioned { anchorWidth = it.parentLayoutCoordinates?.size?.width }) { _, _ -> layout(0, 0) {} }
+        // not drawn until the width is known, so it never shows at the wrong width first
+        if (anchorWidth == null) return
+    }
+    val gap = with(LocalDensity.current) { POPOVER_GAP.roundToPx() }
+    val margin = with(LocalDensity.current) { POPOVER_SHADOW_ROOM.roundToPx() }
+    val above = scope.get<String>("placement") == "above"
+    val position = remember(above, gap, margin) {
+        object : PopupPositionProvider {
+            // the window is the card plus its margin all round: place that so the card itself lines up with the anchor
+            override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize) =
+                popoverOffset(anchorBounds.inflate(margin), windowSize, popupContentSize, above, gap - 2 * margin, layoutDirection == LayoutDirection.Rtl)
+        }
+    }
+    val width = anchorWidth?.takeIf { matchWidth }?.let { with(LocalDensity.current) { it.toDp() } }
+    Popup(
+        popupPositionProvider = position,
+        onDismissRequest = { if (scope.has("onDismiss")) scope.dispatch("onDismiss") },
+        properties = PopupProperties(focusable = false),
+    ) {
+        AnimatedVisibility(visibleState = visible, enter = fadeIn(), exit = fadeOut()) {
+            Surface(
+                // the popup window clips to its content: leave the shadow room to fall
+                modifier = Modifier.padding(POPOVER_SHADOW_ROOM).then(if (width != null) Modifier.width(width) else Modifier),
+                shape = MaterialTheme.shapes.medium,
+                // explicit: contentColorFor would guess from the container and can land on a muted colour
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shadowElevation = 3.dp,
+            ) { scope.Children() }
+        }
+    }
+}
+
+private val POPOVER_GAP = 8.dp
+private val POPOVER_SHADOW_ROOM = 8.dp
+
+/**
+ * Where a popover of [content] size goes: on the [above] / below side of [anchor] with [gap] px between, start edges
+ * aligned. The preferred side wins when it fits, else the other side when that fits, else the roomier side; the result
+ * is kept inside [window] on both axes.
+ */
+internal fun popoverOffset(anchor: IntRect, window: IntSize, content: IntSize, above: Boolean, gap: Int, rtl: Boolean): IntOffset {
+    val topY = anchor.top - gap - content.height
+    val bottomY = anchor.bottom + gap
+    val fitsTop = topY >= 0
+    val fitsBottom = bottomY + content.height <= window.height
+    val roomierTop = anchor.top > window.height - anchor.bottom
+    val onTop = if (above) fitsTop || !fitsBottom && roomierTop else !fitsBottom && (fitsTop || roomierTop)
+    val x = if (rtl) anchor.right - content.width else anchor.left
+    return IntOffset(
+        x.coerceIn(0, (window.width - content.width).coerceAtLeast(0)),
+        (if (onTop) topY else bottomY).coerceIn(0, (window.height - content.height).coerceAtLeast(0)),
+    )
 }
