@@ -288,7 +288,11 @@ private fun TextFieldComponent(scope: NodeScope) {
     LaunchedEffect(maxLength) { change(clip(text)) }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> { text = clip(command.args["text"] as? String ?: ""); if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
+            "setText" -> {
+                text = clip(command.args["text"] as? String ?: "")
+                field = TextFieldValue(text, TextRange(text.length)) // also when the text is the same: the cursor still goes to the end
+                if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text))
+            }
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -310,8 +314,12 @@ private fun TextFieldComponent(scope: NodeScope) {
     // vertical padding shrinks to fit a line into it; M3's 16dp on each side makes the default 56dp with a 24sp line.
     val boxHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp
     val vertical = if (boxHeight == null) OutlinedTextFieldDefaults.contentPadding().calculateTopPadding() else {
-        // a style without a line height (none of M3's) gets the usual 1.5× of its size
-        val line = with(LocalDensity.current) { if (textStyle.lineHeight.isSpecified) textStyle.lineHeight.toDp() else textStyle.fontSize.toDp() * 1.5f }
+        // a style without a line height (none of M3's) gets the usual 1.5× of its size; without a size either, M3's body line
+        val line = with(LocalDensity.current) {
+            if (textStyle.lineHeight.isSpecified) textStyle.lineHeight.toDp()
+            else if (textStyle.fontSize.isSpecified) textStyle.fontSize.toDp() * 1.5f
+            else MaterialTheme.typography.bodyLarge.lineHeight.toDp()
+        }
         ((boxHeight - line) / 2).coerceIn(0.dp, OutlinedTextFieldDefaults.contentPadding().calculateTopPadding())
     }
     val supporting = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }
