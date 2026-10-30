@@ -29,8 +29,6 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     val root = UINode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
     private val born = ArrayList<UINode>()
-    // commands of the flush being applied, sent after it is: a component never gets one ahead of the props it came with
-    private val sent = ArrayList<Pair<UINode, Command>>()
 
     val size: Int get() = nodes.size
 
@@ -44,10 +42,11 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             report(PatchProblem(json.take(200), "message is not a JSON array (${e.message})"))
             return
         }
-        // a flush that failed to apply sends nothing
-        sent.clear()
+        // this flush's commands, sent once it is applied: a component never gets one ahead of the props it came with,
+        // and a flush that fails to apply sends none
+        val sent = ArrayList<Pair<UINode, Command>>()
         Snapshot.withMutableSnapshot {
-            for (op in ops) applyOp(op)
+            for (op in ops) applyOp(op, sent)
             for (node in born) {
                 node.created = true
                 registry.schema(node.type)?.props?.forEach { (key, spec) ->
@@ -56,8 +55,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             }
             born.clear()
         }
+        // a node removed later in the flush has a cancelled queue: its commands are dropped there
         for ((node, command) in sent) node.queue.trySend(command)
-        sent.clear()
     }
 
     fun clear() {
@@ -66,7 +65,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         nodes[ROOT_ID] = root
     }
 
-    private fun applyOp(op: JsonElement) {
+    private fun applyOp(op: JsonElement, sent: MutableList<Pair<UINode, Command>>) {
         val fields = op as? JsonArray ?: return report(PatchProblem(op.toString(), "op is not an array"))
         val kind = fields.getOrNull(0)?.string() ?: return report(PatchProblem(op.toString(), "op without kind"))
         when (kind) {
@@ -75,7 +74,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             "i" -> insert(fields, op)
             "m" -> move(fields, op)
             "r" -> remove(fields, op)
-            "x" -> command(fields, op)
+            "x" -> command(fields, op, sent)
             else -> report(PatchProblem(op.toString(), "unknown op"))
         }
     }
@@ -152,7 +151,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         return false
     }
 
-    private fun command(f: JsonArray, op: JsonElement) {
+    private fun command(f: JsonArray, op: JsonElement, sent: MutableList<Pair<UINode, Command>>) {
         val node = child(f, op, at = 1) ?: return
         val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
         val schema = registry.schema(node.type) ?: return
@@ -169,6 +168,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     private fun forget(node: UINode) {
         nodes.remove(node.id)
+        // deleted for good (ids are never reused): commands still waiting, or sent later in this flush, are dropped
+        node.queue.cancel()
         for (child in node.children) forget(child)
     }
 

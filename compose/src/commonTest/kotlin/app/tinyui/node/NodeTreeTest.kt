@@ -7,6 +7,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tinyui.components.registerBuiltins
 import app.tinyui.schema.ComponentRegistry
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -105,13 +108,29 @@ class NodeTreeTest {
     }
 
     @Test
-    fun aFlushSendsItsCommandsOnlyOnceItIsApplied() {
+    fun aCommandArrivesOnlyAfterItsFlushIsApplied() = runTest {
         tree.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
         val node = tree.node(1)!!
+        val events = ArrayList<String>()
+        // runs on the spot, inside the send: if the command went out before the commit, it would come first
+        val receiver = launch(UnconfinedTestDispatcher(testScheduler)) { node.commands.receive(); events += "received" }
+        val applied = Snapshot.registerApplyObserver { changed, _ -> if (node.props in changed) events += "applied" }
         tree.apply("""[["x",1,"focus",{}],["p",1,"placeholder","hint"]]""")
-        // what a component sees when the command arrives: the props of the same flush are already there
-        assertEquals("hint", node.props["placeholder"])
-        assertEquals(listOf("focus"), received(node).map { it.name })
+        applied.dispose()
+        receiver.cancel()
+        assertEquals(listOf("applied", "received"), events)
+    }
+
+    @Test
+    fun aRemovedNodeGetsNoMoreCommands() {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0],["c",2,"TextField"],["i",0,2,1]]""")
+        val first = tree.node(1)!!
+        val second = tree.node(2)!!
+        // one still waiting from an earlier flush, one sent in the flush that removes the node
+        tree.apply("""[["x",1,"focus",{}]]""")
+        tree.apply("""[["x",1,"setText",{"text":"a"}],["r",1],["x",2,"focus",{}]]""")
+        assertTrue(first.commands.isClosedForReceive)
+        assertEquals(listOf("focus"), received(second).map { it.name })
     }
 
     private fun received(node: UINode): List<Command> = generateSequence { node.commands.tryReceive().getOrNull() }.toList()
