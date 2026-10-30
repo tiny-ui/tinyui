@@ -1,11 +1,15 @@
 package app.tinyui.node
 
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.graphics.Color
 import app.tinyui.schema.ColorValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tinyui.components.registerBuiltins
 import app.tinyui.schema.ComponentRegistry
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -82,10 +86,99 @@ class NodeTreeTest {
         assertEquals(1, problems.size); assertTrue("initial prop" in problems.single().reason)
         problems.clear()
         tree.apply("""[["x",1,"setText",{"text":"z"}],["x",1,"setText",{}],["x",1,"setText",{"text":3}],["x",1,"focus",{}]]""")
-        assertEquals(listOf("setText", "focus"), tree.node(1)!!.commands.map { it.name })
-        assertEquals("z", tree.node(1)!!.commands[0].args["text"])
+        val sent = received(tree.node(1)!!)
+        assertEquals(listOf("setText", "focus"), sent.map { it.name })
+        assertEquals("z", sent[0].args["text"])
         assertEquals(2, problems.size)
     }
+
+    @Test
+    fun receivingCommandsNeverConflictsWithAFlushBeingApplied() {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0],["x",1,"setText",{"text":"a"}]]""")
+        val node = tree.node(1)!!
+        // the main thread takes a command inside its own snapshot while the engine thread applies the next flush:
+        // with commands as snapshot state both wrote the same list, and the later apply failed with a conflict
+        val main = Snapshot.takeMutableSnapshot()
+        val first = main.enter { node.commands.tryReceive().getOrNull() }
+        tree.apply("""[["x",1,"focus",{}]]""")
+        main.apply().check()
+        main.dispose()
+        assertEquals("setText", first?.name)
+        assertEquals(listOf("focus"), received(node).map { it.name })
+    }
+
+    @Test
+    fun aCommandArrivesOnlyAfterItsFlushIsApplied() = runTest {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        val node = tree.node(1)!!
+        val events = ArrayList<String>()
+        // runs on the spot, inside the send: if the command went out before the commit, it would come first
+        val receiver = launch(UnconfinedTestDispatcher(testScheduler)) { node.commands.receive(); events += "received" }
+        val applied = Snapshot.registerApplyObserver { changed, _ -> if (node.props in changed) events += "applied" }
+        tree.apply("""[["x",1,"focus",{}],["p",1,"placeholder","hint"]]""")
+        applied.dispose()
+        receiver.cancel()
+        assertEquals(listOf("applied", "received"), events)
+    }
+
+    @Test
+    fun problemsAreReportedOnceTheFlushIsApplied() {
+        val events = ArrayList<String>()
+        lateinit var reporting: NodeTree
+        // what the sink sees of the tree at the moment it hears about a problem
+        reporting = NodeTree(ComponentRegistry().registerBuiltins()) { events += "reported:${reporting.node(1)!!.props["placeholder"]}" }
+        reporting.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        val node = reporting.node(1)!!
+        val applied = Snapshot.registerApplyObserver { changed, _ -> if (node.props in changed) events += "applied" }
+        // the bad op comes first in the flush, the sink hears of it after the commit, with the whole flush in place
+        reporting.apply("""[["x",1,"nope",{}],["p",1,"placeholder","hint"]]""")
+        applied.dispose()
+        assertEquals(listOf("applied", "reported:hint"), events)
+    }
+
+    @Test
+    fun aSinkWritingToTheTreeFromReportGetsAFlushOfItsOwn() {
+        var reentered = false
+        lateinit var reentrant: NodeTree
+        reentrant = NodeTree(ComponentRegistry().registerBuiltins()) {
+            problems += it
+            // reported for the missing required prop; the sink answers by adding a node
+            if (!reentered) { reentered = true; reentrant.apply("""[["c",2,"Text"],["p",2,"text","x"],["i",0,2,1]]""") }
+        }
+        reentrant.apply("""[["c",1,"Text"],["i",0,1,0]]""")
+        assertTrue(reentered)
+        assertEquals(listOf(1, 2), ids(reentrant.root))
+        assertEquals("x", reentrant.node(2)!!.props["text"])
+        assertEquals("required prop text was not set in the creating flush", problems.single().reason)
+    }
+
+    @Test
+    fun aSinkHearsOfAFlushOnlyOnceItsCommandsAreSent() {
+        var reentered = false
+        lateinit var reentrant: NodeTree
+        reentrant = NodeTree(ComponentRegistry().registerBuiltins()) {
+            if (!reentered) { reentered = true; reentrant.apply("""[["x",1,"setText",{"text":"inner"}]]""") }
+        }
+        reentrant.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        // the bad op reports after the flush is complete: the sink's own command queues up behind this flush's
+        reentrant.apply("""[["x",1,"focus",{}],["x",1,"nope",{}]]""")
+        assertTrue(reentered)
+        assertEquals(listOf("focus", "setText"), received(reentrant.node(1)!!).map { it.name })
+    }
+
+    @Test
+    fun aRemovedNodeGetsNoMoreCommands() {
+        tree.apply("""[["c",1,"TextField"],["i",0,1,0],["c",2,"TextField"],["i",0,2,1]]""")
+        val first = tree.node(1)!!
+        val second = tree.node(2)!!
+        // one still waiting from an earlier flush, one sent in the flush that removes the node
+        tree.apply("""[["x",1,"focus",{}]]""")
+        tree.apply("""[["x",1,"setText",{"text":"a"}],["r",1],["x",2,"focus",{}]]""")
+        assertTrue(first.commands.isClosedForReceive)
+        assertEquals(listOf("focus"), received(second).map { it.name })
+    }
+
+    private fun received(node: UINode): List<Command> = generateSequence { node.commands.tryReceive().getOrNull() }.toList()
 
     @Test
     fun requiredPropsAreCheckedWhenTheCreatingFlushEnds() {

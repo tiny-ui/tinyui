@@ -193,8 +193,6 @@ final class app.tinyui.node/PatchProblem { // app.tinyui.node/PatchProblem|null[
 final class app.tinyui.node/UINode { // app.tinyui.node/UINode|null[0]
     final val children // app.tinyui.node/UINode.children|{}children[0]
         final fun <get-children>(): androidx.compose.runtime.snapshots/SnapshotStateList<app.tinyui.node/UINode> // app.tinyui.node/UINode.children.<get-children>|<get-children>(){}[0]
-    final val commands // app.tinyui.node/UINode.commands|{}commands[0]
-        final fun <get-commands>(): androidx.compose.runtime.snapshots/SnapshotStateList<app.tinyui.node/Command> // app.tinyui.node/UINode.commands.<get-commands>|<get-commands>(){}[0]
     final val events // app.tinyui.node/UINode.events|{}events[0]
         final fun <get-events>(): androidx.compose.runtime.snapshots/SnapshotStateMap<kotlin/String, kotlin/Boolean> // app.tinyui.node/UINode.events.<get-events>|<get-events>(){}[0]
     final val id // app.tinyui.node/UINode.id|{}id[0]
