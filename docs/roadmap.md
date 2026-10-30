@@ -72,6 +72,7 @@
 | `KtorChannel` 把 http `tags` 转成 ktor `attributes`，宿主的 ktor 插件可读 | native-api.md §6 | 第一个用 `KtorChannel` 又要读 tags 的宿主（现有宿主都自写通道）。`tags` 本身已完成（2026-10-28，注册流程触发） |
 | 服务端拒绝建名为 `host` 等保留词的包 | — | 不做：2026-10-28 曾拟保留包名 `host` 给原生路由，因是潜规则撤销；页面要原生页的结果走 `host.call`（launch-for-result），只跳不要结果走 deep link（`linking.openUrl`） |
 | `openUrl` 的打开方式提示（`mode`） | ADR-007 §3.6 | 页面确实要求应用内或外部打开 |
+| `TextField` 的 `height` 可调（输入框本体高度，`supportingText` 挂在框外）：`BasicTextField` + `OutlinedTextFieldDefaults.DecorationBox` 自己拼，M3 原件的最小高度 56dp 不再锁死 | components.md §3 | 已实现并撤回（[#54](https://github.com/tiny-ui/tinyui/pull/54) 合入后 revert）：M3 把高度定死、Compose 不开放密度，自己拼要跟着维护 M3 原件的细节（错误语义、选区色、`TextFieldState` 迁移）。宿主的设计规范接受 M3 的 56dp 就不需要它；设计坚持紧凑输入框时 revert 那个 revert 即可恢复 |
 | 流式响应 / SSE、上传下载、请求缓存 | ADR-007 §3.1 | 第一个需要的页面 |
 | 会话之外的身份模型（多账号等） | ADR-007 §3.5 | 出现这类宿主 |
 | ~~`weight`~~ / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `weight`、`border`、`Column` / `Row` 的 `scroll` 已加（2026-09-17，TrendingAI 订阅页触发）；`alignSelf` 等需求 |
