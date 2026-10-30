@@ -39,7 +39,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | 顺序 | prop | 类型 | Modifier |
 |---|---|---|---|
 | 0 | `weight` | number | `weight(f)`，由父 `Row` / `Column` 施加（2026-09-17 加） |
-| 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()`；`TextField` 自己消费 `height`（§3） |
+| 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()` |
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)` |
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
@@ -73,7 +73,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
-| `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限）；公共 prop `height` 是输入框本体的高度 | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
+| `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select` 与 `Menu` 读它 | | | |
@@ -93,8 +93,6 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 `Checkbox` 与 `RadioButton` 同一模式（2026-10-28 加）：只报点击，勾没勾是页面状态。勾选框带一句文案时，把两者包进 `<Row role="checkbox" selected={…} onClick={…}>`，整行一个读屏节点，`Checkbox` 本身不给 `onClick`。
 
 `TextField` 的外观与通知（2026-10-28 加，注册流程触发）：`error` 把描边、`supportingText` 染成错误色，`supportingText` 是字段下方一行提示或错误文案；`secure` 不设时跟 `keyboard="password"`，显隐切换就是页面翻转它，配 `trailingIcon` + `onTrailingClick`（清除按钮同理：`trailingIcon` + `setText("")`，不另加组件）。`prefixText` 是输入前的固定文字（区号），画在 leading 槽而不是 M3 `prefix`——后者在空且未聚焦时隐藏、也不能点；`onPrefixClick` 让它可点（打开区号选择）。`imeAction="next"` 时键盘动作先 `onCommit` 再把焦点移到下一个可聚焦项。`maxLength` 超长截断而不是拒绝。`onFocusChange` 只在焦点真的变化时发，首次组合的"未聚焦"不算，所以 `onCommit` 也不会在首帧被误发（此前会）。文本仍归 Kotlin（ADR-004），这些都只是外观与通知。
-
-`TextField` 的 `height` 是输入框本体的高度（2026-10-30 加，紧凑表单触发）：M3 的 `OutlinedTextField` 把最小高度锁在 56dp、不开放内边距，所以框架改用 `BasicTextField` + `OutlinedTextFieldDefaults.DecorationBox` 自己拼——外观（描边、颜色、形状、占位、图标槽、supportingText）全部仍从 M3 的默认值取，只有高度归页面。给了固定 `height` 时上下内边距按当前行高收紧（`(height − 行高) / 2`，不超过 M3 的 16dp），一行文字正好居中；没给就是 M3 的 56dp。`supportingText` 挂在框的下面、不计入 `height`，所以错误文案出现与消失不需要页面改高度——这是它与其他组件的 `height` 唯一的不同（§2 的 size 槽位对它跳过，由组件自己消费）。多行（`singleLine={false}`）时它是最小高度，内容多了照常撑开。`fill` / `wrap` 对它没有意义，按没给处理。
 
 `CodeField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）。叫 Code 而不是 Pin / Otp：短信验证码与交易密码是同一个组件，`secure` 与 `autofill` 区分两者，名字不偏向任何一种。Compose 与 M3 都没有对应组件，它是框架自绘的（`BasicTextField` + 自画格子），格子尺寸由框架定、颜色跟主题。焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`autofill="oneTimeCode"` 让系统把刚收到的短信验证码作为建议（Android 自动填充 `SmsOtpCode`、iOS 键盘上方「来自信息」）；缺省 `none` 时明确告诉系统什么都别建议——iOS 不设内容类型会按 `NumberPassword` 键盘把它当密码框、弹钥匙串，交易密码不该这样。iOS 只从 `PlatformImeOptions` 读内容类型、不看 semantics，所以两端各走各的路，平台差异在框架里消化。`onComplete` 每次填满最后一格时发，`clear` / `setText` 与 `TextField.setText` 一样会触发 `onChange`——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
 

@@ -532,10 +532,10 @@ class PageHost internal constructor(
 
         /** docs/components.md §2: parent-scoped (weight) → size → clip → background → border → gesture → padding. */
         @Composable
-        override fun modifier(clickable: Boolean, height: Boolean): Modifier {
+        override fun modifier(clickable: Boolean): Modifier {
             var m: Modifier = LocalChildModifier.current
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
-            if (height) when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
+            when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
             val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
             if (shape != RectangleShape) m = m.clip(shape)
             color("background")?.let { m = m.background(it) }

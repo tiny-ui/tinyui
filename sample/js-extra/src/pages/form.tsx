@@ -76,8 +76,7 @@ export default function Form() {
                     </Popover>
                 </Box>
                 <Button text="Encrypt password" variant="outlined" onClick={() => void encrypt()} />
-                {/* a compact 48dp box; the supporting text, when there is one, hangs below it */}
-                <TextField width="fill" height={48} placeholder="Phone" keyboard="phone" prefixText="+86" onPrefixClick={() => void ui.toast("pick a calling code")} />
+                <TextField width="fill" placeholder="Phone" keyboard="phone" prefixText="+86" onPrefixClick={() => void ui.toast("pick a calling code")} />
                 <Row align="center" gap={4} role="checkbox" selected={agreed()} onClick={() => setAgreed(!agreed())}>
                     <Checkbox checked={agreed()} />
                     <Text weight={1} text="I agree to the [Privacy Policy](privacy) and the [Terms of Service](terms)" onLinkClick={(e) => void ui.toast(`open ${e.id}`)} />
