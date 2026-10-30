@@ -27,9 +27,12 @@ interface NodeScope {
     @Composable
     fun color(key: String): Color? = get<ColorValue>(key)?.resolve()
 
-    /** Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered. */
+    /**
+     * Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered.
+     * With [height] false the `height` prop is left out, for a component that sizes a part of itself by it (TextField's box).
+     */
     @Composable
-    fun modifier(clickable: Boolean = true): Modifier
+    fun modifier(clickable: Boolean = true, height: Boolean = true): Modifier
 
     @Composable
     fun Children()
