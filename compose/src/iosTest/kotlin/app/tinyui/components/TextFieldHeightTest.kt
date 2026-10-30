@@ -4,7 +4,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasSetTextAction
@@ -73,5 +76,13 @@ class TextFieldHeightTest {
         waitForIdle()
         assertTrue(problems.isEmpty(), problems.toString())
         onNode(hasSetTextAction()).assertHeightIsAtLeast(49.dp)
+    }
+
+    @Test
+    fun errorIsAnnouncedWithTheSupportingText() = runComposeUiTest {
+        tree.apply("""[["c",1,"TextField"],["p",1,"error",true],["p",1,"supportingText","Not an email address"],["i",0,1,0]]""")
+        setContent { MaterialTheme { registry.Render("TextField", scopeOf(tree.node(1)!!)) } }
+        waitForIdle()
+        onNode(hasSetTextAction()).assert(SemanticsMatcher.expectValue(SemanticsProperties.Error, "Not an email address"))
     }
 }

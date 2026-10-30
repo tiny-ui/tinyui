@@ -8,9 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,14 +27,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.unit.isSpecified
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -56,6 +54,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
@@ -65,6 +64,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,6 +75,7 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.alpha
@@ -89,6 +90,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -105,6 +107,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
@@ -307,10 +310,12 @@ private fun TextFieldComponent(scope: NodeScope) {
     // vertical padding shrinks to fit a line into it; M3's 16dp on each side makes the default 56dp with a 24sp line.
     val boxHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp
     val vertical = if (boxHeight == null) OutlinedTextFieldDefaults.contentPadding().calculateTopPadding() else {
-        val line = with(LocalDensity.current) { textStyle.lineHeight.takeIf { it.isSpecified }?.toDp() } ?: 0.dp
+        // a style without a line height (none of M3's) gets the usual 1.5× of its size
+        val line = with(LocalDensity.current) { if (textStyle.lineHeight.isSpecified) textStyle.lineHeight.toDp() else textStyle.fontSize.toDp() * 1.5f }
         ((boxHeight - line) / 2).coerceIn(0.dp, OutlinedTextFieldDefaults.contentPadding().calculateTopPadding())
     }
-    BasicTextField(
+    val supporting = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) { BasicTextField(
         value = value,
         onValueChange = { v ->
             val t = clip(v.text)
@@ -326,6 +331,8 @@ private fun TextFieldComponent(scope: NodeScope) {
         visualTransformation = visualTransformation,
         interactionSource = interactionSource,
         modifier = scope.modifier(clickable = false, height = false)
+            // what M3's OutlinedTextField announces: the error state, here with the page's own text
+            .semantics { if (isError) error(supporting ?: "Invalid input") }
             .defaultMinSize(minWidth = OutlinedTextFieldDefaults.MinWidth, minHeight = boxHeight ?: OutlinedTextFieldDefaults.MinHeight)
             .focusRequester(focusRequester)
             .onFocusChanged {
@@ -358,12 +365,12 @@ private fun TextFieldComponent(scope: NodeScope) {
                         else Icon(icon.vector, contentDescription = null)
                     }
                 },
-                supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+                supportingText = supporting?.let { { Text(it) } },
                 colors = colors,
                 contentPadding = OutlinedTextFieldDefaults.contentPadding(top = vertical, bottom = vertical),
             )
         },
-    )
+    ) }
 }
 
 /**
