@@ -122,24 +122,34 @@ class NodeTreeTest {
     }
 
     @Test
-    fun anApplyReenteredFromReportJoinsTheFlushItInterrupted() = runTest {
+    fun problemsAreReportedOnceTheFlushIsApplied() {
+        val events = ArrayList<String>()
+        lateinit var reporting: NodeTree
+        // what the sink sees of the tree at the moment it hears about a problem
+        reporting = NodeTree(ComponentRegistry().registerBuiltins()) { events += "reported:${reporting.node(1)!!.props["placeholder"]}" }
+        reporting.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        val node = reporting.node(1)!!
+        val applied = Snapshot.registerApplyObserver { changed, _ -> if (node.props in changed) events += "applied" }
+        // the bad op comes first in the flush, the sink hears of it after the commit, with the whole flush in place
+        reporting.apply("""[["x",1,"nope",{}],["p",1,"placeholder","hint"]]""")
+        applied.dispose()
+        assertEquals(listOf("applied", "reported:hint"), events)
+    }
+
+    @Test
+    fun aSinkWritingToTheTreeFromReportGetsAFlushOfItsOwn() {
         var reentered = false
         lateinit var reentrant: NodeTree
         reentrant = NodeTree(ComponentRegistry().registerBuiltins()) {
-            if (!reentered) { reentered = true; reentrant.apply("""[["x",1,"setText",{"text":"inner"}]]""") }
+            problems += it
+            // reported for the missing required prop; the sink answers by adding a node
+            if (!reentered) { reentered = true; reentrant.apply("""[["c",2,"Text"],["p",2,"text","x"],["i",0,2,1]]""") }
         }
-        reentrant.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
-        val node = reentrant.node(1)!!
-        // each command as it arrives, with what the tree shows at that moment
-        val seen = ArrayList<String>()
-        val receiver = launch(UnconfinedTestDispatcher(testScheduler)) {
-            for (c in node.commands) seen += "${c.name}:${node.props["placeholder"]}"
-        }
-        // the unknown command reports, the sink reenters; the placeholder comes after both
-        reentrant.apply("""[["x",1,"focus",{}],["x",1,"nope",{}],["p",1,"placeholder","hint"]]""")
-        receiver.cancel()
+        reentrant.apply("""[["c",1,"Text"],["i",0,1,0]]""")
         assertTrue(reentered)
-        assertEquals(listOf("focus:hint", "setText:hint"), seen)
+        assertEquals(listOf(1, 2), ids(reentrant.root))
+        assertEquals("x", reentrant.node(2)!!.props["text"])
+        assertEquals("required prop text was not set in the creating flush", problems.single().reason)
     }
 
     @Test

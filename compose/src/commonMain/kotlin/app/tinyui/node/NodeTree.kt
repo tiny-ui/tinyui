@@ -28,7 +28,7 @@ class PatchProblem(val op: String, val reason: String) {
 class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
     val root = UINode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
-    // the flush being applied, null between flushes; an apply reentered from [report] joins it
+    // the flush being applied, null between flushes
     private var flush: Flush? = null
 
     val size: Int get() = nodes.size
@@ -36,10 +36,11 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     fun node(id: Int): UINode? = nodes[id]
 
     /**
-     * Applies one flush atomically: other threads see the tree before or after, never in between. What is not snapshot
-     * state waits for the commit: commands are sent, and removed nodes' queues cancelled, only once the flush is applied,
-     * so a component never gets a command ahead of the props it came with, and a flush that fails to apply leaves no
-     * trace there. An apply reentered from [report] (a sink writing to the tree) is part of the flush it interrupted.
+     * Applies one flush atomically: other threads see the tree before or after, never in between. Nothing leaves the
+     * snapshot while it is open: problems are reported, removed nodes' queues cancelled and commands sent only once the
+     * flush is applied. So a component never gets a command ahead of the props it came with, a flush that fails to
+     * apply leaves no trace beyond its report, and a sink sees the tree between flushes: if it writes to the tree from
+     * [report], that is a flush of its own.
      */
     fun apply(json: String) {
         val ops = try {
@@ -48,10 +49,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             report(PatchProblem(json.take(200), "message is not a JSON array (${e.message})"))
             return
         }
-        if (flush != null) {
-            Snapshot.withMutableSnapshot { for (op in ops) applyOp(op) }
-            return
-        }
+        check(flush == null) { "apply is not reentrant: one thread writes the tree, one flush at a time" }
         val current = Flush()
         flush = current
         try {
@@ -60,16 +58,23 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
                 for (node in current.born) {
                     node.created = true
                     registry.schema(node.type)?.props?.forEach { (key, spec) ->
-                        if (spec.required && node.props[key] == null) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+                        if (spec.required && node.props[key] == null) problem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush")
                     }
                 }
             }
         } finally {
             flush = null
+            // also when the snapshot failed to apply: what went wrong is still worth hearing
+            for (p in current.problems) report(p)
         }
         // cancelled first: a command for a node removed in the same flush is dropped, not delivered
-        for (node in current.removed) node.queue.cancel()
-        for ((node, command) in current.sent) node.queue.trySend(command)
+        for (node in current.removed) node.commands.cancel()
+        for ((node, command) in current.sent) node.commands.trySend(command)
+    }
+
+    /** Recorded for the flush being applied, reported once it is. */
+    private fun problem(op: String, reason: String) {
+        flush!!.problems += PatchProblem(op, reason)
     }
 
     fun clear() {
@@ -79,8 +84,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 
     private fun applyOp(op: JsonElement) {
-        val fields = op as? JsonArray ?: return report(PatchProblem(op.toString(), "op is not an array"))
-        val kind = fields.getOrNull(0)?.string() ?: return report(PatchProblem(op.toString(), "op without kind"))
+        val fields = op as? JsonArray ?: return problem(op.toString(), "op is not an array")
+        val kind = fields.getOrNull(0)?.string() ?: return problem(op.toString(), "op without kind")
         when (kind) {
             "c" -> create(fields, op)
             "p" -> setProp(fields, op)
@@ -88,56 +93,56 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             "m" -> move(fields, op)
             "r" -> remove(fields, op)
             "x" -> command(fields, op)
-            else -> report(PatchProblem(op.toString(), "unknown op"))
+            else -> problem(op.toString(), "unknown op")
         }
     }
 
     private fun create(f: JsonArray, op: JsonElement) {
-        val id = f.int(1) ?: return report(PatchProblem(op.toString(), "c without id"))
-        val type = f.string(2) ?: return report(PatchProblem(op.toString(), "c without type"))
-        if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
+        val id = f.int(1) ?: return problem(op.toString(), "c without id")
+        val type = f.string(2) ?: return problem(op.toString(), "c without type")
+        if (nodes.containsKey(id)) return problem(op.toString(), "id already exists")
         // the requested type stays on the node: Render falls back to Placeholder, which shows it in debug
-        if (registry.schema(type) == null) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
+        if (registry.schema(type) == null) problem(op.toString(), "unknown component type, rendering Placeholder")
         nodes[id] = UINode(id, type).also { flush!!.born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
         val node = child(f, op, at = 1) ?: return
-        val key = f.string(2) ?: return report(PatchProblem(op.toString(), "p without key"))
+        val key = f.string(2) ?: return problem(op.toString(), "p without key")
         val value = f.getOrNull(3) ?: JsonNull
         val schema = registry.schema(node.type) ?: return
         if (key.length > 2 && key.startsWith("on") && key[2].isUpperCase()) {
-            if (key !in schema.events) return report(PatchProblem(op.toString(), "event not in schema of ${node.type}"))
-            val flag = (value as? JsonPrimitive)?.booleanOrNull ?: return report(PatchProblem(op.toString(), "event flag must be a boolean"))
+            if (key !in schema.events) return problem(op.toString(), "event not in schema of ${node.type}")
+            val flag = (value as? JsonPrimitive)?.booleanOrNull ?: return problem(op.toString(), "event flag must be a boolean")
             if (flag) node.events[key] = true else node.events.remove(key)
             return
         }
-        val spec = schema.prop(key) ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
-        if (spec.initial && node.created) return report(PatchProblem(op.toString(), "$key is an initial prop of ${node.type}: writes after creation are ignored"))
+        val spec = schema.prop(key) ?: return problem(op.toString(), "prop not in schema of ${node.type}")
+        if (spec.initial && node.created) return problem(op.toString(), "$key is an initial prop of ${node.type}: writes after creation are ignored")
         if (value is JsonNull) {
-            if (spec.required && spec.default == null) return report(PatchProblem(op.toString(), "$key is required on ${node.type}; null is not allowed"))
+            if (spec.required && spec.default == null) return problem(op.toString(), "$key is required on ${node.type}; null is not allowed")
             node.props[key] = spec.default
             return
         }
-        val primitive = value as? JsonPrimitive ?: return report(PatchProblem(op.toString(), "prop value must be a scalar"))
-        val converted = spec.convert(primitive) ?: return report(PatchProblem(op.toString(), "cannot convert ${primitive} to ${spec.kind} for ${node.type}.$key"))
+        val primitive = value as? JsonPrimitive ?: return problem(op.toString(), "prop value must be a scalar")
+        val converted = spec.convert(primitive) ?: return problem(op.toString(), "cannot convert ${primitive} to ${spec.kind} for ${node.type}.$key")
         node.props[key] = converted
     }
 
     private fun insert(f: JsonArray, op: JsonElement) {
-        val parent = f.int(1)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "i: unknown parent"))
+        val parent = f.int(1)?.let { nodes[it] } ?: return problem(op.toString(), "i: unknown parent")
         val node = child(f, op) ?: return
-        if (node.parent != null) return report(PatchProblem(op.toString(), "i: node already has a parent"))
-        if (node === parent || isAncestor(node, of = parent)) return report(PatchProblem(op.toString(), "i: would create a cycle"))
+        if (node.parent != null) return problem(op.toString(), "i: node already has a parent")
+        if (node === parent || isAncestor(node, of = parent)) return problem(op.toString(), "i: would create a cycle")
         val index = clamp(f.int(3), parent.children.size, op) ?: return
         node.parent = parent
         parent.children.add(index, node)
     }
 
     private fun move(f: JsonArray, op: JsonElement) {
-        val parent = f.int(1)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "m: unknown parent"))
+        val parent = f.int(1)?.let { nodes[it] } ?: return problem(op.toString(), "m: unknown parent")
         val node = child(f, op) ?: return
-        if (node.parent !== parent) return report(PatchProblem(op.toString(), "m: node is not a child of parent"))
+        if (node.parent !== parent) return problem(op.toString(), "m: node is not a child of parent")
         val index = clamp(f.int(3), parent.children.size - 1, op) ?: return
         parent.children.remove(node)
         parent.children.add(index, node)
@@ -152,9 +157,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     /** Ops that act on a node as a child never target the root container. */
     private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UINode? {
-        val id = f.int(at) ?: run { report(PatchProblem(op.toString(), "op without node id")); return null }
-        val node = nodes[id] ?: run { report(PatchProblem(op.toString(), "unknown node $id")); return null }
-        if (node.id == ROOT_ID) { report(PatchProblem(op.toString(), "the root container is not a child")); return null }
+        val id = f.int(at) ?: run { problem(op.toString(), "op without node id"); return null }
+        val node = nodes[id] ?: run { problem(op.toString(), "unknown node $id"); return null }
+        if (node.id == ROOT_ID) { problem(op.toString(), "the root container is not a child"); return null }
         return node
     }
 
@@ -166,14 +171,14 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     private fun command(f: JsonArray, op: JsonElement) {
         val node = child(f, op, at = 1) ?: return
-        val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
+        val name = f.string(2) ?: return problem(op.toString(), "x without name")
         val schema = registry.schema(node.type) ?: return
-        val fields = schema.commands[name] ?: return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
+        val fields = schema.commands[name] ?: return problem(op.toString(), "command not in schema of ${node.type}")
         val given = f.getOrNull(3) as? JsonObject ?: JsonObject(emptyMap())
         val args = HashMap<String, Any?>()
         for ((field, spec) in fields) {
-            val v = given[field] as? JsonPrimitive ?: return report(PatchProblem(op.toString(), "command $name needs $field"))
-            if (!spec.accepts(v)) return report(PatchProblem(op.toString(), "command $name: $field must be $spec"))
+            val v = given[field] as? JsonPrimitive ?: return problem(op.toString(), "command $name needs $field")
+            if (!spec.accepts(v)) return problem(op.toString(), "command $name: $field must be $spec")
             args[field] = v.scalar()
         }
         flush!!.sent += node to Command(name, args)
@@ -187,9 +192,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 
     private fun clamp(index: Int?, size: Int, op: JsonElement): Int? {
-        if (index == null) { report(PatchProblem(op.toString(), "missing index")); return null }
+        if (index == null) { problem(op.toString(), "missing index"); return null }
         if (index < 0 || index > size) {
-            report(PatchProblem(op.toString(), "index $index out of [0, $size], clamped"))
+            problem(op.toString(), "index $index out of [0, $size], clamped")
             return index.coerceIn(0, size)
         }
         return index
@@ -206,8 +211,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 }
 
-/** What one flush does outside the snapshot, after it commits. */
+/** What one flush does outside the snapshot, once it is applied. */
 private class Flush {
+    val problems = ArrayList<PatchProblem>()
     val born = ArrayList<UINode>()
     val sent = ArrayList<Pair<UINode, Command>>()
     val removed = ArrayList<UINode>()
