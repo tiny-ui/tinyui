@@ -34,10 +34,10 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     /**
      * Applies one flush atomically: other threads see the tree before or after, never in between. Nothing leaves the
-     * snapshot while it is open: problems are reported, removed nodes' queues cancelled and commands sent only once the
-     * flush is applied. So a component never gets a command ahead of the props it came with, a flush that fails to
-     * apply leaves no trace beyond its report, and a sink sees the tree between flushes: if it writes to the tree from
-     * [report], that is a flush of its own.
+     * snapshot while it is open: removed nodes' queues are cancelled, commands sent and problems reported only once the
+     * flush is applied, in that order. So a component never gets a command ahead of the props it came with, a flush that
+     * fails to apply leaves no trace beyond its report, and a sink hears of a flush once it is complete: if it writes to
+     * the tree from [report], that is a flush of its own, after this one.
      */
     fun apply(json: String) {
         val ops = try {
@@ -57,16 +57,20 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
                     }
                 }
             }
-        } finally {
-            // also when the snapshot failed to apply: what went wrong is still worth hearing
+        } catch (t: Throwable) {
+            // what went wrong is still worth hearing; nothing else of this flush happens
             for (p in flush.problems) report(p)
+            throw t
         }
         // cancelled first: a command for a node removed in the same flush is dropped, not delivered
         for (node in flush.removed) node.commands.cancel()
         for ((node, command) in flush.sent) node.commands.trySend(command)
+        for (p in flush.problems) report(p)
     }
 
+    /** Drops every node like `r` would: their queues close, so nothing waits on a node that is gone. */
     fun clear() {
+        for (node in nodes.values) if (node !== root) node.commands.cancel()
         root.children.clear()
         nodes.clear()
         nodes[ROOT_ID] = root

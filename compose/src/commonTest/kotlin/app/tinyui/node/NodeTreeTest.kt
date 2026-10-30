@@ -153,6 +153,20 @@ class NodeTreeTest {
     }
 
     @Test
+    fun aSinkHearsOfAFlushOnlyOnceItsCommandsAreSent() {
+        var reentered = false
+        lateinit var reentrant: NodeTree
+        reentrant = NodeTree(ComponentRegistry().registerBuiltins()) {
+            if (!reentered) { reentered = true; reentrant.apply("""[["x",1,"setText",{"text":"inner"}]]""") }
+        }
+        reentrant.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        // the bad op reports after the flush is complete: the sink's own command queues up behind this flush's
+        reentrant.apply("""[["x",1,"focus",{}],["x",1,"nope",{}]]""")
+        assertTrue(reentered)
+        assertEquals(listOf("focus", "setText"), received(reentrant.node(1)!!).map { it.name })
+    }
+
+    @Test
     fun aRemovedNodeGetsNoMoreCommands() {
         tree.apply("""[["c",1,"TextField"],["i",0,1,0],["c",2,"TextField"],["i",0,2,1]]""")
         val first = tree.node(1)!!
