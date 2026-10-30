@@ -8,9 +8,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -51,6 +54,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
@@ -60,6 +64,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +75,7 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.alpha
@@ -84,6 +90,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -100,6 +107,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
@@ -267,18 +275,24 @@ private fun TextFieldComponent(scope: NodeScope) {
     fun clip(t: String) = clipTo(t, scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 })
     val maxLength = scope.get<Double>("maxLength")
     var text by retain { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
+    // the cursor and composing region live here; when `text` changes from outside the cursor goes to the end
+    var field by remember { mutableStateOf(TextFieldValue(text, TextRange(text.length))) }
+    val value = if (field.text == text) field else TextFieldValue(text, TextRange(text.length))
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val interactionSource = remember { MutableInteractionSource() }
     val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", text)) }
+    val change = { t: String -> if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } }
     // a lowered limit applies to what is already there, reported like any other change
-    LaunchedEffect(maxLength) {
-        val t = clip(text)
-        if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) }
-    }
+    LaunchedEffect(maxLength) { change(clip(text)) }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> { text = clip(command.args["text"] as? String ?: ""); if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
+            "setText" -> {
+                text = clip(command.args["text"] as? String ?: "")
+                field = TextFieldValue(text, TextRange(text.length)) // also when the text is the same: the cursor still goes to the end
+                if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text))
+            }
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -291,38 +305,80 @@ private fun TextFieldComponent(scope: NodeScope) {
     val next = scope.get<String>("imeAction") == "next"
     val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
     val trailing = scope.get<IconValue>("trailingIcon")
-    OutlinedTextField(
-        value = text,
-        onValueChange = { val t = clip(it); if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } },
-        placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
-        leadingIcon = prefix?.let { p ->
-            {
-                val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
-                Text(p, modifier = tap.padding(start = 16.dp, end = 8.dp))
-            }
+    val isError = scope.get<Boolean>("error") == true
+    val singleLine = scope.get<Boolean>("singleLine") ?: true
+    val visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None
+    val colors = OutlinedTextFieldDefaults.colors()
+    val textStyle = LocalTextStyle.current.merge(color = MaterialTheme.colorScheme.onSurface)
+    // `height` is the box, not the component: the supporting text hangs below it (docs/components.md §3). The
+    // vertical padding shrinks to fit a line into it; M3's 16dp on each side makes the default 56dp with a 24sp line.
+    val boxHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp
+    val vertical = if (boxHeight == null) OutlinedTextFieldDefaults.contentPadding().calculateTopPadding() else {
+        // a style without a line height (none of M3's) gets the usual 1.5× of its size; without a size either, M3's body line
+        val line = with(LocalDensity.current) {
+            if (textStyle.lineHeight.isSpecified) textStyle.lineHeight.toDp()
+            else if (textStyle.fontSize.isSpecified) textStyle.fontSize.toDp() * 1.5f
+            else MaterialTheme.typography.bodyLarge.lineHeight.toDp()
+        }
+        ((boxHeight - line) / 2).coerceIn(0.dp, OutlinedTextFieldDefaults.contentPadding().calculateTopPadding())
+    }
+    val supporting = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }
+    CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) { BasicTextField(
+        value = value,
+        onValueChange = { v ->
+            val t = clip(v.text)
+            field = if (t == v.text) v else v.copy(text = t, selection = TextRange(t.length))
+            change(t)
         },
-        trailingIcon = trailing?.let { icon ->
-            {
-                if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
-                else Icon(icon.vector, contentDescription = null)
-            }
-        },
-        isError = scope.get<Boolean>("error") == true,
-        supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        singleLine = scope.get<Boolean>("singleLine") ?: true,
+        singleLine = singleLine,
+        textStyle = textStyle,
+        cursorBrush = SolidColor(if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done),
         // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
         keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { if (!focusManager.moveFocus(FocusDirection.Next)) commit() }),
-        visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
-        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged {
-            // the first callback reports the initial unfocused state: not a change, not a focus loss
-            if (it.isFocused == focused) return@onFocusChanged
-            focused = it.isFocused
-            if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
-            if (!focused) commit()
+        visualTransformation = visualTransformation,
+        interactionSource = interactionSource,
+        modifier = scope.modifier(clickable = false, height = false)
+            // what M3's OutlinedTextField announces: the error state, here with the page's own text
+            .semantics { if (isError) error(supporting ?: "Invalid input") }
+            .defaultMinSize(minWidth = OutlinedTextFieldDefaults.MinWidth, minHeight = boxHeight ?: OutlinedTextFieldDefaults.MinHeight)
+            .focusRequester(focusRequester)
+            .onFocusChanged {
+                // the first callback reports the initial unfocused state: not a change, not a focus loss
+                if (it.isFocused == focused) return@onFocusChanged
+                focused = it.isFocused
+                if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
+                if (!focused) commit()
+            },
+        decorationBox = { inner ->
+            OutlinedTextFieldDefaults.DecorationBox(
+                value = text,
+                innerTextField = inner,
+                enabled = true,
+                singleLine = singleLine,
+                visualTransformation = visualTransformation,
+                interactionSource = interactionSource,
+                isError = isError,
+                placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+                // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
+                leadingIcon = prefix?.let { p ->
+                    {
+                        val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
+                        Text(p, modifier = tap.padding(start = 16.dp, end = 8.dp))
+                    }
+                },
+                trailingIcon = trailing?.let { icon ->
+                    {
+                        if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
+                        else Icon(icon.vector, contentDescription = null)
+                    }
+                },
+                supportingText = supporting?.let { { Text(it) } },
+                colors = colors,
+                contentPadding = OutlinedTextFieldDefaults.contentPadding(top = vertical, bottom = vertical),
+            )
         },
-    )
+    ) }
 }
 
 /**

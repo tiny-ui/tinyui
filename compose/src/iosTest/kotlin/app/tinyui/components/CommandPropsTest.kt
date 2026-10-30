@@ -29,7 +29,7 @@ class CommandPropsTest {
         override fun <T> get(key: String): T? = (node.props[key] ?: registry.schema(node.type)?.prop(key)?.default) as T?
         override fun has(event: String) = node.events[event] == true
         override fun dispatch(event: String, payload: String) { events += "$event $payload" }
-        @Composable override fun modifier(clickable: Boolean) = Modifier
+        @Composable override fun modifier(clickable: Boolean, height: Boolean) = Modifier
         @Composable override fun Children() {}
         @Composable override fun RenderChild(child: UINode) {}
     }
