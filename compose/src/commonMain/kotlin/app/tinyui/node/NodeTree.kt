@@ -28,13 +28,19 @@ class PatchProblem(val op: String, val reason: String) {
 class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
     val root = UINode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
-    private val born = ArrayList<UINode>()
+    // the flush being applied, null between flushes; an apply reentered from [report] joins it
+    private var flush: Flush? = null
 
     val size: Int get() = nodes.size
 
     fun node(id: Int): UINode? = nodes[id]
 
-    /** Applies one flush atomically: other threads see the tree before or after, never in between. */
+    /**
+     * Applies one flush atomically: other threads see the tree before or after, never in between. What is not snapshot
+     * state waits for the commit: commands are sent, and removed nodes' queues cancelled, only once the flush is applied,
+     * so a component never gets a command ahead of the props it came with, and a flush that fails to apply leaves no
+     * trace there. An apply reentered from [report] (a sink writing to the tree) is part of the flush it interrupted.
+     */
     fun apply(json: String) {
         val ops = try {
             Json.parseToJsonElement(json).jsonArray
@@ -42,21 +48,28 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             report(PatchProblem(json.take(200), "message is not a JSON array (${e.message})"))
             return
         }
-        // this flush's commands, sent once it is applied: a component never gets one ahead of the props it came with,
-        // and a flush that fails to apply sends none
-        val sent = ArrayList<Pair<UINode, Command>>()
-        Snapshot.withMutableSnapshot {
-            for (op in ops) applyOp(op, sent)
-            for (node in born) {
-                node.created = true
-                registry.schema(node.type)?.props?.forEach { (key, spec) ->
-                    if (spec.required && node.props[key] == null) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+        if (flush != null) {
+            Snapshot.withMutableSnapshot { for (op in ops) applyOp(op) }
+            return
+        }
+        val current = Flush()
+        flush = current
+        try {
+            Snapshot.withMutableSnapshot {
+                for (op in ops) applyOp(op)
+                for (node in current.born) {
+                    node.created = true
+                    registry.schema(node.type)?.props?.forEach { (key, spec) ->
+                        if (spec.required && node.props[key] == null) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+                    }
                 }
             }
-            born.clear()
+        } finally {
+            flush = null
         }
-        // a node removed later in the flush has a cancelled queue: its commands are dropped there
-        for ((node, command) in sent) node.queue.trySend(command)
+        // cancelled first: a command for a node removed in the same flush is dropped, not delivered
+        for (node in current.removed) node.queue.cancel()
+        for ((node, command) in current.sent) node.queue.trySend(command)
     }
 
     fun clear() {
@@ -65,7 +78,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         nodes[ROOT_ID] = root
     }
 
-    private fun applyOp(op: JsonElement, sent: MutableList<Pair<UINode, Command>>) {
+    private fun applyOp(op: JsonElement) {
         val fields = op as? JsonArray ?: return report(PatchProblem(op.toString(), "op is not an array"))
         val kind = fields.getOrNull(0)?.string() ?: return report(PatchProblem(op.toString(), "op without kind"))
         when (kind) {
@@ -74,7 +87,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             "i" -> insert(fields, op)
             "m" -> move(fields, op)
             "r" -> remove(fields, op)
-            "x" -> command(fields, op, sent)
+            "x" -> command(fields, op)
             else -> report(PatchProblem(op.toString(), "unknown op"))
         }
     }
@@ -85,7 +98,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
         // the requested type stays on the node: Render falls back to Placeholder, which shows it in debug
         if (registry.schema(type) == null) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
-        nodes[id] = UINode(id, type).also { born += it }
+        nodes[id] = UINode(id, type).also { flush!!.born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
@@ -151,7 +164,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         return false
     }
 
-    private fun command(f: JsonArray, op: JsonElement, sent: MutableList<Pair<UINode, Command>>) {
+    private fun command(f: JsonArray, op: JsonElement) {
         val node = child(f, op, at = 1) ?: return
         val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
         val schema = registry.schema(node.type) ?: return
@@ -163,13 +176,13 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             if (!spec.accepts(v)) return report(PatchProblem(op.toString(), "command $name: $field must be $spec"))
             args[field] = v.scalar()
         }
-        sent += node to Command(name, args)
+        flush!!.sent += node to Command(name, args)
     }
 
     private fun forget(node: UINode) {
         nodes.remove(node.id)
-        // deleted for good (ids are never reused): commands still waiting, or sent later in this flush, are dropped
-        node.queue.cancel()
+        // deleted for good (ids are never reused): its queue is cancelled once the flush is applied
+        flush!!.removed += node
         for (child in node.children) forget(child)
     }
 
@@ -191,4 +204,11 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         booleanOrNull != null -> booleanOrNull
         else -> doubleOrNull
     }
+}
+
+/** What one flush does outside the snapshot, after it commits. */
+private class Flush {
+    val born = ArrayList<UINode>()
+    val sent = ArrayList<Pair<UINode, Command>>()
+    val removed = ArrayList<UINode>()
 }

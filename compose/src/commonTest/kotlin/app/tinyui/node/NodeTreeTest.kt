@@ -122,6 +122,27 @@ class NodeTreeTest {
     }
 
     @Test
+    fun anApplyReenteredFromReportJoinsTheFlushItInterrupted() = runTest {
+        var reentered = false
+        lateinit var reentrant: NodeTree
+        reentrant = NodeTree(ComponentRegistry().registerBuiltins()) {
+            if (!reentered) { reentered = true; reentrant.apply("""[["x",1,"setText",{"text":"inner"}]]""") }
+        }
+        reentrant.apply("""[["c",1,"TextField"],["i",0,1,0]]""")
+        val node = reentrant.node(1)!!
+        // each command as it arrives, with what the tree shows at that moment
+        val seen = ArrayList<String>()
+        val receiver = launch(UnconfinedTestDispatcher(testScheduler)) {
+            for (c in node.commands) seen += "${c.name}:${node.props["placeholder"]}"
+        }
+        // the unknown command reports, the sink reenters; the placeholder comes after both
+        reentrant.apply("""[["x",1,"focus",{}],["x",1,"nope",{}],["p",1,"placeholder","hint"]]""")
+        receiver.cancel()
+        assertTrue(reentered)
+        assertEquals(listOf("focus:hint", "setText:hint"), seen)
+    }
+
+    @Test
     fun aRemovedNodeGetsNoMoreCommands() {
         tree.apply("""[["c",1,"TextField"],["i",0,1,0],["c",2,"TextField"],["i",0,2,1]]""")
         val first = tree.node(1)!!
