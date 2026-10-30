@@ -43,7 +43,11 @@ interface NodeScope {
     fun RenderChild(child: UINode)
 }
 
-/** Consumes this node's commands as they arrive, oldest first; one-shot, after composition (docs/adr-004 §3.2). */
+/**
+ * Consumes this node's commands as they arrive, oldest first; one-shot, after composition (docs/adr-004 §3.2).
+ * A command arrives once its flush is applied, but before the recomposition that flush causes: the handler must read
+ * the props it depends on through [NodeScope.get] when it runs, not use values captured during composition.
+ */
 @Composable
 fun NodeScope.Commands(handler: suspend (Command) -> Unit) {
     val node = node

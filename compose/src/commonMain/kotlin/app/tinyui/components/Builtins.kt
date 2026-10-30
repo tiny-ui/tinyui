@@ -263,8 +263,9 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
  */
 @Composable
 private fun TextFieldComponent(scope: NodeScope) {
-    val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
-    fun clip(t: String) = clipTo(t, maxLength)
+    // read when used, not captured: a command runs before the recomposition that would refresh a captured value
+    fun clip(t: String) = clipTo(t, scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 })
+    val maxLength = scope.get<Double>("maxLength")
     var text by retain { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
@@ -330,19 +331,22 @@ private fun TextFieldComponent(scope: NodeScope) {
  */
 @Composable
 private fun CodeFieldComponent(scope: NodeScope) {
-    val length = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, MAX_CODE_LENGTH)
+    fun length() = (scope.get<Double>("length")?.toInt() ?: 6).coerceIn(1, MAX_CODE_LENGTH)
+    val length = length()
     var value by retain { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
     // [force]: commands report onChange even when nothing changed, like TextField.setText
     fun update(raw: String, force: Boolean = false) {
-        val t = raw.filter { it in '0'..'9' }.take(length)
+        // the live prop, like TextField.clip: a command may run before this composition saw a new length
+        val max = length()
+        val t = raw.filter { it in '0'..'9' }.take(max)
         val changed = t != value.text
         value = TextFieldValue(t, selection = TextRange(t.length))
         if (!changed && !force) return
         if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t))
-        if (changed && t.length == length && scope.has("onComplete")) scope.dispatch("onComplete", payload("text", t))
+        if (changed && t.length == max && scope.has("onComplete")) scope.dispatch("onComplete", payload("text", t))
     }
     // fewer cells drop the digits that no longer fit at once, rather than keeping them hidden until the next edit
     LaunchedEffect(length) { if (value.text.length > length) update(value.text) }

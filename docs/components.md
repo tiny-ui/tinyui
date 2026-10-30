@@ -181,6 +181,8 @@ const [open, setOpen] = signal(false);
 
 命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。
 
+**处理器要在执行时读 props**：命令在它那批 flush 提交后送达，但早于这批引起的重组。处理器若用组合期捕获的值（`val maxLength = scope.get(...)` 再闭包进去），同一批里改 prop 又发命令时就用了旧值。`TextField.setText` 裁剪、`CodeField.setText` 取位数都在处理器里现读 `scope.get`，自定义组件照此办。
+
 ## 5. `Placeholder`
 
 未注册的类型渲染 `Placeholder`，同时 E5 上报。debug 构建（Android `FLAG_DEBUGGABLE`、iOS debug binary）画红框加类型名与 id；release 渲染零尺寸的空 `Box`。
