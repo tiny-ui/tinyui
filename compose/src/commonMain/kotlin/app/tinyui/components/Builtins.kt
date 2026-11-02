@@ -281,11 +281,17 @@ private fun ComponentRegistry.stretchOf(scope: NodeScope, cross: String): Stretc
     return Stretch.None
 }
 
-/** Only nodes that take room are measured with their parent; a popup or a sheet lives in a window of its own. */
+/**
+ * Only nodes that take room are measured with their parent; a popup or a sheet lives in a window of its own. A node
+ * with both width and height fixed answers from those (Compose's size modifier never asks the content), so nothing
+ * under it is ever asked: a lazy list in a fixed box is fine. One fixed axis is not enough — a nested Row asks its
+ * children's intrinsic width to share out the space even when the Row is only being asked for its height.
+ */
 private fun ComponentRegistry.firstWithoutIntrinsics(node: UINode): UINode? {
     for (child in node.children) {
         val schema = schema(child.type) ?: continue
         if (!schema.layout) continue
+        if (child.props["width"] is SizeValue.Fixed && child.props["height"] is SizeValue.Fixed) continue
         if (!schema.intrinsics) return child
         firstWithoutIntrinsics(child)?.let { return it }
     }

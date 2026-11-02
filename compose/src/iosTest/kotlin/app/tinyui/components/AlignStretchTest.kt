@@ -90,16 +90,30 @@ class AlignStretchTest {
         ) { assertTrue(near(height("Resend"), 40.dp), "button ${height("Resend")}") }
     }
 
-    /** A lazy list cannot be asked for intrinsics: no stretch, one problem, no crash. */
+    /**
+     * A lazy list with no size of its own cannot be asked for intrinsics (asking throws and would take the page down):
+     * no stretch, one problem, no crash. This layout does throw without the guard; a lazy list with a fixed height
+     * would not, since the size modifier answers for it.
+     */
     @Test
     fun aLazyListIsReportedNotACrash() {
         render(
             """[["c",1,"Row"],["p",1,"width",360],["p",1,"align","stretch"],""" +
-                """["c",2,"Column"],["c",4,"LazyColumn"],["p",4,"height",56],["i",2,4,0],["c",3,"Button"],["p",3,"text","Resend"],""" +
-                """["i",0,1,0],["i",1,2,0],["i",1,3,1]]""",
+                """["c",2,"LazyColumn"],["p",2,"weight",1],["c",3,"Button"],["p",3,"text","Resend"],["i",0,1,0],["i",1,2,0],["i",1,3,1]]""",
         ) { assertTrue(height("Resend") < 56.dp, "button not stretched: ${height("Resend")}") }
         assertEquals(1, reported.size, reported.toString())
         assertTrue("LazyColumn" in reported[0], reported[0])
+    }
+
+    /** Under a box with both sizes fixed nothing is asked, so a lazy list there blocks nothing: stretched, no problem. */
+    @Test
+    fun aLazyListInAFixedBoxBlocksNothing() {
+        render(
+            """[["c",1,"Row"],["p",1,"width",360],["p",1,"align","stretch"],""" +
+                """["c",2,"Box"],["p",2,"width",120],["p",2,"height",200],["c",4,"LazyColumn"],["i",2,4,0],""" +
+                """["c",3,"Button"],["p",3,"text","Resend"],["i",0,1,0],["i",1,2,0],["i",1,3,1]]""",
+        ) { assertTrue(near(height("Resend"), 200.dp), "button ${height("Resend")}") }
+        assertTrue(reported.isEmpty(), reported.toString())
     }
 
     /** With a fixed height there is nothing to measure: the stretch is a plain fill, lazy list or not. */
