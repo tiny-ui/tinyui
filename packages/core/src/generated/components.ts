@@ -9,6 +9,7 @@ export interface LayoutProps {
     weight?: number;
     width?: number | "fill" | "wrap";
     height?: number | "fill" | "wrap";
+    invisible?: boolean;
     cornerRadius?: number;
     background?: ColorValue;
     borderWidth?: number;

@@ -536,12 +536,15 @@ class PageHost internal constructor(
             var m: Modifier = LocalChildModifier.current
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
+            // outside clip / background / border so those vanish too; the gesture below is skipped as well
+            val invisible = get<Boolean>("invisible") == true
+            if (invisible) m = m.invisible()
             val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
             if (shape != RectangleShape) m = m.clip(shape)
             color("background")?.let { m = m.background(it) }
             // 0.dp is Compose's hairline (one pixel), not "no border"
             get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
-            if (clickable && has("onClick")) {
+            if (clickable && !invisible && has("onClick")) {
                 val role = roleOf(get<String>("role"))
                 val selected = get<Boolean>("selected")
                 m = if (selected != null) m.selectable(selected, role = role) { dispatch("onClick") } else m.clickable(role = role) { dispatch("onClick") }
