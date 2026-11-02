@@ -131,19 +131,31 @@ import app.tinyui.schema.Theme
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Column) { scope ->
         val scroll = scope.get<Boolean>("scroll") == true
+        val gap = gapBefore(scope)
         Column(
             modifier = scope.modifier().then(if (scroll) Modifier.verticalScroll(retainScrollState()) else Modifier),
-            verticalArrangement = verticalArrangement(scope["justify"], scope["gap"]),
+            verticalArrangement = verticalArrangement(scope["justify"]),
             horizontalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterHorizontally; "end" -> Alignment.End; else -> Alignment.Start },
-        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
+        ) {
+            scope.Children { child ->
+                val weight = if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier
+                gap(child)?.let { weight.padding(top = it) } ?: weight
+            }
+        }
     }
     register(BuiltinSchemas.Row) { scope ->
         val scroll = scope.get<Boolean>("scroll") == true
+        val gap = gapBefore(scope)
         Row(
             modifier = scope.modifier().then(if (scroll) Modifier.horizontalScroll(retainScrollState()) else Modifier),
-            horizontalArrangement = horizontalArrangement(scope["justify"], scope["gap"]),
+            horizontalArrangement = horizontalArrangement(scope["justify"]),
             verticalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterVertically; "end" -> Alignment.Bottom; else -> Alignment.Top },
-        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
+        ) {
+            scope.Children { child ->
+                val weight = if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier
+                gap(child)?.let { weight.padding(start = it) } ?: weight
+            }
+        }
     }
     register(BuiltinSchemas.Box) { scope ->
         Box(modifier = scope.modifier(), contentAlignment = boxAlignment(scope["align"])) { scope.Children() }
@@ -230,24 +242,35 @@ private fun retainScrollState(): ScrollState = retain { ScrollState(0) }
 // a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
 private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)?.toFloat()?.takeIf { it > 0f }
 
-private fun verticalArrangement(justify: String?, gap: Dp?): Arrangement.Vertical {
-    val spaced = gap != null && gap > 0.dp
-    return when (justify) {
-        "center" -> if (spaced) Arrangement.spacedBy(gap, Alignment.CenterVertically) else Arrangement.Center
-        "end" -> if (spaced) Arrangement.spacedBy(gap, Alignment.Bottom) else Arrangement.Bottom
-        "spaceBetween" -> Arrangement.SpaceBetween
-        else -> if (spaced) Arrangement.spacedBy(gap) else Arrangement.Top
-    }
+/**
+ * Children that only float (a popup, a sheet) and take no room in their parent: `Menu`, `Popover`, `BottomSheet`. They
+ * still sit in the parent's composition — Compose's `Popup` anchors through a zero-size node there — so a `gap` must
+ * not count them, or the parent grows by one gap while they are open and shrinks back when they close.
+ */
+private val FLOATING = setOf("Menu", "Popover", "BottomSheet")
+
+/**
+ * `gap` as a leading inset on every laid-out child but the first; `Arrangement.spacedBy` would space the floating
+ * children too (see [FLOATING]). Null when there is no gap or the child takes no room.
+ */
+private fun gapBefore(scope: NodeScope): (UINode) -> Dp? {
+    val gap = scope.get<Dp>("gap")?.takeIf { it > 0.dp } ?: return { null }
+    val first = scope.node.children.firstOrNull { it.type !in FLOATING }?.id
+    return { child -> gap.takeIf { child.type !in FLOATING && child.id != first } }
 }
 
-private fun horizontalArrangement(justify: String?, gap: Dp?): Arrangement.Horizontal {
-    val spaced = gap != null && gap > 0.dp
-    return when (justify) {
-        "center" -> if (spaced) Arrangement.spacedBy(gap, Alignment.CenterHorizontally) else Arrangement.Center
-        "end" -> if (spaced) Arrangement.spacedBy(gap, Alignment.End) else Arrangement.End
-        "spaceBetween" -> Arrangement.SpaceBetween
-        else -> if (spaced) Arrangement.spacedBy(gap) else Arrangement.Start
-    }
+private fun verticalArrangement(justify: String?): Arrangement.Vertical = when (justify) {
+    "center" -> Arrangement.Center
+    "end" -> Arrangement.Bottom
+    "spaceBetween" -> Arrangement.SpaceBetween
+    else -> Arrangement.Top
+}
+
+private fun horizontalArrangement(justify: String?): Arrangement.Horizontal = when (justify) {
+    "center" -> Arrangement.Center
+    "end" -> Arrangement.End
+    "spaceBetween" -> Arrangement.SpaceBetween
+    else -> Arrangement.Start
 }
 
 private fun boxAlignment(name: String?): Alignment = when (name) {
