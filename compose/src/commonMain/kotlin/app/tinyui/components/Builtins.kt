@@ -126,6 +126,7 @@ import app.tinyui.schema.ComponentRegistry
 import app.tinyui.schema.NodeScope
 import app.tinyui.schema.SizeValue
 import app.tinyui.schema.Theme
+import app.tinyui.textFieldColors
 
 /** First batch of built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. */
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
@@ -314,6 +315,7 @@ private fun TextFieldComponent(scope: NodeScope) {
     OutlinedTextField(
         value = text,
         onValueChange = { val t = clip(it); if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } },
+        colors = textFieldColors(),
         placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
         leadingIcon = prefix?.let { p ->
@@ -380,7 +382,8 @@ private fun CodeFieldComponent(scope: NodeScope) {
     val secure = scope.get<Boolean>("secure") == true
     val error = scope.get<Boolean>("error") == true
     val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
-    val colors = MaterialTheme.colorScheme
+    // the cells follow the host's text input colours like TextField does (TinyUIDefaults)
+    val colors = textFieldColors()
     BasicTextField(
         value = value,
         onValueChange = { update(it.text) },
@@ -399,7 +402,7 @@ private fun CodeFieldComponent(scope: NodeScope) {
                     for (i in 0 until length) {
                         val digit = value.text.getOrNull(i)
                         val current = focused && i == minOf(value.text.length, length - 1)
-                        val outline = when { error -> colors.error; current -> colors.primary; else -> colors.outline }
+                        val outline = when { error -> colors.errorIndicatorColor; current -> colors.focusedIndicatorColor; else -> colors.unfocusedIndicatorColor }
                         Box(
                             contentAlignment = Alignment.Center,
                             // the minimum keeps cells usable where weight has no space to share (a scrolling Row)
@@ -431,6 +434,7 @@ private fun SelectComponent(scope: NodeScope) {
             value = options.firstOrNull { it.first == selected }?.second ?: "",
             onValueChange = {},
             readOnly = true,
+            colors = textFieldColors(),
             enabled = enabled,
             singleLine = true,
             label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
