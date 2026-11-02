@@ -139,7 +139,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 定于 2026-09-25（ADR-007 §3.7，组件契约见 components.md §3）。页面 `import icon from "….svg"` 得到 `Icon` 要的字符串：`tinyui build` 在 esbuild 里给 `.svg` 挂加载器，构建期转换，设备上不解析 SVG。
 
-- 填充图标：`<svg viewBox>` 下的 `path` / `circle` / `ellipse` / `rect`（含圆角）/ `line` / `polyline` / `polygon` 合并成一个 path，得 `"<viewBox>|<d>"`；`fill` 只能缺省或 `currentColor`
+- 填充图标：`<svg viewBox>` 下的 `path` / `circle` / `ellipse` / `rect`（含圆角）/ `line` / `polyline` / `polygon` 合并成一个 path，得 `"<viewBox>|<d>"`；`fill` 只能缺省或 `currentColor`；每个 `path` 开头的相对 `m` 改写成绝对 `M`（SVG 规定首个移动本就是绝对的，合并后不改会相对上一个形状的终点漂移；iconfont 导出常这么写）
 - 描边图标：根元素 `fill="none"` 且有 `stroke`（Lucide 的写法），得 `"<viewBox>|<d>|<stroke-width>"`
 - 构建失败：渐变、`image`、`text`、`use`、`mask`、`transform`、`style`、透明度、另一种颜色的 `fill`、没有 `viewBox`（且没有 `width` / `height`）
 - 类型：页面工程的 tsconfig 加 `"types": ["tinyui-core/assets"]`，`*.svg` 的默认导出是 `string`

@@ -19,6 +19,15 @@ describe("svg loader", () => {
         assert.match(d!, /M1 1L2 2$/);
     });
 
+    it("keeps a path that starts with a relative m where it was drawn (iconfont exports write m for the first move)", () => {
+        const svg = `<svg viewBox="0 0 1024 1024"><path d="M512 76.8h5v5z"/><path d="m635.7 353.3 30 41-200 150z"/></svg>`;
+        // the pairs after a relative move are relative linetos; they must not turn absolute with the move
+        assert.equal(svgToIcon(svg), "0 0 1024 1024|M512 76.8h5v5zM635.7 353.3 l30 41 -200 150z");
+        assert.equal(svgToIcon(`<svg viewBox="0 0 8 8"><path d="m1 1h2"/><path d="m2,2L3 3"/></svg>`), "0 0 8 8|M1 1h2M2 2L3 3");
+        // exponents are part of the number, not the next command
+        assert.equal(svgToIcon(`<svg viewBox="0 0 8 8"><path d="M0 0"/><path d="m1 2e3h1"/><path d="m1e2 3 4 5z"/></svg>`), "0 0 8 8|M0 0M1 2e3h1M1e2 3 l4 5z");
+    });
+
     it("refuses what one tint cannot draw", () => {
         const wrap = (inner: string) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
         assert.throws(() => svgToIcon(wrap(`<path fill="#ff0000" d="M0 0Z"/>`)), SvgError);
