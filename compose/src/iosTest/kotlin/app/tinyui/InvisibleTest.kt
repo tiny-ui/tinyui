@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** `invisible`: room kept, nothing drawn, no touch for the subtree, nothing read (docs/components.md §2). */
+/** `invisible`: room kept, nothing drawn, transparent to touch (the subtree is not hit, what is around it is), nothing read (docs/components.md §2). */
 @OptIn(ExperimentalTestApi::class)
 class InvisibleTest {
     @Test
@@ -39,27 +39,33 @@ class InvisibleTest {
         onNodeWithText("Ghost").assertDoesNotExist()
     }
 
-    /** A tap on an invisible node reaches nothing under it, a clickable child included; the same tree takes it when visible. */
+    /**
+     * A tap over an invisible node is not taken by it or anything under it, a clickable child included: it goes through
+     * to what is around — here the clickable box the invisible one sits in. Visible, the child takes it instead. This is
+     * what a placeholder label inside a button relies on: the button must still get the tap.
+     */
     @Test
-    fun takesNoTouchForItsSubtree() {
-        assertEquals(0, clicksThrough(invisible = true))
-        assertEquals(1, clicksThrough(invisible = false))
+    fun isTransparentToTouch() {
+        assertEquals(0 to 1, clicks(invisible = true))
+        assertEquals(1 to 0, clicks(invisible = false))
     }
 
-    private fun clicksThrough(invisible: Boolean): Int {
-        var clicks = 0
+    /** (clicks the inner child got, clicks the outer box got) */
+    private fun clicks(invisible: Boolean): Pair<Int, Int> {
+        var inner = 0
+        var outer = 0
         runComposeUiTest {
             setContent {
-                Box(Modifier.testTag("wrap").size(100.dp)) {
+                Box(Modifier.testTag("wrap").size(100.dp).clickable { outer++ }) {
                     Box(Modifier.size(100.dp).then(if (invisible) Modifier.invisible() else Modifier)) {
-                        Box(Modifier.size(100.dp).clickable { clicks++ })
+                        Box(Modifier.size(100.dp).clickable { inner++ })
                     }
                 }
             }
             onNodeWithTag("wrap").performTouchInput { click() }
             waitForIdle()
         }
-        return clicks
+        return inner to outer
     }
 
     /** The use it was added for: a label that changes keeps the width of its widest form by stacking it, invisible. */
