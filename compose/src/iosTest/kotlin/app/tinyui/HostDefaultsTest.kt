@@ -20,7 +20,7 @@ class HostDefaultsTest {
         setContent {
             MaterialTheme {
                 custom = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color.Red)
-                CompositionLocalProvider(LocalTinyUIDefaults provides TinyUIDefaults(textFieldColors = { custom!! })) { got = textFieldColors() }
+                CompositionLocalProvider(LocalTinyUIDefaults provides TinyUIDefaults(textFieldColors = custom)) { got = textFieldColors() }
             }
         }
         waitForIdle()

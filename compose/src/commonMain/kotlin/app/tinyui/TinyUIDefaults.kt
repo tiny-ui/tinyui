@@ -14,9 +14,9 @@ import androidx.compose.runtime.compositionLocalOf
 class TinyUIDefaults(
     /**
      * Colours of every text input — `TextField`, `Select`, and the cells of `CodeField` (its focused / unfocused / error
-     * indicator colours). Composable because the colours are built from `MaterialTheme`.
+     * indicator colours). Build it inside the host's `MaterialTheme`, as with any M3 colours, so it follows the scheme.
      */
-    val textFieldColors: (@Composable () -> TextFieldColors)? = null,
+    val textFieldColors: TextFieldColors? = null,
 )
 
 /** The host's [TinyUIDefaults]; the M3 defaults when the host sets none. */
@@ -24,4 +24,4 @@ val LocalTinyUIDefaults = compositionLocalOf { TinyUIDefaults() }
 
 /** The text input colours the host chose, else M3's outlined defaults. */
 @Composable
-internal fun textFieldColors(): TextFieldColors = LocalTinyUIDefaults.current.textFieldColors?.invoke() ?: OutlinedTextFieldDefaults.colors()
+internal fun textFieldColors(): TextFieldColors = LocalTinyUIDefaults.current.textFieldColors ?: OutlinedTextFieldDefaults.colors()
