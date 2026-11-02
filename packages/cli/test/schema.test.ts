@@ -26,12 +26,6 @@ describe("schema generator", () => {
         assert.doesNotMatch(generateTs([card], "../node.ts"), /declare module/);
     });
 
-    it("passes floating through to Kotlin and defaults it to false", () => {
-        const menu = defineComponent("Menu", { children: true, floating: true });
-        assert.equal(card.floating, false);
-        assert.match(generateKt([card, menu], "x", "HostSchemas"), /type = "pp.Card"[\s\S]*floating = false,[\s\S]*type = "Menu"[\s\S]*floating = true,/);
-    });
-
     it("emits the token name sets only for the built-in object", () => {
         const builtin = generateKt([card], "x", "BuiltinSchemas");
         assert.match(builtin, /val colorTokens: Set<String> = setOf\("primary"/);

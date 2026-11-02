@@ -7,7 +7,6 @@ export default defineComponent("BottomSheet", {
     },
     events: { onDismiss: {} },
     children: true,
-    floating: true,
     // floats over the page, not laid out in its parent
     layout: false,
 });

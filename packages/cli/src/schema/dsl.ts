@@ -28,10 +28,11 @@ export interface ComponentDef {
     /** command name → args fields */
     commands: Record<string, Record<string, FieldDef>>;
     children: boolean;
-    /** Accepts the common layout props (docs/components.md §2). */
+    /**
+     * Accepts the common layout props (docs/components.md §2) — i.e. takes a box of its own in its parent. `false` for
+     * what takes no room: a popup, a sheet, data for a sibling, a handler; Row / Column leave those out of `gap`.
+     */
     layout: boolean;
-    /** Floats over the page (a popup, a sheet) and takes no room in its parent: Row / Column leave it out of `gap`. */
-    floating: boolean;
 }
 
 interface PropOptions { required?: boolean; initial?: boolean; doc?: string }
@@ -74,7 +75,6 @@ export interface ComponentInput {
     commands?: Record<string, Record<string, FieldDef>>;
     children?: boolean;
     layout?: boolean;
-    floating?: boolean;
 }
 
 export function defineComponent(name: string, input: ComponentInput = {}): ComponentDef {
@@ -101,7 +101,6 @@ export function defineComponent(name: string, input: ComponentInput = {}): Compo
         commands: input.commands ?? {},
         children: input.children ?? false,
         layout: input.layout ?? true,
-        floating: input.floating ?? false,
     };
 }
 

@@ -26,8 +26,7 @@ defineComponent("TextField", {
     events: { onChange: { text: field.string() } },
     commands: { setText: { text: field.string() }, focus: {} },
     children: false,   // 是否接受 children
-    layout: true,      // 是否接受公共布局 prop，默认 true
-    floating: false,   // 浮在页面之上、不占父容器版面（Menu / Popover / BottomSheet），Row / Column 的 gap 不计它，默认 false
+    layout: true,      // 是否接受公共布局 prop，默认 true；false 即不占父容器版面（Menu / Popover / BottomSheet / Option / BackHandler），Row / Column 的 gap 不计它
 });
 ```
 
@@ -68,7 +67,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|
-| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema 声明 `floating: true` 的 `Menu` / `Popover` / `BottomSheet` 不计）、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
+| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` 不计）、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
 | `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick`、`onLinkClick{id}`（给了它，`text` 里的 `[文案](id)` 渲染成链接） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |

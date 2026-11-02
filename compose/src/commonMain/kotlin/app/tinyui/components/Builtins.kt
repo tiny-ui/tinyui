@@ -243,16 +243,17 @@ private fun retainScrollState(): ScrollState = retain { ScrollState(0) }
 private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)?.toFloat()?.takeIf { it > 0f }
 
 /**
- * `gap` as a leading inset on every laid-out child but the first. A child whose schema is `floating` (a popup, a sheet)
- * takes no room — it still sits in the parent's composition, Compose's `Popup` anchors through a zero-size node there —
- * so it gets no inset and does not count as first; `Arrangement.spacedBy` would space it too, and the parent would grow
- * by one gap while it is open and shrink back when it closes. Null when there is no gap or the child floats.
+ * `gap` as a leading inset on every child that takes room, except the first of them. A child whose schema has no layout
+ * (a popup, a sheet, an `Option`, a `BackHandler`) takes no room — a popup still sits in the parent's composition,
+ * Compose's `Popup` anchors through a zero-size node there — so it gets no inset and does not count as first;
+ * `Arrangement.spacedBy` would space that node too, and the parent would grow by one gap while the popup is open and
+ * shrink back when it closes. Null when there is no gap or the child takes no room.
  */
 private fun ComponentRegistry.gapBefore(scope: NodeScope): (UINode) -> Dp? {
     val gap = scope.get<Dp>("gap")?.takeIf { it > 0.dp } ?: return { null }
-    val floats = { child: UINode -> schema(child.type)?.floating == true }
-    val first = scope.node.children.firstOrNull { !floats(it) }?.id
-    return { child -> gap.takeIf { !floats(child) && child.id != first } }
+    val takesRoom = { child: UINode -> schema(child.type)?.layout != false }
+    val first = scope.node.children.firstOrNull(takesRoom)?.id
+    return { child -> gap.takeIf { takesRoom(child) && child.id != first } }
 }
 
 private fun verticalArrangement(justify: String?): Arrangement.Vertical = when (justify) {
