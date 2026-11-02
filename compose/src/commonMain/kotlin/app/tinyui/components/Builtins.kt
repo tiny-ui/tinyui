@@ -389,14 +389,18 @@ private fun Prefix(scope: NodeScope, text: String, color: Color) {
 
 private val PrefixInset = 4.dp
 
-/** [outer]'s corners shrunk by [inset], for a block that sits [inset] inside a shape and should follow its curve. */
-private class ConcentricInsetShape(private val outer: CornerBasedShape, private val inset: Dp) : Shape {
+/**
+ * [outer]'s corners shrunk by [inset], for a block that sits [inset] inside a shape and should follow it. `copy` keeps the
+ * kind of corner the theme chose (rounded, cut…); shrinking by the inset is exactly concentric for rounded corners and
+ * close enough for cut ones.
+ */
+internal class ConcentricInsetShape(private val outer: CornerBasedShape, private val inset: Dp) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val d = with(density) { inset.toPx() }
         // corners in percent are taken against the block grown by the inset, which is close enough for a block inside a field
         val outerSize = Size(size.width + 2 * d, size.height + 2 * d)
         fun inner(c: CornerSize) = CornerSize((c.toPx(outerSize, density) - d).coerceAtLeast(0f))
-        return RoundedCornerShape(inner(outer.topStart), inner(outer.topEnd), inner(outer.bottomEnd), inner(outer.bottomStart))
+        return outer.copy(inner(outer.topStart), inner(outer.topEnd), inner(outer.bottomEnd), inner(outer.bottomStart))
             .createOutline(size, layoutDirection, density)
     }
 }
