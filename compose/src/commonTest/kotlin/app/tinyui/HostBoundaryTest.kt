@@ -55,6 +55,8 @@ class HostBoundaryTest {
     fun iconsParseFilledAndOutlinedAndRefuseAnythingElse() {
         assertNotNull(parseIcon("0 -960 960 960|M480-80L80-480Z"))
         assertNotNull(parseIcon("0 0 24 24|M2 12L22 12|2"))
+        assertNotNull(parseIcon("0 0 1024 1024|M0 0h1v1z|+25.6"))
+        assertNull(parseIcon("0 0 24 24|M2 12Z|+bold"))
         assertNull(parseIcon("M2 12L22 12"))
         assertNull(parseIcon("0 0 24|M2 12Z"))
         assertNull(parseIcon("0 0 24 24|M2 12Z|thick"))
