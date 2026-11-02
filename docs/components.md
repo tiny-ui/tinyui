@@ -195,3 +195,11 @@ const [open, setOpen] = signal(false);
 - token 词表就是 Material 3 的字段名：颜色为 `ColorScheme` 的全部字段，文字样式为 `Typography` 的十五个名字（cli `schema/tokens.ts` 是词表真值，`compose/.../schema/Theme.kt` 逐一解析，测试保证两边一致）
 - 暂不做：宿主自定义 token（触发条件：某宿主出现 M3 之外的语义色要跨页复用，届时走清单下发 + 宿主类型包生成，与宿主组件同一条路）；间距 / 圆角 / 阴影的 token
 
+**宿主覆盖组件默认值**（2026-11-02 加，注册流程触发：设计系统把输入框聚焦描边给 `onSurface`，M3 从 `primary` 推）。M3 有些组件颜色不是 token 而是从角色推出来的，`MaterialTheme` 表达不了；宿主在包 `TinyUIPage` 的主题层设一次 `LocalTinyUIDefaults`，每个字段可选，null 即 M3 默认，页面看不到它；值在宿主自己的 `MaterialTheme` 里构造，随主题重组。现有字段：`textFieldColors`，一份 `TextFieldColors` 供 `TextField`、`Select` 与 `CodeField` 的格子共用（格子取它的 focused / unfocused / error indicator 色）。新字段的触发条件同上：设计系统与 M3 默认值的一处具体偏离，不是页面级定制。
+
+```kotlin
+CompositionLocalProvider(LocalTinyUIDefaults provides TinyUIDefaults(textFieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.onSurface))) {
+    TinyUIPage(…)
+}
+```
+

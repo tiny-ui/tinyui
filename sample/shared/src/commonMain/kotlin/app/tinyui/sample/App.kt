@@ -8,6 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import app.tinyui.TinyUIDefaults
+import app.tinyui.LocalTinyUIDefaults
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,15 +94,20 @@ fun App(updatesDir: Path) {
     val retained = retainRetainedValuesStoreRegistry()
     // pages name theme tokens only (docs/components.md §6); flipping the scheme here restyles them with no patch
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                    for (p in pages) TextButton(onClick = { page = p }) { Text(p.substringAfter('/')) }
-                    TextButton(onClick = { sampleLocale.value = if (locale == "en") "zh" else "en" }) { Text(if (locale == "en") "中文" else "EN") }
+        // a host may override the M3 component defaults MaterialTheme cannot express (docs/components.md §6): this one
+        // colours a focused text input with onSurface the way a design system that departs from M3's primary would
+        val defaults = TinyUIDefaults(textFieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.onSurface))
+        CompositionLocalProvider(LocalTinyUIDefaults provides defaults) {
+            Surface(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                        for (p in pages) TextButton(onClick = { page = p }) { Text(p.substringAfter('/')) }
+                        TextButton(onClick = { sampleLocale.value = if (locale == "en") "zh" else "en" }) { Text(if (locale == "en") "中文" else "EN") }
+                    }
+                    val u = updates
+                    if (u == null) Text("loading…", Modifier.padding(16.dp))
+                    else key(page) { retained.LocalRetainedValuesStoreProvider(page) { UpdatesPage(u, page, host, modifier = Modifier.fillMaxSize()) } }
                 }
-                val u = updates
-                if (u == null) Text("loading…", Modifier.padding(16.dp))
-                else key(page) { retained.LocalRetainedValuesStoreProvider(page) { UpdatesPage(u, page, host, modifier = Modifier.fillMaxSize()) } }
             }
         }
     }
