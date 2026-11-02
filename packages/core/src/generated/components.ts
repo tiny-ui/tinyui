@@ -158,6 +158,12 @@ export interface TextFieldProps extends LayoutProps {
     supportingText?: string;
     /** fixed text before the input, such as a calling code */
     prefixText?: string;
+    /** icon after prefixText, such as a dropdown arrow; tinted like the prefix text */
+    prefixIcon?: string;
+    /** size of the prefix icon; unset, the icon's own size (24dp for a packaged icon) */
+    prefixIconSize?: number;
+    /** fills the prefix as a block inset 4dp in the field, its corners concentric with the field's; unset, plain text */
+    prefixBackground?: ColorValue;
     /** icon at the end, such as show / hide or clear; tappable when onTrailingClick is set */
     trailingIcon?: string;
     /** next moves focus to the following field */
