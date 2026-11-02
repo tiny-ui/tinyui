@@ -40,6 +40,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|
 | 0 | `weight` | number | `weight(f)`，由父 `Row` / `Column` 施加（2026-09-17 加） |
 | 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()` |
+| 1.5 | `invisible` | boolean | `alpha(0)` + 清空子树语义 + 在 initial pass 吃掉所有指针事件（2026-11-02 加） |
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)` |
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
@@ -53,6 +54,17 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
     <RadioButton selected={p.selected} />
     <Text text={p.title} />
 </Row>
+```
+
+`invisible` 是 CSS `visibility: hidden`、Android `View.INVISIBLE`、Flutter `Visibility(maintainSize)`、SwiftUI `.hidden()` 的那个状态（2026-11-02 加，注册流程触发）：**占位但不画、不响应触摸（整棵子树）、不进无障碍树**。它在 clip / background 之外，所以背景与边框一起消失；节点自己的 `onClick` 不挂，子树里的点击也到不了。「不占空间」不需要它：条件不渲染即可。不叫 `hidden`——HTML 的 `hidden` 属性等于 `display: none`，和 CSS `visibility: hidden` 正好相反，这个词在 Web 里本身有歧义；`invisible` 在 Android 与 Tailwind 里都明确指保留空间。典型用法是让会变的文案保持最宽状态的宽度，免得切换时整行跳动：
+
+```tsx
+<Button variant="outlined" enabled={seconds() === 0} onClick={resend}>
+    <Box>
+        <Text text={t("resend")} invisible />        {/* 最宽的一种文案占位 */}
+        <Text text={seconds() > 0 ? `${seconds()}s` : t("resend")} />
+    </Box>
+</Button>
 ```
 
 顺序固定：以后加 prop 只能插进这个序列，不能重排（重排会改变已有页面的视觉）。`padding` 在最里面，所以它是内容内边距；背景、边框和点击区域包含它。

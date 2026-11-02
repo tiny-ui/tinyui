@@ -117,6 +117,7 @@ export const LAYOUT_PROPS: Record<string, PropDef> = {
     weight: number({ doc: "share of the parent's remaining main-axis space; only as a direct child of Row / Column" }),
     width: size({ doc: "dp, or fill / wrap" }),
     height: size({ doc: "dp, or fill / wrap" }),
+    invisible: boolean({ doc: "keeps its room but is not drawn, tapped or read (CSS visibility: hidden, Android INVISIBLE); for a node that should not take room, do not render it" }),
     cornerRadius: dp({ doc: "clips background and content" }),
     background: color(),
     borderWidth: dp({ doc: "drawn inside the corner radius; color defaults to the outline token" }),

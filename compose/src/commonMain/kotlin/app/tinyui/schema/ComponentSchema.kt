@@ -195,6 +195,7 @@ object LayoutProps {
         "weight" to PropSpec.Num(default = null),
         "width" to PropSpec.Size(default = null),
         "height" to PropSpec.Size(default = null),
+        "invisible" to PropSpec.Bool(default = null),
         "cornerRadius" to PropSpec.Dp(default = null),
         "background" to PropSpec.ColorSpec(default = null),
         "borderWidth" to PropSpec.Dp(default = null),

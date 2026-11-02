@@ -16,6 +16,8 @@ export default function Form() {
     const [password, setPassword] = signal("");
     const [shown, setShown] = signal(false);
     const [focused, setFocused] = signal(false);
+    const [resendIn, setResendIn] = signal(0);
+    const tick = () => { if (resendIn() > 0) { setResendIn(resendIn() - 1); setTimeout(tick, 1000); } };
     const [agreed, setAgreed] = signal(false);
     const [voice, setVoice] = signal("");
     const [pinError, setPinError] = signal(false);
@@ -90,7 +92,13 @@ export default function Form() {
                 {/* one field for the code, and the button as tall as the field: align="stretch" sizes the row from them */}
                 <Row width="fill" align="stretch" gap={8}>
                     <TextField weight={1} keyboard="number" maxLength={6} placeholder="Code" autofill="oneTimeCode" />
-                    <Button variant="outlined" text="Resend" onClick={() => void ui.toast("resend")} />
+                    {/* the label changes with the countdown; the invisible one keeps the button at its widest width */}
+                    <Button variant="outlined" enabled={resendIn() === 0} onClick={() => { setResendIn(5); setTimeout(tick, 1000); void ui.toast("resend"); }}>
+                        <Box>
+                            <Text text="Resend" invisible />
+                            <Text text={resendIn() > 0 ? `${resendIn()}s` : "Resend"} />
+                        </Box>
+                    </Button>
                 </Row>
                 <Text text="Transaction PIN (1234 is wrong)" style="titleSmall" />
                 <CodeField
