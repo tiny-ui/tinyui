@@ -17,7 +17,11 @@ internal fun Modifier.invisible(): Modifier = this
     .alpha(0f)
     .clearAndSetSemantics {}
     .pointerInput(Unit) {
+        // one gesture per pass through the block: consume until every pointer is up, then wait for the next
         awaitEachGesture {
-            while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+            do {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                event.changes.forEach { it.consume() }
+            } while (event.changes.any { it.pressed })
         }
     }
