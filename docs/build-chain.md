@@ -141,6 +141,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 - 填充图标：`<svg viewBox>` 下的 `path` / `circle` / `ellipse` / `rect`（含圆角）/ `line` / `polyline` / `polygon` 合并成一个 path，得 `"<viewBox>|<d>"`；`fill` 只能缺省或 `currentColor`；每个 `path` 开头的相对 `m` 改写成绝对 `M`（SVG 规定首个移动本就是绝对的，合并后不改会相对上一个形状的终点漂移；iconfont 导出常这么写）
 - 描边图标：根元素 `fill="none"` 且有 `stroke`（Lucide 的写法），得 `"<viewBox>|<d>|<stroke-width>"`
+- 加粗图标：根元素有 `stroke` 但不写 `fill="none"`，形状照填充图标合并，得 `"<viewBox>|<d>|+<stroke-width>"`（2026-11-02 加；设计系统图标的「加粗档」由此表达，`stroke-width` 按 viewBox 单位写）
 - 构建失败：渐变、`image`、`text`、`use`、`mask`、`transform`、`style`、透明度、另一种颜色的 `fill`、没有 `viewBox`（且没有 `width` / `height`）
 - 类型：页面工程的 tsconfig 加 `"types": ["tinyui-core/assets"]`，`*.svg` 的默认导出是 `string`
 

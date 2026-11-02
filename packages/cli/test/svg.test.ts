@@ -28,6 +28,13 @@ describe("svg loader", () => {
         assert.equal(svgToIcon(`<svg viewBox="0 0 8 8"><path d="M0 0"/><path d="m1 2e3h1"/><path d="m1e2 3 4 5z"/></svg>`), "0 0 8 8|M0 0M1 2e3h1M1e2 3 l4 5z");
     });
 
+    it("a filled icon with a root stroke is a bold icon: the stroke width is kept with a + sign", () => {
+        assert.equal(svgToIcon(`<svg viewBox="0 0 1024 1024" stroke="currentColor" stroke-width="25.6"><path d="M0 0h1v1z"/></svg>`), "0 0 1024 1024|M0 0h1v1z|+25.6");
+        assert.equal(svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M0 0Z"/></svg>`), "0 0 24 24|M0 0Z|+1");
+        // the shapes inherit the one stroke; they still may not bring their own colour
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path stroke="#000" d="M0 0Z"/></svg>`), /stroke belongs on the <svg>/);
+    });
+
     it("refuses what one tint cannot draw", () => {
         const wrap = (inner: string) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
         assert.throws(() => svgToIcon(wrap(`<path fill="#ff0000" d="M0 0Z"/>`)), SvgError);
@@ -38,7 +45,6 @@ describe("svg loader", () => {
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 0 24"><path d="M0 0Z"/></svg>`), /positive width/);
         assert.throws(() => svgToIcon(wrap("")), /no shapes/);
         assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" fill="none"><path d="M0 0Z"/></svg>`), /without a stroke/);
-        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><line x1="0" y1="0" x2="1" y2="1"/></svg>`), /either filled or outlined/);
         assert.throws(() => svgToIcon(wrap(`<path stroke="currentColor" d="M0 0Z"/>`)), /stroke="…"> in a filled icon/);
         const outlined = (inner: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${inner}</svg>`;
         assert.throws(() => svgToIcon(outlined(`<path stroke="none" d="M0 0Z"/>`)), /overrides the stroke/);

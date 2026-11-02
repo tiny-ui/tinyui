@@ -107,7 +107,7 @@ const pin = ref<CodeFieldCommands>();
 
 `Text` 内联链接（2026-10-28 加）：给了 `onLinkClick`，`text` 里的 `[文案](id)` 渲染成 primary 色链接，点击报 `{id}`；没给时按字面显示。协议句"我同意 [隐私政策](privacy) 及 [服务协议](terms)"要行内折行，`Row` 拼几个 `Text` 做不到；markdown 链接子集是最小够用的标记，i18n 文案里直接写。只认 `[` `]` `(` `)` 紧挨、id 不含空白的形式，其余方括号原样显示；不支持嵌套与转义。
 
-`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
+`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角），加粗图标 `"<viewBox>|<d>|+<线宽>"`（先填充再用同一颜色沿轮廓描一道，形状每边长出半个线宽；设计系统把一份几何按描边分「常规 / 加粗」两档时用它，线宽是 viewBox 单位的常数，与渲染尺寸无关，2026-11-02 加）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
 
 ```tsx
 import bolt from "@material-symbols/svg-400/outlined/bolt.svg";

@@ -93,7 +93,10 @@ sealed class PropSpec(val kind: String, val required: Boolean, val initial: Bool
         }
     }
 
-    /** `"<viewBox>|<d>"`, or `"<viewBox>|<d>|<strokeWidth>"` for an outlined icon (docs/components.md §3), parsed into an [ImageVector] once per distinct string. */
+    /**
+     * `"<viewBox>|<d>"`, `"<viewBox>|<d>|<strokeWidth>"` for an outlined icon, or `"<viewBox>|<d>|+<strokeWidth>"` for a bold one
+     * (filled, then stroked in the same colour; docs/components.md §3), parsed into an [ImageVector] once per distinct string.
+     */
     class IconSpec(required: Boolean = false, initial: Boolean = false) : PropSpec("icon", required, initial) {
         override val default: IconValue? = null
         override val declared: Any? = null
@@ -114,14 +117,20 @@ internal fun parseIcon(text: String): IconValue? {
     if (parts.size !in 2..3) return null
     val box = parts[0].trim().split(Regex("[\\s,]+")).mapNotNull { it.toFloatOrNull() }
     if (box.size != 4 || box[2] <= 0f || box[3] <= 0f) return null
-    val stroke = parts.getOrNull(2)?.let { it.toFloatOrNull() ?: return null }
+    val strokeText = parts.getOrNull(2)?.trim()
+    val bold = strokeText?.startsWith('+') == true
+    val stroke = strokeText?.let { (if (bold) it.substring(1) else it).toFloatOrNull() ?: return null }
     val nodes = runCatching { PathParser().parsePathString(parts[1]).toNodes() }.getOrNull() ?: return null
     val paint = SolidColor(Color.Black)
     val vector = ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = box[2], viewportHeight = box[3])
         .addGroup(translationX = -box[0], translationY = -box[1])
         .apply {
-            if (stroke == null) addPath(nodes, fill = paint)
-            else addPath(nodes, fill = null, stroke = paint, strokeLineWidth = stroke, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+            when {
+                stroke == null -> addPath(nodes, fill = paint)
+                // bold: the stroke rides on the filled outline, so the glyph grows by half the width on each edge
+                bold -> addPath(nodes, fill = paint, stroke = paint, strokeLineWidth = stroke, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+                else -> addPath(nodes, fill = null, stroke = paint, strokeLineWidth = stroke, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round)
+            }
         }
         .clearGroup()
         .build()
