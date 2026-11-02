@@ -28,7 +28,10 @@ export interface ComponentDef {
     /** command name → args fields */
     commands: Record<string, Record<string, FieldDef>>;
     children: boolean;
-    /** Accepts the common layout props (docs/components.md §2). */
+    /**
+     * Accepts the common layout props (docs/components.md §2) — i.e. takes a box of its own in its parent. `false` for
+     * what takes no room: a popup, a sheet, data for a sibling, a handler; Row / Column leave those out of `gap`.
+     */
     layout: boolean;
 }
 

@@ -173,7 +173,10 @@ class ComponentSchema(
     val events: Map<String, Map<String, FieldSpec>>,
     val commands: Map<String, Map<String, FieldSpec>>,
     val children: Boolean,
-    /** Accepts [LayoutProps]. */
+    /**
+     * Accepts [LayoutProps] — i.e. takes a box of its own in its parent. `false` for what takes no room (a popup, a
+     * sheet, data for a sibling, a handler); Row / Column leave those out of `gap`.
+     */
     val layout: Boolean,
 ) {
     /** Own props plus the common layout props when [layout] is on. */
