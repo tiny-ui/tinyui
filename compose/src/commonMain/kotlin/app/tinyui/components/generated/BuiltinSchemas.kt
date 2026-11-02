@@ -21,6 +21,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val Row = ComponentSchema(
@@ -38,6 +39,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val Box = ComponentSchema(
@@ -52,6 +54,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val Text = ComponentSchema(
@@ -73,6 +76,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val Button = ComponentSchema(
@@ -89,6 +93,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val RadioButton = ComponentSchema(
@@ -104,6 +109,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val TextField = ComponentSchema(
@@ -135,6 +141,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val LazyColumn = ComponentSchema(
@@ -151,6 +158,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val Spacer = ComponentSchema(
@@ -163,6 +171,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val Icon = ComponentSchema(
@@ -180,6 +189,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val Loading = ComponentSchema(
@@ -194,6 +204,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val BottomSheet = ComponentSchema(
@@ -208,6 +219,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        floating = true,
     )
 
     val Divider = ComponentSchema(
@@ -222,6 +234,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val Checkbox = ComponentSchema(
@@ -237,6 +250,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val CodeField = ComponentSchema(
@@ -259,6 +273,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        floating = false,
     )
 
     val Select = ComponentSchema(
@@ -276,6 +291,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val Option = ComponentSchema(
@@ -290,6 +306,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = false,
+        floating = false,
     )
 
     val Popover = ComponentSchema(
@@ -306,6 +323,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        floating = true,
     )
 
     val TopAppBar = ComponentSchema(
@@ -321,6 +339,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        floating = false,
     )
 
     val BackHandler = ComponentSchema(
@@ -335,6 +354,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = false,
+        floating = false,
     )
 
     val Menu = ComponentSchema(
@@ -350,6 +370,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        floating = true,
     )
 
     val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu)

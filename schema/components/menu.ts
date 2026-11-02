@@ -7,6 +7,7 @@ export default defineComponent("Menu", {
     },
     events: { onSelect: { value: field.string() }, onDismiss: {} },
     children: true,
+    floating: true,
     // floats next to the parent, not laid out in it
     layout: false,
 });

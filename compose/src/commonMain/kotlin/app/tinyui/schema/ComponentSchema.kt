@@ -175,6 +175,8 @@ class ComponentSchema(
     val children: Boolean,
     /** Accepts [LayoutProps]. */
     val layout: Boolean,
+    /** Floats over the page (a popup, a sheet) and takes no room in its parent: Row / Column leave it out of `gap`. */
+    val floating: Boolean = false,
 ) {
     /** Own props plus the common layout props when [layout] is on. */
     fun prop(key: String): PropSpec? = props[key] ?: if (layout) LayoutProps.specs[key] else null

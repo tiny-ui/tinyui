@@ -9,6 +9,7 @@ export default defineComponent("Popover", {
     },
     events: { onDismiss: {} },
     children: true,
+    floating: true,
     // floats next to the parent, not laid out in it
     layout: false,
 });
