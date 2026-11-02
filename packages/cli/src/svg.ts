@@ -39,9 +39,7 @@ export function svgToIcon(source: string): string {
         if (!stroked && a["fill"] === "none") throw new SvgError(`<${tag} fill="none"> in a filled icon; outlined icons set fill="none" and a stroke on the <svg>`);
         switch (tag) {
             case "g": if (!(rest ?? "").trimEnd().endsWith("/")) depth++; break;
-            // The first move of a path is absolute even when written as `m` (SVG 1.1 §8.3.3); once the shapes are
-            // joined into one `d` it would become relative to the previous shape's end and the glyph drifts off canvas.
-            case "path": parts.push(required(a, "d", tag).replace(/^m/, "M")); break;
+            case "path": parts.push(absoluteFirstMove(required(a, "d", tag))); break;
             case "circle": parts.push(ellipse(n(a, "cx"), n(a, "cy"), n(a, "r", true), n(a, "r", true))); break;
             case "ellipse": parts.push(ellipse(n(a, "cx"), n(a, "cy"), n(a, "rx", true), n(a, "ry", true))); break;
             case "rect": parts.push(rect(n(a, "x"), n(a, "y"), n(a, "width", true), n(a, "height", true), a["rx"] ?? a["ry"], a["ry"] ?? a["rx"])); break;
@@ -100,4 +98,18 @@ function rect(x: number, y: number, w: number, h: number, rxText?: string, ryTex
     const ry = Math.min(ryText === undefined ? 0 : num(ryText), h / 2);
     if (rx === 0 || ry === 0) return `M${x} ${y}h${w}v${h}h${-w}Z`;
     return `M${x + rx} ${y}h${w - 2 * rx}a${rx} ${ry} 0 0 1 ${rx} ${ry}v${h - 2 * ry}a${rx} ${ry} 0 0 1 ${-rx} ${ry}h${-(w - 2 * rx)}a${rx} ${ry} 0 0 1 ${-rx} ${-ry}v${-(h - 2 * ry)}a${rx} ${ry} 0 0 1 ${rx} ${-ry}Z`;
+}
+
+/**
+ * The first move of a path is absolute even when written as `m` (SVG 1.1 §8.3.3), but once the shapes are joined into one `d`
+ * it would become relative to the previous shape's end and the glyph drifts off canvas. Rewrite it as `M`, keeping the pairs
+ * that follow the move as the relative linetos they implicitly are.
+ */
+function absoluteFirstMove(d: string): string {
+    const m = /^m\s*([^a-zA-Z]*)/.exec(d);
+    if (!m) return d;
+    const numbers = m[1]!.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) ?? [];
+    if (numbers.length < 2) return d;
+    const rest = numbers.slice(2);
+    return `M${numbers[0]} ${numbers[1]}${rest.length ? ` l${rest.join(" ")}` : ""}${d.slice(m[0].length)}`;
 }
