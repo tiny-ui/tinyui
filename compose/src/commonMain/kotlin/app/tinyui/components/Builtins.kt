@@ -318,6 +318,8 @@ private fun TextFieldComponent(scope: NodeScope) {
     }
     val secure = scope.get<Boolean>("secure") ?: (keyboard == KeyboardType.Password)
     val next = scope.get<String>("imeAction") == "next"
+    // unset leaves the hint to the system; the options carry it on iOS, the semantics on Android (same as CodeField)
+    val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
     val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
     val trailing = scope.get<IconValue>("trailingIcon")
     val colors = textFieldColors()
@@ -338,17 +340,22 @@ private fun TextFieldComponent(scope: NodeScope) {
         isError = error,
         supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         singleLine = scope.get<Boolean>("singleLine") ?: true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done,
+            platformImeOptions = if (oneTimeCode) oneTimeCodeImeOptions(true) else null,
+        ),
         // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
         keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { if (!focusManager.moveFocus(FocusDirection.Next)) commit() }),
         visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
-        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged {
-            // the first callback reports the initial unfocused state: not a change, not a focus loss
-            if (it.isFocused == focused) return@onFocusChanged
-            focused = it.isFocused
-            if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
-            if (!focused) commit()
-        },
+        modifier = scope.modifier(clickable = false).focusRequester(focusRequester)
+            .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
+            .onFocusChanged {
+                // the first callback reports the initial unfocused state: not a change, not a focus loss
+                if (it.isFocused == focused) return@onFocusChanged
+                focused = it.isFocused
+                if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
+                if (!focused) commit()
+            },
     )
 }
 
