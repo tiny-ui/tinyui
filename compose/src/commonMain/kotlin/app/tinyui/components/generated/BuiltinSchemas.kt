@@ -123,6 +123,7 @@ object BuiltinSchemas {
             "trailingIcon" to PropSpec.IconSpec(required = false, initial = false),
             "imeAction" to PropSpec.Enum(values = setOf("done", "next"), default = "done", required = false, initial = false),
             "maxLength" to PropSpec.Num(default = 0.0, required = false, initial = false),
+            "autofill" to PropSpec.Enum(values = setOf("oneTimeCode"), default = null, required = false, initial = false),
         ),
         events = mapOf(
             "onChange" to mapOf("text" to FieldSpec.Str),

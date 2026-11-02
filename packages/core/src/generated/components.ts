@@ -170,6 +170,8 @@ export interface TextFieldProps extends LayoutProps {
     imeAction?: "done" | "next";
     /** 0 = unlimited; longer input is cut, not rejected */
     maxLength?: number;
+    /** what the field holds, so the system can offer it; oneTimeCode offers a code just received by SMS. Unset, the system decides */
+    autofill?: "oneTimeCode";
     onChange?: (e: TextFieldChangePayload) => void;
     onCommit?: (e: TextFieldCommitPayload) => void;
     onFocusChange?: (e: TextFieldFocusChangePayload) => void;

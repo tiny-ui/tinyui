@@ -17,6 +17,7 @@ export default defineComponent("TextField", {
         trailingIcon: icon({ doc: "icon at the end, such as show / hide or clear; tappable when onTrailingClick is set" }),
         imeAction: enumOf(["done", "next"], { default: "done", doc: "next moves focus to the following field" }),
         maxLength: number({ default: 0, doc: "0 = unlimited; longer input is cut, not rejected" }),
+        autofill: enumOf(["oneTimeCode"], { doc: "what the field holds, so the system can offer it; oneTimeCode offers a code just received by SMS. Unset, the system decides" }),
     },
     events: {
         onChange: { text: field.string() },
