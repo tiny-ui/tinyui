@@ -686,7 +686,9 @@ private fun TopAppBarComponent(scope: NodeScope) {
             navigationIcon = {
                 if (backIcon != null) {
                     IconButton(onClick = { if (dispatcher != null) input.backCompleted() }) {
-                        Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"))
+                        // unset keeps the icon's own size: the 24dp every packaged icon carries, defined once in parseIcon
+                        val size = scope.get<Dp>("backIconSize")
+                        Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"), modifier = if (size != null) Modifier.size(size) else Modifier)
                     }
                 }
             },

@@ -337,6 +337,8 @@ export interface TopAppBarProps extends LayoutProps {
     backIcon?: string;
     /** what a screen reader says for the back button */
     backLabel?: string;
+    /** size of the back icon; unset, the icon's own size (24dp for a packaged icon). The button stays a 48dp touch target */
+    backIconSize?: number;
     children?: Node | Node[];
 }
 

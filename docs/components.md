@@ -83,7 +83,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
 | `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
 | `Popover` | `open`（必填）、`placement`（above / below，默认 below）、`matchAnchorWidth`；不接受布局 prop | `onDismiss`（点了弹层外面） | | 是：卡片的内容 |
-| `TopAppBar` | `title`、`backIcon`（`icon` 类型，设了才有返回按钮）、`backLabel`（返回按钮的读屏名） | | | 是：右侧的操作 |
+| `TopAppBar` | `title`、`backIcon`（`icon` 类型，设了才有返回按钮）、`backLabel`（返回按钮的读屏名）、`backIconSize`（dp，返回图标的尺寸；不设用图标自带的 24dp） | | | 是：右侧的操作 |
 | `BackHandler` | `enabled`（默认 true）；不接受布局 prop | `onBack` | | |
 | `Menu` | `open`（必填）；不接受布局 prop | `onSelect{value}`、`onDismiss`（点了菜单外面） | | 是：`Option` |
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
@@ -146,7 +146,11 @@ const [focused, setFocused] = signal(false);
 
 `TopAppBar` 是 M3 小顶栏（2026-10-29 加，注册流程触发：每一步的返回、帮助入口与语言切换不一样，放在页面里才能随页面热下发）。children 进右侧操作槽，用现有组件拼（文字按钮、`Row` + `Icon` + `Text` 的语言触发器）；`title` 可选，标题写在内容区大字里的页面不设。它自己让出状态栏：状态栏的内边距在公共 modifier 之外，所以 `height` 是栏本身的高度（缺省 M3 的 64dp），宿主已经消费过的 inset（如 `Scaffold` 的 innerPadding 配 `consumeWindowInsets`）不会再加一遍。底色缺省 `surface`，`background` 同时染状态栏那一段。
 
-返回按钮只有设了 `backIcon` 才出现（流程第一页不设），图标照常由页面从包里引入。它**没有自己的事件**：点它就是往系统返回的 dispatcher 注入一次返回，同 Android 工具栏调 `onBackPressedDispatcher.onBackPressed()`——启用着的 `BackHandler` 先收到，没有就到宿主的导航（Navigation 3 弹出栈顶；宿主没接返回时 Android 结束 Activity，与按返回键一样）。要改返回行为只在 `BackHandler` 一处写，顶栏与系统返回是同一条路，优先级只有 dispatcher 那一份。宿主没提供 dispatcher 时没有系统返回，按钮也不起作用，与 `BackHandler` 一致；这种宿主（不是 `ComponentActivity` 的 Android 宿主、测试）要么补上 dispatcher，要么页面自己放一个调 `navigation.pop()` 的按钮。
+返回按钮只有设了 `backIcon` 才出现（流程第一页不设），图标照常由页面从包里引入。`backIconSize` 只改图标的尺寸（2026-11-02 加，注册流程触发：设计系统的返回图标是 32dp），按钮仍是 M3 的 48dp 触控区；不设时用图标自带的尺寸，包里的图标统一是 24dp（`parseIcon` 一处定义），所以顶栏不另写默认值。以后其他组件里的图标要调尺寸，同样叫「`<图标 prop>Size`」，如 `TextField` 的 `trailingIconSize`。
+
+这组 prop 叫 `back*` 而不叫 M3 / Compose 插槽名 `navigationIcon`：Compose 的 `navigationIcon`（以及 Android `Toolbar` 的 `navigationIcon`）是放任意内容、点击自己写的插槽，而这里的按钮没有自己的事件，固定是一次系统返回，语义同 iOS 的返回按钮、Flutter 的 `BackButton`。换成 ✕ 图标关闭流程页也还是返回。将来左侧真要放别的（如抽屉菜单），另开 `leading` 插槽、用 children 写点击，与 `back*` 不冲突。
+
+它**没有自己的事件**：点它就是往系统返回的 dispatcher 注入一次返回，同 Android 工具栏调 `onBackPressedDispatcher.onBackPressed()`——启用着的 `BackHandler` 先收到，没有就到宿主的导航（Navigation 3 弹出栈顶；宿主没接返回时 Android 结束 Activity，与按返回键一样）。要改返回行为只在 `BackHandler` 一处写，顶栏与系统返回是同一条路，优先级只有 dispatcher 那一份。宿主没提供 dispatcher 时没有系统返回，按钮也不起作用，与 `BackHandler` 一致；这种宿主（不是 `ComponentActivity` 的 Android 宿主、测试）要么补上 dispatcher，要么页面自己放一个调 `navigation.pop()` 的按钮。
 
 `BackHandler` 是返回的拦截声明（2026-10-29 加）：不画任何东西，`enabled` 时把系统返回（Android 返回键与预测性返回手势、iOS 侧滑，经 `navigationevent` 的 dispatcher，与 Navigation 3 同一个；顶栏返回按钮也注入到这里）交给 `onBack`，页面在里面决定做什么，比如先确认再 `navigation.pop()`。按 ADR-002，拦不拦必须作为 prop 预先声明，宿主没法在手势发生时同步问 JS。多个启用着的以最后组合的为准（dispatcher 的规则）；打开着的 `BottomSheet` 先于它收到返回（M3 弹层自带）。宿主没提供 dispatcher 时它不起作用。
 
