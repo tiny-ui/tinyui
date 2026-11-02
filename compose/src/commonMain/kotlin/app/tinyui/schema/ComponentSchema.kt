@@ -178,6 +178,12 @@ class ComponentSchema(
      * sheet, data for a sibling, a handler); Row / Column leave those out of `gap`.
      */
     val layout: Boolean,
+    /**
+     * Answers intrinsic measurements, which `align="stretch"` on a Row / Column without a fixed cross size asks its
+     * whole subtree. `false` for what cannot (a lazy list, anything built on SubcomposeLayout): the stretch is dropped
+     * and reported instead of crashing the page.
+     */
+    val intrinsics: Boolean = true,
 ) {
     /** Own props plus the common layout props when [layout] is on. */
     fun prop(key: String): PropSpec? = props[key] ?: if (layout) LayoutProps.specs[key] else null

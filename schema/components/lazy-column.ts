@@ -13,4 +13,6 @@ export default defineComponent("LazyColumn", {
         scrollTo: { index: field.number() },
     },
     children: true,
+    // a lazy list is a SubcomposeLayout, which cannot answer intrinsic measurements
+    intrinsics: false,
 });

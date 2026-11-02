@@ -87,6 +87,11 @@ export default function Form() {
                 </Select>
                 <Text text="SMS code" style="titleSmall" />
                 <CodeField width="fill" autofill="oneTimeCode" onComplete={(e) => void ui.toast(`code ${e.text}`)} />
+                {/* one field for the code, and the button as tall as the field: align="stretch" sizes the row from them */}
+                <Row width="fill" align="stretch" gap={8}>
+                    <TextField weight={1} keyboard="number" maxLength={6} placeholder="Code" autofill="oneTimeCode" />
+                    <Button variant="outlined" text="Resend" onClick={() => void ui.toast("resend")} />
+                </Row>
                 <Text text="Transaction PIN (1234 is wrong)" style="titleSmall" />
                 <CodeField
                     width="fill" secure error={pinError()} ref={pin}

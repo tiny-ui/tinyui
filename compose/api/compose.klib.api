@@ -60,6 +60,7 @@ abstract interface app.tinyui.schema/NodeScope { // app.tinyui.schema/NodeScope|
     abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun Children(kotlin/Function1<app.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.Children|Children(kotlin.Function1<app.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // app.tinyui.schema/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun reportProblem(kotlin/String) // app.tinyui.schema/NodeScope.reportProblem|reportProblem(kotlin.String){}[0]
 
     final class ComposeDefaultImpls { // app.tinyui.schema/NodeScope.ComposeDefaultImpls|null[0]
         final fun modifier$default(kotlin/Boolean, app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
@@ -218,7 +219,7 @@ final class app.tinyui.schema/ComponentRegistry { // app.tinyui.schema/Component
 }
 
 final class app.tinyui.schema/ComponentSchema { // app.tinyui.schema/ComponentSchema|null[0]
-    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin/Boolean, kotlin/Boolean) // app.tinyui.schema/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.schema.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.Boolean;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean = ...) // app.tinyui.schema/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.schema.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
 
     final val children // app.tinyui.schema/ComponentSchema.children|{}children[0]
         final fun <get-children>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.children.<get-children>|<get-children>(){}[0]
@@ -226,6 +227,8 @@ final class app.tinyui.schema/ComponentSchema { // app.tinyui.schema/ComponentSc
         final fun <get-commands>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.commands.<get-commands>|<get-commands>(){}[0]
     final val events // app.tinyui.schema/ComponentSchema.events|{}events[0]
         final fun <get-events>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.events.<get-events>|<get-events>(){}[0]
+    final val intrinsics // app.tinyui.schema/ComponentSchema.intrinsics|{}intrinsics[0]
+        final fun <get-intrinsics>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.intrinsics.<get-intrinsics>|<get-intrinsics>(){}[0]
     final val layout // app.tinyui.schema/ComponentSchema.layout|{}layout[0]
         final fun <get-layout>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.layout.<get-layout>|<get-layout>(){}[0]
     final val props // app.tinyui.schema/ComponentSchema.props|{}props[0]

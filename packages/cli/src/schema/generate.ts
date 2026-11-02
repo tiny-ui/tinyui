@@ -71,6 +71,7 @@ export function generateKt(components: ComponentDef[], pkg: string, objectName: 
         out.push(`        ),`);
         out.push(`        children = ${c.children},`);
         out.push(`        layout = ${c.layout},`);
+        out.push(`        intrinsics = ${c.intrinsics},`);
         out.push(`    )`, "");
     }
     out.push(`    val all: List<ComponentSchema> = listOf(${components.map((c) => ktIdent(c.name)).join(", ")})`);
