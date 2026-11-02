@@ -551,6 +551,13 @@ final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
         final fun <get-version>(): kotlin/Long // app.tinyui/StoreValue.version.<get-version>|<get-version>(){}[0]
 }
 
+final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
+    constructor <init>(androidx.compose.material3/TextFieldColors? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(androidx.compose.material3.TextFieldColors?){}[0]
+
+    final val textFieldColors // app.tinyui/TinyUIDefaults.textFieldColors|{}textFieldColors[0]
+        final fun <get-textFieldColors>(): androidx.compose.material3/TextFieldColors? // app.tinyui/TinyUIDefaults.textFieldColors.<get-textFieldColors>|<get-textFieldColors>(){}[0]
+}
+
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
     constructor <init>(app.tinyui.schema/ComponentRegistry, app.tinyui/PageSink, app.tinyui/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HttpChannel> = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui/SessionSource? = ..., app.tinyui/AnalyticsSink? = ..., app.tinyui/LinkOpener? = ..., app.tinyui/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.schema.ComponentRegistry;app.tinyui.PageSink;app.tinyui.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.HttpChannel>;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.SessionSource?;app.tinyui.AnalyticsSink?;app.tinyui.LinkOpener?;app.tinyui.Navigator;okio.Path?){}[0]
 
@@ -792,6 +799,8 @@ final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop // app.t
 final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop|#static{}app_tinyui_schema_SizeValue_Fixed$stableprop[0]
 final val app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop|#static{}app_tinyui_schema_SizeValue_Wrap$stableprop[0]
 final val app.tinyui.schema/app_tinyui_schema_Theme$stableprop // app.tinyui.schema/app_tinyui_schema_Theme$stableprop|#static{}app_tinyui_schema_Theme$stableprop[0]
+final val app.tinyui/LocalTinyUIDefaults // app.tinyui/LocalTinyUIDefaults|{}LocalTinyUIDefaults[0]
+    final fun <get-LocalTinyUIDefaults>(): androidx.compose.runtime/ProvidableCompositionLocal<app.tinyui/TinyUIDefaults> // app.tinyui/LocalTinyUIDefaults.<get-LocalTinyUIDefaults>|<get-LocalTinyUIDefaults>(){}[0]
 final val app.tinyui/app_tinyui_BuildManifest$stableprop // app.tinyui/app_tinyui_BuildManifest$stableprop|#static{}app_tinyui_BuildManifest$stableprop[0]
 final val app.tinyui/app_tinyui_Bundle$stableprop // app.tinyui/app_tinyui_Bundle$stableprop|#static{}app_tinyui_Bundle$stableprop[0]
 final val app.tinyui/app_tinyui_CapabilityRegistry$stableprop // app.tinyui/app_tinyui_CapabilityRegistry$stableprop|#static{}app_tinyui_CapabilityRegistry$stableprop[0]
@@ -821,6 +830,7 @@ final val app.tinyui/app_tinyui_SourceMaps$stableprop // app.tinyui/app_tinyui_S
 final val app.tinyui/app_tinyui_StackFrame$stableprop // app.tinyui/app_tinyui_StackFrame$stableprop|#static{}app_tinyui_StackFrame$stableprop[0]
 final val app.tinyui/app_tinyui_StoreValue$stableprop // app.tinyui/app_tinyui_StoreValue$stableprop|#static{}app_tinyui_StoreValue$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUI$stableprop // app.tinyui/app_tinyui_TinyUI$stableprop|#static{}app_tinyui_TinyUI$stableprop[0]
+final val app.tinyui/app_tinyui_TinyUIDefaults$stableprop // app.tinyui/app_tinyui_TinyUIDefaults$stableprop|#static{}app_tinyui_TinyUIDefaults$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUIHost$stableprop // app.tinyui/app_tinyui_TinyUIHost$stableprop|#static{}app_tinyui_TinyUIHost$stableprop[0]
 
 final fun (app.tinyui.schema/ComponentRegistry).app.tinyui.components/registerBuiltins(): app.tinyui.schema/ComponentRegistry // app.tinyui.components/registerBuiltins|registerBuiltins@app.tinyui.schema.ComponentRegistry(){}[0]
@@ -882,6 +892,7 @@ final fun app.tinyui/app_tinyui_SourceMaps$stableprop_getter(): kotlin/Int // ap
 final fun app.tinyui/app_tinyui_StackFrame$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StackFrame$stableprop_getter|app_tinyui_StackFrame$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_StoreValue$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StoreValue$stableprop_getter|app_tinyui_StoreValue$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUI$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUI$stableprop_getter|app_tinyui_TinyUI$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_TinyUIDefaults$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUIDefaults$stableprop_getter|app_tinyui_TinyUIDefaults$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUIHost$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUIHost$stableprop_getter|app_tinyui_TinyUIHost$stableprop_getter(){}[0]
 final inline fun <#A: reified kotlin/Any?> (app.tinyui/Store).app.tinyui/bind(kotlin/String, kotlinx.coroutines.flow/Flow<#A>, kotlinx.coroutines/CoroutineScope): kotlinx.coroutines/Job // app.tinyui/bind|bind@app.tinyui.Store(kotlin.String;kotlinx.coroutines.flow.Flow<0:0>;kotlinx.coroutines.CoroutineScope){0§<kotlin.Any?>}[0]
 final inline fun <#A: reified kotlin/Any?> (app.tinyui/Store).app.tinyui/set(kotlin/String, #A) // app.tinyui/set|set@app.tinyui.Store(kotlin.String;0:0){0§<kotlin.Any?>}[0]
