@@ -314,6 +314,7 @@ object BuiltinSchemas {
             "title" to PropSpec.Str(default = null, required = false, initial = false),
             "backIcon" to PropSpec.IconSpec(required = false, initial = false),
             "backLabel" to PropSpec.Str(default = null, required = false, initial = false),
+            "backIconSize" to PropSpec.Dp(default = null, required = false, initial = false),
         ),
         events = mapOf(
         ),
