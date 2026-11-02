@@ -35,9 +35,10 @@ export function svgToIcon(source: string): string {
             if (a[bad] !== undefined && !(bad === "fill-rule" && a[bad] === "nonzero")) throw new SvgError(`<${tag} ${bad}="…">: only plain single-colour shapes can be an icon`);
         }
         if (a["fill"] !== undefined && a["fill"] !== "currentColor" && a["fill"] !== "none" && !stroked) throw new SvgError(`<${tag} fill="${a["fill"]}">: an icon takes one colour from its tint; remove the fill`);
-        if (!stroked && a["stroke"] !== undefined && a["stroke"] !== "none") throw new SvgError(`<${tag} stroke="…"> in a filled icon; a stroke belongs on the <svg> (outlined: with fill="none"; bold: without)`);
-        if (stroked && ((a["stroke"] !== undefined && a["stroke"] !== "currentColor") || (a["stroke-width"] !== undefined && num(a["stroke-width"]) !== strokeWidth))) {
-            throw new SvgError(`<${tag}> overrides the stroke; an outlined icon has one stroke, set on the <svg>`);
+        if (!hasStroke && a["stroke"] !== undefined && a["stroke"] !== "none") throw new SvgError(`<${tag} stroke="…"> in a filled icon; a stroke belongs on the <svg> (outlined: with fill="none"; bold: without)`);
+        // outlined and bold alike: the shapes inherit the one stroke and may not change its colour, width, or opt out of it
+        if (hasStroke && ((a["stroke"] !== undefined && a["stroke"] !== "currentColor") || (a["stroke-width"] !== undefined && num(a["stroke-width"]) !== strokeWidth))) {
+            throw new SvgError(`<${tag}> overrides the stroke; an icon has one stroke, set on the <svg>`);
         }
         if (!stroked && a["fill"] === "none") throw new SvgError(`<${tag} fill="none"> in a filled icon; outlined icons set fill="none" and a stroke on the <svg>`);
         switch (tag) {

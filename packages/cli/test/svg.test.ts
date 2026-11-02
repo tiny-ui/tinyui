@@ -31,8 +31,11 @@ describe("svg loader", () => {
     it("a filled icon with a root stroke is a bold icon: the stroke width is kept with a + sign", () => {
         assert.equal(svgToIcon(`<svg viewBox="0 0 1024 1024" stroke="currentColor" stroke-width="25.6"><path d="M0 0h1v1z"/></svg>`), "0 0 1024 1024|M0 0h1v1z|+25.6");
         assert.equal(svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M0 0Z"/></svg>`), "0 0 24 24|M0 0Z|+1");
-        // the shapes inherit the one stroke; they still may not bring their own colour
-        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path stroke="#000" d="M0 0Z"/></svg>`), /stroke belongs on the <svg>/);
+        // the shapes inherit the one stroke; they may not recolour it, change its width, or opt out of it
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path stroke="#000" d="M0 0Z"/></svg>`), /overrides the stroke/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-width="4" d="M0 0Z"/></svg>`), /overrides the stroke/);
+        assert.throws(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor"><path stroke="none" d="M0 0Z"/></svg>`), /overrides the stroke/);
+        assert.doesNotThrow(() => svgToIcon(`<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke="currentColor" stroke-width="2" d="M0 0Z"/></svg>`));
     });
 
     it("refuses what one tint cannot draw", () => {
