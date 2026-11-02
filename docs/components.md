@@ -40,7 +40,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|
 | 0 | `weight` | number | `weight(f)`，由父 `Row` / `Column` 施加（2026-09-17 加） |
 | 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()` |
-| 1.5 | `invisible` | boolean | `alpha(0)` + 清空子树语义 + 在 initial pass 吃掉所有指针事件（2026-11-02 加） |
+| 1.5 | `invisible` | boolean | `alpha(0)` + 裁剪到空形状（命中测试只在裁剪区内命中，整棵子树因此不被命中、触摸穿过去）+ 清空子树语义（2026-11-02 加） |
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)` |
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
@@ -56,7 +56,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 </Row>
 ```
 
-`invisible` 是 CSS `visibility: hidden`、Android `View.INVISIBLE`、Flutter `Visibility(maintainSize)`、SwiftUI `.hidden()` 的那个状态（2026-11-02 加，注册流程触发）：**占位但不画、不响应触摸（整棵子树）、不进无障碍树**。它在 clip / background 之外，所以背景与边框一起消失；节点自己的 `onClick` 不挂，子树里的点击也到不了。「不占空间」不需要它：条件不渲染即可。不叫 `hidden`——HTML 的 `hidden` 属性等于 `display: none`，和 CSS `visibility: hidden` 正好相反，这个词在 Web 里本身有歧义；`invisible` 在 Android 与 Tailwind 里都明确指保留空间。典型用法是让会变的文案保持最宽状态的宽度，免得切换时整行跳动：
+`invisible` 是 CSS `visibility: hidden`、Android `View.INVISIBLE`、Flutter `Visibility(maintainSize)`、SwiftUI `.hidden()` 的那个状态（2026-11-02 加，注册流程触发）：**占位但不画、对触摸透明、不进无障碍树**。「对触摸透明」和这些平台一致：隐形节点自己和它的子树都不被命中，触摸**穿过去**交给周围或后面的东西——按钮里叠一份隐形文案占位，按钮本身照样能点；它不是一块挡板。它在 clip / background 之外，所以背景与边框一起消失；节点自己的 `onClick` 不挂。「不占空间」不需要它：条件不渲染即可。不叫 `hidden`——HTML 的 `hidden` 属性等于 `display: none`，和 CSS `visibility: hidden` 正好相反，这个词在 Web 里本身有歧义；`invisible` 在 Android 与 Tailwind 里都明确指保留空间。典型用法是让会变的文案保持最宽状态的宽度，免得切换时整行跳动：
 
 ```tsx
 <Button variant="outlined" enabled={seconds() === 0} onClick={resend}>
