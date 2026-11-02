@@ -19,6 +19,11 @@ describe("svg loader", () => {
         assert.match(d!, /M1 1L2 2$/);
     });
 
+    it("keeps a path that starts with a relative m where it was drawn (iconfont exports write m for the first move)", () => {
+        const svg = `<svg viewBox="0 0 1024 1024"><path d="M512 76.8h5v5z"/><path d="m635.7 353.3 30 41-200 150z"/></svg>`;
+        assert.equal(svgToIcon(svg), "0 0 1024 1024|M512 76.8h5v5zM635.7 353.3 30 41-200 150z");
+    });
+
     it("refuses what one tint cannot draw", () => {
         const wrap = (inner: string) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
         assert.throws(() => svgToIcon(wrap(`<path fill="#ff0000" d="M0 0Z"/>`)), SvgError);

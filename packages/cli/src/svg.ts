@@ -39,7 +39,9 @@ export function svgToIcon(source: string): string {
         if (!stroked && a["fill"] === "none") throw new SvgError(`<${tag} fill="none"> in a filled icon; outlined icons set fill="none" and a stroke on the <svg>`);
         switch (tag) {
             case "g": if (!(rest ?? "").trimEnd().endsWith("/")) depth++; break;
-            case "path": parts.push(required(a, "d", tag)); break;
+            // The first move of a path is absolute even when written as `m` (SVG 1.1 §8.3.3); once the shapes are
+            // joined into one `d` it would become relative to the previous shape's end and the glyph drifts off canvas.
+            case "path": parts.push(required(a, "d", tag).replace(/^m/, "M")); break;
             case "circle": parts.push(ellipse(n(a, "cx"), n(a, "cy"), n(a, "r", true), n(a, "r", true))); break;
             case "ellipse": parts.push(ellipse(n(a, "cx"), n(a, "cy"), n(a, "rx", true), n(a, "ry", true))); break;
             case "rect": parts.push(rect(n(a, "x"), n(a, "y"), n(a, "width", true), n(a, "height", true), a["rx"] ?? a["ry"], a["ry"] ?? a["rx"])); break;
