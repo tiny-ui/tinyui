@@ -33,6 +33,12 @@ export interface ComponentDef {
      * what takes no room: a popup, a sheet, data for a sibling, a handler; Row / Column leave those out of `gap`.
      */
     layout: boolean;
+    /**
+     * Answers intrinsic measurements, which `align="stretch"` on a Row / Column without a fixed cross size asks its
+     * whole subtree. `false` for what cannot (a lazy list, anything built on SubcomposeLayout): the stretch is then
+     * dropped and reported instead of crashing the page.
+     */
+    intrinsics: boolean;
 }
 
 interface PropOptions { required?: boolean; initial?: boolean; doc?: string }
@@ -75,6 +81,7 @@ export interface ComponentInput {
     commands?: Record<string, Record<string, FieldDef>>;
     children?: boolean;
     layout?: boolean;
+    intrinsics?: boolean;
 }
 
 export function defineComponent(name: string, input: ComponentInput = {}): ComponentDef {
@@ -101,6 +108,7 @@ export function defineComponent(name: string, input: ComponentInput = {}): Compo
         commands: input.commands ?? {},
         children: input.children ?? false,
         layout: input.layout ?? true,
+        intrinsics: input.intrinsics ?? true,
     };
 }
 

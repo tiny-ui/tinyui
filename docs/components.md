@@ -67,7 +67,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|
-| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` 不计）、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
+| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` 不计）、`align`（交叉轴 start / center / end / stretch）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
 | `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick`、`onLinkClick{id}`（给了它，`text` 里的 `[文案](id)` 渲染成链接） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
@@ -87,6 +87,8 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `BackHandler` | `enabled`（默认 true）；不接受布局 prop | `onBack` | | |
 | `Menu` | `open`（必填）；不接受布局 prop | `onSelect{value}`、`onDismiss`（点了菜单外面） | | 是：`Option` |
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
+
+`align="stretch"`（2026-11-02 加，注册流程触发：验证码输入框与「重新发送」等高）与 CSS `align-items: stretch`、Flutter `CrossAxisAlignment.stretch` 同义：占版面、且没设交叉轴尺寸的子节点撑满容器的交叉轴（Row 撑高、Column 撑宽）；设了 `height` / `width` 的子节点（含 `wrap`）保持自己的，和 CSS 一样。容器的交叉轴是固定值或 `fill` 时只是撑满；否则容器先按子节点定自己的尺寸——Row 取最高的子节点（Compose `IntrinsicSize.Min`），Column 取最宽的（`IntrinsicSize.Max`）——这要对整棵子树做固有尺寸测量，多测一遍，所以缺省仍是 `start`，不像 CSS 那样默认拉伸。回答不了固有尺寸的组件（schema `intrinsics: false`，内置只有 `LazyColumn`；宿主组件基于 `SubcomposeLayout` 的也要这样声明）在子树里时，问它会让整页崩溃，所以框架放弃拉伸、按 E5 上报（`NodeScope.reportProblem`），页面仍画出来；给容器一个固定交叉轴尺寸就不需要测量。子树是逐层读的，任何一层后来插进这样的组件，容器都会重新检查。
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
 

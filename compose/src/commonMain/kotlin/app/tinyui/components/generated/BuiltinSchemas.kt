@@ -10,7 +10,7 @@ object BuiltinSchemas {
         type = "Column",
         props = mapOf(
             "gap" to PropSpec.Dp(default = 0.0, required = false, initial = false),
-            "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
+            "align" to PropSpec.Enum(values = setOf("start", "center", "end", "stretch"), default = "start", required = false, initial = false),
             "justify" to PropSpec.Enum(values = setOf("start", "center", "end", "spaceBetween"), default = "start", required = false, initial = false),
             "scroll" to PropSpec.Bool(default = false, required = false, initial = false),
         ),
@@ -21,13 +21,14 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val Row = ComponentSchema(
         type = "Row",
         props = mapOf(
             "gap" to PropSpec.Dp(default = 0.0, required = false, initial = false),
-            "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
+            "align" to PropSpec.Enum(values = setOf("start", "center", "end", "stretch"), default = "start", required = false, initial = false),
             "justify" to PropSpec.Enum(values = setOf("start", "center", "end", "spaceBetween"), default = "start", required = false, initial = false),
             "scroll" to PropSpec.Bool(default = false, required = false, initial = false),
         ),
@@ -38,6 +39,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val Box = ComponentSchema(
@@ -52,6 +54,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val Text = ComponentSchema(
@@ -73,6 +76,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val Button = ComponentSchema(
@@ -89,6 +93,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val RadioButton = ComponentSchema(
@@ -104,6 +109,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val TextField = ComponentSchema(
@@ -139,6 +145,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val LazyColumn = ComponentSchema(
@@ -155,6 +162,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = false,
     )
 
     val Spacer = ComponentSchema(
@@ -167,6 +175,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val Icon = ComponentSchema(
@@ -184,6 +193,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val Loading = ComponentSchema(
@@ -198,6 +208,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val BottomSheet = ComponentSchema(
@@ -212,6 +223,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        intrinsics = true,
     )
 
     val Divider = ComponentSchema(
@@ -226,6 +238,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val Checkbox = ComponentSchema(
@@ -241,6 +254,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val CodeField = ComponentSchema(
@@ -263,6 +277,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = true,
+        intrinsics = true,
     )
 
     val Select = ComponentSchema(
@@ -280,6 +295,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val Option = ComponentSchema(
@@ -294,6 +310,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = false,
+        intrinsics = true,
     )
 
     val Popover = ComponentSchema(
@@ -310,6 +327,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        intrinsics = true,
     )
 
     val TopAppBar = ComponentSchema(
@@ -326,6 +344,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = true,
+        intrinsics = true,
     )
 
     val BackHandler = ComponentSchema(
@@ -340,6 +359,7 @@ object BuiltinSchemas {
         ),
         children = false,
         layout = false,
+        intrinsics = true,
     )
 
     val Menu = ComponentSchema(
@@ -355,6 +375,7 @@ object BuiltinSchemas {
         ),
         children = true,
         layout = false,
+        intrinsics = true,
     )
 
     val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu)

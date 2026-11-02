@@ -565,6 +565,10 @@ class PageHost internal constructor(
 
         @Composable
         override fun RenderChild(child: UINode) = CompositionLocalProvider(LocalChildModifier provides Modifier) { Render(child) }
+
+        override fun reportProblem(reason: String) {
+            report("E5", reason, op = "node ${node.id} (${node.type})")
+        }
     }
 
     @Composable

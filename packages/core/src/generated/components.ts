@@ -27,8 +27,8 @@ export interface ColumnClickPayload {
 export interface ColumnProps extends LayoutProps {
     /** space between children */
     gap?: number;
-    /** cross axis */
-    align?: "start" | "center" | "end";
+    /** cross axis; stretch gives every child without its own width the width of the widest one */
+    align?: "start" | "center" | "end" | "stretch";
     /** main axis */
     justify?: "start" | "center" | "end" | "spaceBetween";
     /** scrolls along the main axis; padding stays outside the scrolling content */
@@ -44,8 +44,8 @@ export interface RowClickPayload {
 export interface RowProps extends LayoutProps {
     /** space between children */
     gap?: number;
-    /** cross axis */
-    align?: "start" | "center" | "end";
+    /** cross axis; stretch gives every child without its own height the height of the tallest one */
+    align?: "start" | "center" | "end" | "stretch";
     /** main axis */
     justify?: "start" | "center" | "end" | "spaceBetween";
     /** scrolls along the main axis; padding stays outside the scrolling content */

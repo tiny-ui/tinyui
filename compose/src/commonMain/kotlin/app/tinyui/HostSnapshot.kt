@@ -54,6 +54,8 @@ object HostSnapshot {
         calls("commands", schema.commands),
         "children".takeIf { schema.children },
         "layout".takeIf { schema.layout },
+        // only when off: the default writes nothing, so snapshots frozen before the flag keep their bytes
+        "noIntrinsics".takeIf { !schema.intrinsics },
     ).joinToString("; ")
 
     private fun prop(name: String, spec: PropSpec): String = buildString {

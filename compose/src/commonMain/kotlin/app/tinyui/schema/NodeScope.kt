@@ -41,6 +41,12 @@ interface NodeScope {
     /** Renders one child; for components that lay children out themselves (LazyColumn). */
     @Composable
     fun RenderChild(child: UINode)
+
+    /**
+     * A page mistake found while rendering, which the component works around (it draws something reasonable instead);
+     * the host reports it like a patch problem (E5). Call it from an effect, not on every recomposition.
+     */
+    fun reportProblem(reason: String) {}
 }
 
 /**

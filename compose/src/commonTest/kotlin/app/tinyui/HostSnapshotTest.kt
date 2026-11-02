@@ -39,10 +39,16 @@ class HostSnapshotTest {
         children = true, layout = false,
     )
 
+    // a lazy feed: no intrinsics, so the line says so; the two above keep their bytes because the default writes nothing
+    private val feed = ComponentSchema(
+        type = "ta.Feed", props = emptyMap(), events = emptyMap(), commands = emptyMap(), children = true, layout = true, intrinsics = false,
+    )
+
     private fun host(capabilities: CapabilityRegistry = CapabilityRegistry(), channels: Map<String, HttpChannel> = emptyMap(), session: SessionSource? = null) = TinyUIHost(
         ComponentRegistry().registerBuiltins().apply {
             register(rating) {}
             register(icon) {}
+            register(feed) {}
         },
         sink,
         capabilities,
@@ -62,6 +68,7 @@ class HostSnapshotTest {
             tinyui ${TinyUI.version}
 
             components
+              ta.Feed    children; layout; noIntrinsics
               ta.Icon    label?: string = "a; b\ncapabilities", name: string, size?: dp = 24, tint?: color = primary; layout
               ta.Rating  step?: number = 0.5, style?: enum(hearts|stars) = stars (initial), value: number; events onChange(fromUser: boolean, value: number); commands reset(); children
 
