@@ -106,9 +106,10 @@ function rect(x: number, y: number, w: number, h: number, rxText?: string, ryTex
  * that follow the move as the relative linetos they implicitly are.
  */
 function absoluteFirstMove(d: string): string {
-    const m = /^m\s*([^a-zA-Z]*)/.exec(d);
+    // the move's arguments run until the next command letter; a number may carry an exponent (`2e3`), so scan by number
+    const m = /^m((?:[\s,]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)*)/.exec(d);
     if (!m) return d;
-    const numbers = m[1]!.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) ?? [];
+    const numbers = m[1]!.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) ?? [];
     if (numbers.length < 2) return d;
     const rest = numbers.slice(2);
     return `M${numbers[0]} ${numbers[1]}${rest.length ? ` l${rest.join(" ")}` : ""}${d.slice(m[0].length)}`;
