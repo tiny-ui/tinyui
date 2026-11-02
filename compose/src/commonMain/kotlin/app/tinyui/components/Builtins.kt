@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,6 +61,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,11 +76,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -106,6 +113,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
@@ -312,25 +320,22 @@ private fun TextFieldComponent(scope: NodeScope) {
     val next = scope.get<String>("imeAction") == "next"
     val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
     val trailing = scope.get<IconValue>("trailingIcon")
+    val colors = textFieldColors()
+    val error = scope.get<Boolean>("error") == true
     OutlinedTextField(
         value = text,
         onValueChange = { val t = clip(it); if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } },
-        colors = textFieldColors(),
+        colors = colors,
         placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
-        leadingIcon = prefix?.let { p ->
-            {
-                val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
-                Text(p, modifier = tap.padding(start = 16.dp, end = 8.dp))
-            }
-        },
+        leadingIcon = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused)) } },
         trailingIcon = trailing?.let { icon ->
             {
                 if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
                 else Icon(icon.vector, contentDescription = null)
             }
         },
-        isError = scope.get<Boolean>("error") == true,
+        isError = error,
         supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
         singleLine = scope.get<Boolean>("singleLine") ?: true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done),
@@ -345,6 +350,59 @@ private fun TextFieldComponent(scope: NodeScope) {
             if (!focused) commit()
         },
     )
+}
+
+/**
+ * The text before the input, drawn in M3's leading slot rather than its `prefix` (that one hides while the field is
+ * empty and unfocused, and cannot take a tap), but coloured with the prefix colours: it is a prefix that only borrows the
+ * slot. With `prefixBackground` it becomes a block inset [PrefixInset] in the field, its corners concentric with the
+ * field's. M3 already leaves 4dp between the leading slot and the input (16dp padding less the 12dp a 24dp icon gets
+ * inside its 48dp slot), so the 8dp end padding makes 12dp from block to input.
+ */
+@Composable
+private fun Prefix(scope: NodeScope, text: String, color: Color) {
+    val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
+    val icon = scope.get<IconValue>("prefixIcon")
+    val iconSize = scope.get<Dp>("prefixIconSize")
+    val content: @Composable () -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text, color = color)
+            if (icon != null) Icon(icon.vector, contentDescription = null, tint = color, modifier = if (iconSize != null) Modifier.size(iconSize) else Modifier)
+        }
+    }
+    val fill = scope.color("prefixBackground")
+    if (fill == null) {
+        Box(tap.padding(start = 16.dp, end = 8.dp)) { content() }
+        return
+    }
+    val outer = OutlinedTextFieldDefaults.shape
+    val shape = remember(outer) { if (outer is CornerBasedShape) ConcentricInsetShape(outer, PrefixInset) else outer }
+    Box(
+        Modifier.padding(start = PrefixInset, end = 8.dp)
+            // M3's minimum height less the inset above and below; the leading slot is centred, so a field taller than
+            // its minimum (a large line height or font scale) keeps the block centred with a little more room
+            .height(OutlinedTextFieldDefaults.MinHeight - PrefixInset * 2)
+            .clip(shape).background(fill).then(tap).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+private val PrefixInset = 4.dp
+
+/**
+ * [outer]'s corners shrunk by [inset], for a block that sits [inset] inside a shape and should follow it. `copy` keeps the
+ * kind of corner the theme chose (rounded, cut…); shrinking by the inset is exactly concentric for rounded corners and
+ * close enough for cut ones.
+ */
+internal class ConcentricInsetShape(private val outer: CornerBasedShape, private val inset: Dp) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val d = with(density) { inset.toPx() }
+        // corners in percent are taken against the block grown by the inset, which is close enough for a block inside a field
+        val outerSize = Size(size.width + 2 * d, size.height + 2 * d)
+        fun inner(c: CornerSize) = CornerSize((c.toPx(outerSize, density) - d).coerceAtLeast(0f))
+        return outer.copy(inner(outer.topStart), inner(outer.topEnd), inner(outer.bottomEnd), inner(outer.bottomStart))
+            .createOutline(size, layoutDirection, density)
+    }
 }
 
 /**
