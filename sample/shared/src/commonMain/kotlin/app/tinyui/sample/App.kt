@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import app.tinyui.TextFieldStyle
 import app.tinyui.TinyUIDefaults
 import app.tinyui.LocalTinyUIDefaults
 import androidx.compose.runtime.CompositionLocalProvider
@@ -96,7 +97,7 @@ fun App(updatesDir: Path) {
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
         // a host may override the M3 component defaults MaterialTheme cannot express (docs/components.md §6): this one
         // colours a focused text input with onSurface the way a design system that departs from M3's primary would
-        val defaults = TinyUIDefaults(textFieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.onSurface))
+        val defaults = TinyUIDefaults(textField = TextFieldStyle(colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.onSurface)))
         CompositionLocalProvider(LocalTinyUIDefaults provides defaults) {
             Surface(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize().safeDrawingPadding()) {

@@ -569,8 +569,19 @@ final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
         final fun <get-version>(): kotlin/Long // app.tinyui/StoreValue.version.<get-version>|<get-version>(){}[0]
 }
 
+final class app.tinyui/TextFieldStyle { // app.tinyui/TextFieldStyle|null[0]
+    constructor <init>(androidx.compose.material3/TextFieldColors? = ..., androidx.compose.foundation.layout/PaddingValues? = ..., androidx.compose.ui.unit/Dp? = ...) // app.tinyui/TextFieldStyle.<init>|<init>(androidx.compose.material3.TextFieldColors?;androidx.compose.foundation.layout.PaddingValues?;androidx.compose.ui.unit.Dp?){}[0]
+
+    final val colors // app.tinyui/TextFieldStyle.colors|{}colors[0]
+        final fun <get-colors>(): androidx.compose.material3/TextFieldColors? // app.tinyui/TextFieldStyle.colors.<get-colors>|<get-colors>(){}[0]
+    final val contentPadding // app.tinyui/TextFieldStyle.contentPadding|{}contentPadding[0]
+        final fun <get-contentPadding>(): androidx.compose.foundation.layout/PaddingValues? // app.tinyui/TextFieldStyle.contentPadding.<get-contentPadding>|<get-contentPadding>(){}[0]
+    final val minHeight // app.tinyui/TextFieldStyle.minHeight|{}minHeight[0]
+        final fun <get-minHeight>(): androidx.compose.ui.unit/Dp? // app.tinyui/TextFieldStyle.minHeight.<get-minHeight>|<get-minHeight>(){}[0]
+}
+
 final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
-    constructor <init>(androidx.compose.material3/TextFieldColors? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(androidx.compose.material3.TextFieldColors?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?){}[0]
+    constructor <init>(app.tinyui/TextFieldStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(app.tinyui.TextFieldStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?){}[0]
 
     final val filledButton // app.tinyui/TinyUIDefaults.filledButton|{}filledButton[0]
         final fun <get-filledButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.filledButton.<get-filledButton>|<get-filledButton>(){}[0]
@@ -578,8 +589,8 @@ final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
         final fun <get-outlinedButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.outlinedButton.<get-outlinedButton>|<get-outlinedButton>(){}[0]
     final val textButton // app.tinyui/TinyUIDefaults.textButton|{}textButton[0]
         final fun <get-textButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.textButton.<get-textButton>|<get-textButton>(){}[0]
-    final val textFieldColors // app.tinyui/TinyUIDefaults.textFieldColors|{}textFieldColors[0]
-        final fun <get-textFieldColors>(): androidx.compose.material3/TextFieldColors? // app.tinyui/TinyUIDefaults.textFieldColors.<get-textFieldColors>|<get-textFieldColors>(){}[0]
+    final val textField // app.tinyui/TinyUIDefaults.textField|{}textField[0]
+        final fun <get-textField>(): app.tinyui/TextFieldStyle? // app.tinyui/TinyUIDefaults.textField.<get-textField>|<get-textField>(){}[0]
 }
 
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
@@ -854,6 +865,7 @@ final val app.tinyui/app_tinyui_SourceMap_Position$stableprop // app.tinyui/app_
 final val app.tinyui/app_tinyui_SourceMaps$stableprop // app.tinyui/app_tinyui_SourceMaps$stableprop|#static{}app_tinyui_SourceMaps$stableprop[0]
 final val app.tinyui/app_tinyui_StackFrame$stableprop // app.tinyui/app_tinyui_StackFrame$stableprop|#static{}app_tinyui_StackFrame$stableprop[0]
 final val app.tinyui/app_tinyui_StoreValue$stableprop // app.tinyui/app_tinyui_StoreValue$stableprop|#static{}app_tinyui_StoreValue$stableprop[0]
+final val app.tinyui/app_tinyui_TextFieldStyle$stableprop // app.tinyui/app_tinyui_TextFieldStyle$stableprop|#static{}app_tinyui_TextFieldStyle$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUI$stableprop // app.tinyui/app_tinyui_TinyUI$stableprop|#static{}app_tinyui_TinyUI$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUIDefaults$stableprop // app.tinyui/app_tinyui_TinyUIDefaults$stableprop|#static{}app_tinyui_TinyUIDefaults$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUIHost$stableprop // app.tinyui/app_tinyui_TinyUIHost$stableprop|#static{}app_tinyui_TinyUIHost$stableprop[0]
@@ -917,6 +929,7 @@ final fun app.tinyui/app_tinyui_SourceMap_Position$stableprop_getter(): kotlin/I
 final fun app.tinyui/app_tinyui_SourceMaps$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_SourceMaps$stableprop_getter|app_tinyui_SourceMaps$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_StackFrame$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StackFrame$stableprop_getter|app_tinyui_StackFrame$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_StoreValue$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_StoreValue$stableprop_getter|app_tinyui_StoreValue$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_TextFieldStyle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TextFieldStyle$stableprop_getter|app_tinyui_TextFieldStyle$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUI$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUI$stableprop_getter|app_tinyui_TinyUI$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUIDefaults$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUIDefaults$stableprop_getter|app_tinyui_TinyUIDefaults$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUIHost$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUIHost$stableprop_getter|app_tinyui_TinyUIHost$stableprop_getter(){}[0]
