@@ -134,6 +134,7 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
@@ -350,13 +351,6 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
     else -> Alignment.TopStart
 }
 
-/** The field's text and what the page last heard of it; one object so `retain` keeps both across a page reload. */
-private class TextFieldModel(initial: String) {
-    val state = TextFieldState(initial)
-    /** The last text reported through `onChange`: the observer skips what a command has already reported. */
-    var reported = initial
-}
-
 /** Cuts an edit down to [max] UTF-16 units ([clipTo]): the page's `maxLength` cuts, it does not reject. */
 private class ClipTransformation(private val max: Int) : InputTransformation {
     override fun TextFieldBuffer.transformInput() {
@@ -381,26 +375,18 @@ private fun TextFieldComponent(scope: NodeScope) {
     // read when used, not captured: a command runs before the recomposition that would refresh a captured value
     fun clip(t: String) = clipTo(t, scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 })
     val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
-    val model = retain { TextFieldModel(clip(scope.get<String>("initialText") ?: "")) }
-    val state = model.state
+    val state = retain { TextFieldState(clip(scope.get<String>("initialText") ?: "")) }
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    fun report(t: String) {
-        model.reported = t
-        if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t))
-    }
     val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", state.text.toString())) }
-    // the user's edits as the state sees them; what a command set has been reported by the command
-    LaunchedEffect(state) { snapshotFlow { state.text.toString() }.collect { if (it != model.reported) report(it) } }
-    // a lowered limit applies to what is already there, reported like any other change
-    LaunchedEffect(maxLength) {
-        val t = clip(state.text.toString())
-        if (t != state.text.toString()) { state.setTextAndPlaceCursorAtEnd(t); report(t) }
-    }
+    // every change of the text, whoever made it — the user, `setText`, a lowered `maxLength`; the same text again is not one
+    if (scope.has("onChange")) LaunchedEffect(state) { snapshotFlow { state.text.toString() }.drop(1).collect { scope.dispatch("onChange", payload("text", it)) } }
+    // a lowered limit applies to what is already there
+    LaunchedEffect(maxLength) { clip(state.text.toString()).let { if (it != state.text.toString()) state.setTextAndPlaceCursorAtEnd(it) } }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> { val t = clip(command.args["text"] as? String ?: ""); state.setTextAndPlaceCursorAtEnd(t); report(t) }
+            "setText" -> state.setTextAndPlaceCursorAtEnd(clip(command.args["text"] as? String ?: ""))
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -545,7 +531,7 @@ private fun CodeFieldComponent(scope: NodeScope) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var focused by remember { mutableStateOf(false) }
-    // [force]: commands report onChange even when nothing changed, like TextField.setText
+    // [force]: commands report onChange even when nothing changed (TextField.setText does not, since 2026-11-03)
     fun update(raw: String, force: Boolean = false) {
         // the live prop, like TextField.clip: a command may run before this composition saw a new length
         val max = length()

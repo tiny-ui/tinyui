@@ -49,6 +49,26 @@ class CommandPropsTest {
     }
 
     @Test
+    fun textFieldReportsEachChangeOfTheTextAndNotTheSameTextAgain() = runComposeUiTest {
+        tree.apply("""[["c",1,"TextField"],["p",1,"onChange",true],["i",0,1,0]]""")
+        val scope = scopeOf(tree.node(1)!!)
+        setContent { MaterialTheme { registry.Render("TextField", scope) } }
+        waitForIdle()
+        assertTrue(events.isEmpty(), "mounting is not a change: $events")
+        tree.apply("""[["x",1,"setText",{"text":"abc"}]]""")
+        waitForIdle()
+        tree.apply("""[["x",1,"setText",{"text":"abc"}]]""")
+        waitForIdle()
+        assertEquals(1, events.size, "the same text again is not a change: $events")
+        // a lowered limit cuts what is there, and that is a change like any other
+        tree.apply("""[["p",1,"maxLength",2]]""")
+        waitForIdle()
+        assertTrue(problems.isEmpty(), problems.toString())
+        assertEquals(2, events.size, events.toString())
+        assertTrue("\"ab\"" in events.last(), events.last())
+    }
+
+    @Test
     fun codeFieldSetTextTakesTheLengthOfItsOwnFlush() = runComposeUiTest {
         tree.apply("""[["c",1,"CodeField"],["p",1,"length",4],["p",1,"onChange",true],["i",0,1,0]]""")
         val scope = scopeOf(tree.node(1)!!)
