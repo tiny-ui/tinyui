@@ -432,8 +432,9 @@ private fun TextFieldComponent(scope: NodeScope) {
     val placeholder: (@Composable () -> Unit)? = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
     // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
     val leadingIcon: (@Composable () -> Unit)? = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused), style.minHeight) } }
-    // the page sizes the glyph (a 20dp eye in a design system), never the slot: the IconButton's 48dp tap target stays
-    val trailingSize = scope.get<Dp>("trailingIconSize")
+    // the page sizes the glyph (a 20dp eye in a design system), never the slot: the IconButton's 48dp tap target stays;
+    // zero or less is "unset", like gap / borderWidth
+    val trailingSize = scope.get<Dp>("trailingIconSize")?.takeIf { it > 0.dp }
     val trailingIcon: (@Composable () -> Unit)? = trailing?.let { icon ->
         {
             val glyph = @Composable { Icon(icon.vector, contentDescription = null, modifier = if (trailingSize != null) Modifier.size(trailingSize) else Modifier) }
