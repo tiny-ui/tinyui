@@ -909,6 +909,8 @@ private fun TabsComponent(scope: NodeScope) {
                 selected = index == selected,
                 onClick = { if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", option.first)) },
                 text = { Text(option.second) },
+                // M3's inactive label is onSurfaceVariant (primary-navigation-tab tokens); Compose's Tab defaults it to the active color
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
