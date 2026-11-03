@@ -80,6 +80,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -134,7 +135,6 @@ import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
@@ -351,10 +351,14 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
     else -> Alignment.TopStart
 }
 
-/** Cuts an edit down to [max] UTF-16 units ([clipTo]): the page's `maxLength` cuts, it does not reject. */
-private class ClipTransformation(private val max: Int) : InputTransformation {
+/**
+ * Cuts an edit down to the page's `maxLength` ([clipTo]): it cuts, it does not reject. [max] is read at each edit, so an
+ * edit between a flush that lowers the limit and the recomposition that would install a new transformation still
+ * clips to the new limit.
+ */
+private class ClipTransformation(private val max: () -> Int?) : InputTransformation {
     override fun TextFieldBuffer.transformInput() {
-        val clipped = clipTo(asCharSequence().toString(), max)
+        val clipped = clipTo(asCharSequence().toString(), max())
         if (clipped.length < length) replace(clipped.length, length, "")
     }
 }
@@ -372,21 +376,32 @@ private class ClipTransformation(private val max: Int) : InputTransformation {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TextFieldComponent(scope: NodeScope) {
-    // read when used, not captured: a command runs before the recomposition that would refresh a captured value
-    fun clip(t: String) = clipTo(t, scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 })
-    val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
+    // what outlives a composition (the observer, the transformation, a command) reads the scope of the latest one:
+    // a command runs before the recomposition that would refresh a captured value
+    val current by rememberUpdatedState(scope)
+    fun limit() = current.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
+    fun clip(t: String) = clipTo(t, limit())
     val state = retain { TextFieldState(clip(scope.get<String>("initialText") ?: "")) }
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", state.text.toString())) }
-    // every change of the text, whoever made it — the user, `setText`, a lowered `maxLength`; the same text again is not one
-    if (scope.has("onChange")) LaunchedEffect(state) { snapshotFlow { state.text.toString() }.drop(1).collect { scope.dispatch("onChange", payload("text", it)) } }
+    // the last text the page heard of: a change is reported once, by whoever notices it first, so `setText` and a commit
+    // right after an edit report in order; the same text again is not a change
+    val reported = remember { mutableStateOf(state.text.toString()) }
+    fun changed() {
+        val text = state.text.toString()
+        if (text == reported.value) return
+        reported.value = text
+        if (current.has("onChange")) current.dispatch("onChange", payload("text", text))
+    }
+    val commit = { changed(); if (current.has("onCommit")) current.dispatch("onCommit", payload("text", state.text.toString())) }
+    // the user's edits, observed; edits inside one dispatch arrive as the last of them
+    LaunchedEffect(state) { snapshotFlow { state.text.toString() }.collect { changed() } }
     // a lowered limit applies to what is already there
-    LaunchedEffect(maxLength) { clip(state.text.toString()).let { if (it != state.text.toString()) state.setTextAndPlaceCursorAtEnd(it) } }
+    LaunchedEffect(limit()) { clip(state.text.toString()).let { if (it != state.text.toString()) { state.setTextAndPlaceCursorAtEnd(it); changed() } } }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> state.setTextAndPlaceCursorAtEnd(clip(command.args["text"] as? String ?: ""))
+            "setText" -> { state.setTextAndPlaceCursorAtEnd(clip(command.args["text"] as? String ?: "")); changed() }
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -420,7 +435,7 @@ private fun TextFieldComponent(scope: NodeScope) {
     )
     // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
     val onKeyboardAction = KeyboardActionHandler { if (next) { if (!focusManager.moveFocus(FocusDirection.Next)) commit() } else commit() }
-    val inputTransformation = maxLength?.let { remember(it) { ClipTransformation(it) } }
+    val inputTransformation = remember { ClipTransformation { limit() } }
     val modifier = scope.modifier(clickable = false).heightIn(min = style.minHeight).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
@@ -430,6 +445,7 @@ private fun TextFieldComponent(scope: NodeScope) {
             if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
             if (!focused) commit()
         }
+    // M3's secure field is single-line; `singleLine=false` has no meaning for a masked field (docs/components.md §3)
     if (secure != null || keyboard == KeyboardType.Password) {
         OutlinedSecureTextField(
             state = state,
