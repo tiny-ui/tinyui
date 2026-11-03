@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -34,6 +35,13 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
+import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextObfuscationMode
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -54,6 +62,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
@@ -137,7 +146,7 @@ import app.tinyui.schema.ComponentRegistry
 import app.tinyui.schema.NodeScope
 import app.tinyui.schema.SizeValue
 import app.tinyui.schema.Theme
-import app.tinyui.textFieldColors
+import app.tinyui.textFieldStyle
 
 /** First batch of built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. */
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
@@ -341,28 +350,57 @@ private fun boxAlignment(name: String?): Alignment = when (name) {
     else -> Alignment.TopStart
 }
 
+/** The field's text and what the page last heard of it; one object so `retain` keeps both across a page reload. */
+private class TextFieldModel(initial: String) {
+    val state = TextFieldState(initial)
+    /** The last text reported through `onChange`: the observer skips what a command has already reported. */
+    var reported = initial
+}
+
+/** Cuts an edit down to [max] UTF-16 units ([clipTo]): the page's `maxLength` cuts, it does not reject. */
+private class ClipTransformation(private val max: Int) : InputTransformation {
+    override fun TextFieldBuffer.transformInput() {
+        val clipped = clipTo(asCharSequence().toString(), max)
+        if (clipped.length < length) replace(clipped.length, length, "")
+    }
+}
+
 /**
  * Text and cursor stay here; JS gets `onChange` / `onCommit` / `onFocusChange` and sends `setText` / `focus` / `blur`
  * (docs/adr-004 §3.3). Error, supporting text, prefix and trailing icon are looks the page drives through props.
+ *
+ * M3's `OutlinedTextField` on a `TextFieldState`: the state owns text, cursor and composition, so a page reloading or
+ * a sheet recomposing never resets the cursor. The host's density (`TinyUIDefaults.textField`) goes in through M3's own
+ * `contentPadding`, and `heightIn` stands in for the 56dp minimum M3 would otherwise apply — nothing is drawn by hand.
+ * A field that can be masked (`secure` set, or `keyboard="password"`) is M3's secure field; flipping `secure` only changes
+ * how it obscures, so focus and the keyboard stay.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TextFieldComponent(scope: NodeScope) {
     // read when used, not captured: a command runs before the recomposition that would refresh a captured value
     fun clip(t: String) = clipTo(t, scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 })
-    val maxLength = scope.get<Double>("maxLength")
-    var text by retain { mutableStateOf(clip(scope.get<String>("initialText") ?: "")) }
+    val maxLength = scope.get<Double>("maxLength")?.toInt()?.takeIf { it > 0 }
+    val model = retain { TextFieldModel(clip(scope.get<String>("initialText") ?: "")) }
+    val state = model.state
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", text)) }
+    fun report(t: String) {
+        model.reported = t
+        if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t))
+    }
+    val commit = { if (scope.has("onCommit")) scope.dispatch("onCommit", payload("text", state.text.toString())) }
+    // the user's edits as the state sees them; what a command set has been reported by the command
+    LaunchedEffect(state) { snapshotFlow { state.text.toString() }.collect { if (it != model.reported) report(it) } }
     // a lowered limit applies to what is already there, reported like any other change
     LaunchedEffect(maxLength) {
-        val t = clip(text)
-        if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) }
+        val t = clip(state.text.toString())
+        if (t != state.text.toString()) { state.setTextAndPlaceCursorAtEnd(t); report(t) }
     }
     scope.Commands { command ->
         when (command.name) {
-            "setText" -> { text = clip(command.args["text"] as? String ?: ""); if (scope.has("onChange")) scope.dispatch("onChange", payload("text", text)) }
+            "setText" -> { val t = clip(command.args["text"] as? String ?: ""); state.setTextAndPlaceCursorAtEnd(t); report(t) }
             "focus" -> focusRequester.requestFocus()
             "blur" -> focusManager.clearFocus()
         }
@@ -371,47 +409,75 @@ private fun TextFieldComponent(scope: NodeScope) {
         "number" -> KeyboardType.Number; "email" -> KeyboardType.Email; "phone" -> KeyboardType.Phone; "password" -> KeyboardType.Password
         else -> KeyboardType.Text
     }
-    val secure = scope.get<Boolean>("secure") ?: (keyboard == KeyboardType.Password)
+    val secure = scope.get<Boolean>("secure")
     val next = scope.get<String>("imeAction") == "next"
     // unset leaves the hint to the system; the options carry it on iOS, the semantics on Android (same as CodeField)
     val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
     val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
     val trailing = scope.get<IconValue>("trailingIcon")
-    val colors = textFieldColors()
+    val style = textFieldStyle()
+    val colors = style.colors
     val error = scope.get<Boolean>("error") == true
-    OutlinedTextField(
-        value = text,
-        onValueChange = { val t = clip(it); if (t != text) { text = t; if (scope.has("onChange")) scope.dispatch("onChange", payload("text", t)) } },
-        colors = colors,
-        placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
-        leadingIcon = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused)) } },
-        trailingIcon = trailing?.let { icon ->
-            {
-                if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
-                else Icon(icon.vector, contentDescription = null)
-            }
-        },
-        isError = error,
-        supportingText = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        singleLine = scope.get<Boolean>("singleLine") ?: true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done,
-            platformImeOptions = if (oneTimeCode) oneTimeCodeImeOptions(true) else null,
-        ),
-        // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
-        keyboardActions = KeyboardActions(onDone = { commit() }, onNext = { if (!focusManager.moveFocus(FocusDirection.Next)) commit() }),
-        visualTransformation = if (secure) PasswordVisualTransformation() else VisualTransformation.None,
-        modifier = scope.modifier(clickable = false).focusRequester(focusRequester)
-            .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
-            .onFocusChanged {
-                // the first callback reports the initial unfocused state: not a change, not a focus loss
-                if (it.isFocused == focused) return@onFocusChanged
-                focused = it.isFocused
-                if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
-                if (!focused) commit()
-            },
+    val placeholder: (@Composable () -> Unit)? = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
+    // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
+    val leadingIcon: (@Composable () -> Unit)? = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused), style.minHeight) } }
+    val trailingIcon: (@Composable () -> Unit)? = trailing?.let { icon ->
+        {
+            if (scope.has("onTrailingClick")) IconButton(onClick = { scope.dispatch("onTrailingClick") }) { Icon(icon.vector, contentDescription = null) }
+            else Icon(icon.vector, contentDescription = null)
+        }
+    }
+    val supportingText: (@Composable () -> Unit)? = scope.get<String>("supportingText")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
+    val keyboardOptions = KeyboardOptions(
+        keyboardType = keyboard, imeAction = if (next) ImeAction.Next else ImeAction.Done,
+        platformImeOptions = if (oneTimeCode) oneTimeCodeImeOptions(true) else null,
     )
+    // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
+    val onKeyboardAction = KeyboardActionHandler { if (next) { if (!focusManager.moveFocus(FocusDirection.Next)) commit() } else commit() }
+    val inputTransformation = maxLength?.let { remember(it) { ClipTransformation(it) } }
+    val modifier = scope.modifier(clickable = false).heightIn(min = style.minHeight).focusRequester(focusRequester)
+        .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
+        .onFocusChanged {
+            // the first callback reports the initial unfocused state: not a change, not a focus loss
+            if (it.isFocused == focused) return@onFocusChanged
+            focused = it.isFocused
+            if (scope.has("onFocusChange")) scope.dispatch("onFocusChange", buildJsonObject { put("focused", focused) }.toString())
+            if (!focused) commit()
+        }
+    if (secure != null || keyboard == KeyboardType.Password) {
+        OutlinedSecureTextField(
+            state = state,
+            modifier = modifier,
+            placeholder = placeholder,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            supportingText = supportingText,
+            isError = error,
+            inputTransformation = inputTransformation,
+            // M3's default while masked: the character just typed shows briefly, as the platforms' own password fields do
+            textObfuscationMode = if (secure ?: true) TextObfuscationMode.RevealLastTyped else TextObfuscationMode.Visible,
+            keyboardOptions = keyboardOptions,
+            onKeyboardAction = onKeyboardAction,
+            colors = colors,
+            contentPadding = style.contentPadding,
+        )
+    } else {
+        OutlinedTextField(
+            state = state,
+            modifier = modifier,
+            placeholder = placeholder,
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            supportingText = supportingText,
+            isError = error,
+            inputTransformation = inputTransformation,
+            keyboardOptions = keyboardOptions,
+            onKeyboardAction = onKeyboardAction,
+            lineLimits = if (scope.get<Boolean>("singleLine") ?: true) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
+            colors = colors,
+            contentPadding = style.contentPadding,
+        )
+    }
 }
 
 /**
@@ -422,7 +488,7 @@ private fun TextFieldComponent(scope: NodeScope) {
  * inside its 48dp slot), so the 8dp end padding makes 12dp from block to input.
  */
 @Composable
-private fun Prefix(scope: NodeScope, text: String, color: Color) {
+private fun Prefix(scope: NodeScope, text: String, color: Color, minHeight: Dp) {
     val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
     val icon = scope.get<IconValue>("prefixIcon")
     val iconSize = scope.get<Dp>("prefixIconSize")
@@ -441,9 +507,9 @@ private fun Prefix(scope: NodeScope, text: String, color: Color) {
     val shape = remember(outer) { if (outer is CornerBasedShape) ConcentricInsetShape(outer, PrefixInset) else outer }
     Box(
         Modifier.padding(start = PrefixInset, end = 8.dp)
-            // M3's minimum height less the inset above and below; the leading slot is centred, so a field taller than
-            // its minimum (a large line height or font scale) keeps the block centred with a little more room
-            .height(OutlinedTextFieldDefaults.MinHeight - PrefixInset * 2)
+            // the field's minimum height (M3's 56dp, or the host's) less the inset above and below; the leading slot is
+            // centred, so a field taller than its minimum (a large line height or font scale) keeps the block centred
+            .height(minHeight - PrefixInset * 2)
             .clip(shape).background(fill).then(tap).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) { content() }
@@ -503,7 +569,7 @@ private fun CodeFieldComponent(scope: NodeScope) {
     val error = scope.get<Boolean>("error") == true
     val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
     // the cells follow the host's text input colours like TextField does (TinyUIDefaults)
-    val colors = textFieldColors()
+    val colors = textFieldStyle().colors
     BasicTextField(
         value = value,
         onValueChange = { update(it.text) },
@@ -549,18 +615,21 @@ private fun SelectComponent(scope: NodeScope) {
     var expanded by remember { mutableStateOf(false) }
     // disabled while open: the menu goes, so nothing can be picked from it any more
     if (!enabled && expanded) expanded = false
+    val chosen = options.firstOrNull { it.first == selected }?.second ?: ""
+    val style = textFieldStyle()
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (enabled) expanded = it }, modifier = scope.modifier(clickable = false)) {
         OutlinedTextField(
-            value = options.firstOrNull { it.first == selected }?.second ?: "",
-            onValueChange = {},
+            // read-only: the text is the choice, so a new choice is a new state
+            state = remember(chosen) { TextFieldState(chosen) },
             readOnly = true,
-            colors = textFieldColors(),
+            colors = style.colors,
+            contentPadding = style.contentPadding,
             enabled = enabled,
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
             label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
             placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth(),
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth().heightIn(min = style.minHeight),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for ((value, text) in options) {
