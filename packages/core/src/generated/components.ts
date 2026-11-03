@@ -167,6 +167,8 @@ export interface TextFieldProps extends LayoutProps {
     prefixBackground?: ColorValue;
     /** icon at the end, such as show / hide or clear; tappable when onTrailingClick is set */
     trailingIcon?: string;
+    /** size of the trailing icon; unset, the icon's own size (24dp for a packaged icon). The 48dp tap target stays */
+    trailingIconSize?: number;
     /** next moves focus to the following field */
     imeAction?: "done" | "next";
     /** 0 = unlimited; longer input is cut, not rejected */
