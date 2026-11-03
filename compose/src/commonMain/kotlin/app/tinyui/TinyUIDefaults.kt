@@ -14,6 +14,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import kotlin.math.floor
@@ -34,6 +35,12 @@ class TinyUIDefaults(
     val textButton: ButtonStyle? = null,
     /** The look of `Checkbox`: its colours and the strokes of its outline and checkmark. */
     val checkbox: CheckboxStyle? = null,
+    /**
+     * The look of a `[label](id)` link in `Text`, in Compose's own type: colour, weight, decoration per state. Null is the
+     * primary colour at the text's own weight. A design system that sets links semi-bold says so here once; pages keep
+     * writing the mark.
+     */
+    val textLinks: TextLinkStyles? = null,
 )
 
 /**

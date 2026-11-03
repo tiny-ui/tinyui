@@ -2,7 +2,7 @@ import { color, defineComponent, enumOf, field, number, sp, string, TEXT_STYLES 
 
 export default defineComponent("Text", {
     props: {
-        text: string({ required: true, doc: "with onLinkClick set, `[label](id)` spans render as links" }),
+        text: string({ required: true, doc: "`**bold**` spans render bold; with onLinkClick set, `[label](id)` spans render as links. Flat, no nesting; stray marks stay literal" }),
         style: enumOf(TEXT_STYLES, { doc: "Material 3 text style; fontSize / fontWeight override its fields" }),
         color: color(),
         fontSize: sp(),
