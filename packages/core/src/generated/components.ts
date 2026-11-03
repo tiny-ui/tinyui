@@ -74,7 +74,7 @@ export interface TextLinkClickPayload {
 }
 
 export interface TextProps extends LayoutProps {
-    /** with onLinkClick set, `[label](id)` spans render as links */
+    /** `**bold**` spans render bold; with onLinkClick set, `[label](id)` spans render as links. Flat, no nesting; stray marks stay literal */
     text: string;
     /** Material 3 text style; fontSize / fontWeight override its fields */
     style?: "displayLarge" | "displayMedium" | "displaySmall" | "headlineLarge" | "headlineMedium" | "headlineSmall" | "titleLarge" | "titleMedium" | "titleSmall" | "bodyLarge" | "bodyMedium" | "bodySmall" | "labelLarge" | "labelMedium" | "labelSmall";
