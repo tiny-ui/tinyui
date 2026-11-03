@@ -139,6 +139,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
 import app.tinyui.buttonStyle
+import app.tinyui.checkboxStyle
 import app.tinyui.oneTimeCodeImeOptions
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
@@ -229,10 +230,15 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         )
     }
     register(BuiltinSchemas.Checkbox) { scope ->
+        // the stroke overload with M3's own strokes draws exactly what the plain one does; the host may replace either
+        val style = checkboxStyle()
         Checkbox(
             checked = scope.get<Boolean>("checked") == true,
             onCheckedChange = if (scope.has("onClick")) ({ scope.dispatch("onClick") }) else null,
+            checkmarkStroke = style.checkmarkStroke,
+            outlineStroke = style.outlineStroke,
             enabled = scope.get<Boolean>("enabled") ?: true,
+            colors = style.colors,
             modifier = scope.modifier(clickable = false),
         )
     }

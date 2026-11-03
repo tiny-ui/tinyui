@@ -323,6 +323,17 @@ final class app.tinyui/CapabilityRegistry { // app.tinyui/CapabilityRegistry|nul
     final fun register(kotlin/String, app.tinyui/HostCapability) // app.tinyui/CapabilityRegistry.register|register(kotlin.String;app.tinyui.HostCapability){}[0]
 }
 
+final class app.tinyui/CheckboxStyle { // app.tinyui/CheckboxStyle|null[0]
+    constructor <init>(androidx.compose.material3/CheckboxColors? = ..., androidx.compose.ui.graphics.drawscope/Stroke? = ..., androidx.compose.ui.graphics.drawscope/Stroke? = ...) // app.tinyui/CheckboxStyle.<init>|<init>(androidx.compose.material3.CheckboxColors?;androidx.compose.ui.graphics.drawscope.Stroke?;androidx.compose.ui.graphics.drawscope.Stroke?){}[0]
+
+    final val checkmarkStroke // app.tinyui/CheckboxStyle.checkmarkStroke|{}checkmarkStroke[0]
+        final fun <get-checkmarkStroke>(): androidx.compose.ui.graphics.drawscope/Stroke? // app.tinyui/CheckboxStyle.checkmarkStroke.<get-checkmarkStroke>|<get-checkmarkStroke>(){}[0]
+    final val colors // app.tinyui/CheckboxStyle.colors|{}colors[0]
+        final fun <get-colors>(): androidx.compose.material3/CheckboxColors? // app.tinyui/CheckboxStyle.colors.<get-colors>|<get-colors>(){}[0]
+    final val outlineStroke // app.tinyui/CheckboxStyle.outlineStroke|{}outlineStroke[0]
+        final fun <get-outlineStroke>(): androidx.compose.ui.graphics.drawscope/Stroke? // app.tinyui/CheckboxStyle.outlineStroke.<get-outlineStroke>|<get-outlineStroke>(){}[0]
+}
+
 final class app.tinyui/EventBus { // app.tinyui/EventBus|null[0]
     constructor <init>() // app.tinyui/EventBus.<init>|<init>(){}[0]
 
@@ -581,8 +592,10 @@ final class app.tinyui/TextFieldStyle { // app.tinyui/TextFieldStyle|null[0]
 }
 
 final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
-    constructor <init>(app.tinyui/TextFieldStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(app.tinyui.TextFieldStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?){}[0]
+    constructor <init>(app.tinyui/TextFieldStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/CheckboxStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(app.tinyui.TextFieldStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.CheckboxStyle?){}[0]
 
+    final val checkbox // app.tinyui/TinyUIDefaults.checkbox|{}checkbox[0]
+        final fun <get-checkbox>(): app.tinyui/CheckboxStyle? // app.tinyui/TinyUIDefaults.checkbox.<get-checkbox>|<get-checkbox>(){}[0]
     final val filledButton // app.tinyui/TinyUIDefaults.filledButton|{}filledButton[0]
         final fun <get-filledButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.filledButton.<get-filledButton>|<get-filledButton>(){}[0]
     final val outlinedButton // app.tinyui/TinyUIDefaults.outlinedButton|{}outlinedButton[0]
@@ -840,6 +853,7 @@ final val app.tinyui/app_tinyui_BuildManifest$stableprop // app.tinyui/app_tinyu
 final val app.tinyui/app_tinyui_Bundle$stableprop // app.tinyui/app_tinyui_Bundle$stableprop|#static{}app_tinyui_Bundle$stableprop[0]
 final val app.tinyui/app_tinyui_ButtonStyle$stableprop // app.tinyui/app_tinyui_ButtonStyle$stableprop|#static{}app_tinyui_ButtonStyle$stableprop[0]
 final val app.tinyui/app_tinyui_CapabilityRegistry$stableprop // app.tinyui/app_tinyui_CapabilityRegistry$stableprop|#static{}app_tinyui_CapabilityRegistry$stableprop[0]
+final val app.tinyui/app_tinyui_CheckboxStyle$stableprop // app.tinyui/app_tinyui_CheckboxStyle$stableprop|#static{}app_tinyui_CheckboxStyle$stableprop[0]
 final val app.tinyui/app_tinyui_EventBus$stableprop // app.tinyui/app_tinyui_EventBus$stableprop|#static{}app_tinyui_EventBus$stableprop[0]
 final val app.tinyui/app_tinyui_HostException$stableprop // app.tinyui/app_tinyui_HostException$stableprop|#static{}app_tinyui_HostException$stableprop[0]
 final val app.tinyui/app_tinyui_HostSnapshot$stableprop // app.tinyui/app_tinyui_HostSnapshot$stableprop|#static{}app_tinyui_HostSnapshot$stableprop[0]
@@ -904,6 +918,7 @@ final fun app.tinyui/app_tinyui_BuildManifest$stableprop_getter(): kotlin/Int //
 final fun app.tinyui/app_tinyui_Bundle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_Bundle$stableprop_getter|app_tinyui_Bundle$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_ButtonStyle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_ButtonStyle$stableprop_getter|app_tinyui_ButtonStyle$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_CapabilityRegistry$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_CapabilityRegistry$stableprop_getter|app_tinyui_CapabilityRegistry$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_CheckboxStyle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_CheckboxStyle$stableprop_getter|app_tinyui_CheckboxStyle$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_EventBus$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_EventBus$stableprop_getter|app_tinyui_EventBus$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_HostException$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HostException$stableprop_getter|app_tinyui_HostException$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_HostSnapshot$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HostSnapshot$stableprop_getter|app_tinyui_HostSnapshot$stableprop_getter(){}[0]

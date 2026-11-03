@@ -4,13 +4,19 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CheckboxColors
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import kotlin.math.floor
 
 /**
  * Host overrides of M3 component defaults that `MaterialTheme` cannot express (docs/components.md §6). M3 derives some
@@ -26,6 +32,8 @@ class TinyUIDefaults(
     val filledButton: ButtonStyle? = null,
     val outlinedButton: ButtonStyle? = null,
     val textButton: ButtonStyle? = null,
+    /** The look of `Checkbox`: its colours and the strokes of its outline and checkmark. */
+    val checkbox: CheckboxStyle? = null,
 )
 
 /**
@@ -42,6 +50,18 @@ class TextFieldStyle(
     val colors: TextFieldColors? = null,
     val contentPadding: PaddingValues? = null,
     val minHeight: Dp? = null,
+)
+
+/**
+ * What a host may set on a `Checkbox`, in M3's own types — the parameters of M3's `Checkbox` that `MaterialTheme` does
+ * not drive. Null keeps M3's default for that piece. The strokes are in pixels, as M3 takes them: build them inside a
+ * composable with `LocalDensity`, e.g. `Stroke(with(LocalDensity.current) { 1.dp.toPx() })`. The box itself has no size
+ * parameter in M3 (18dp with `ComposeMaterial3Flags.isCheckboxStylingFixEnabled`, else the older 20dp), so none here.
+ */
+class CheckboxStyle(
+    val colors: CheckboxColors? = null,
+    val outlineStroke: Stroke? = null,
+    val checkmarkStroke: Stroke? = null,
 )
 
 /**
@@ -71,6 +91,20 @@ internal fun textFieldStyle(): ResolvedTextFieldStyle {
         colors = style?.colors ?: OutlinedTextFieldDefaults.colors(),
         contentPadding = style?.contentPadding ?: OutlinedTextFieldDefaults.contentPaddingWithoutLabel(),
         minHeight = style?.minHeight ?: OutlinedTextFieldDefaults.MinHeight,
+    )
+}
+
+/** A `Checkbox`'s look with every piece settled: the host's where set, else M3's (the strokes M3's plain `Checkbox` builds). */
+internal class ResolvedCheckboxStyle(val colors: CheckboxColors, val outlineStroke: Stroke, val checkmarkStroke: Stroke)
+
+@Composable
+internal fun checkboxStyle(): ResolvedCheckboxStyle {
+    val style = LocalTinyUIDefaults.current.checkbox
+    val m3Width = with(LocalDensity.current) { floor(CheckboxDefaults.StrokeWidth.toPx()) }
+    return ResolvedCheckboxStyle(
+        colors = style?.colors ?: CheckboxDefaults.colors(),
+        outlineStroke = style?.outlineStroke ?: Stroke(width = m3Width),
+        checkmarkStroke = style?.checkmarkStroke ?: Stroke(width = m3Width, cap = StrokeCap.Square),
     )
 }
 
