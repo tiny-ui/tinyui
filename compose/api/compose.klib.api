@@ -592,7 +592,7 @@ final class app.tinyui/TextFieldStyle { // app.tinyui/TextFieldStyle|null[0]
 }
 
 final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
-    constructor <init>(app.tinyui/TextFieldStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/CheckboxStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(app.tinyui.TextFieldStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.CheckboxStyle?){}[0]
+    constructor <init>(app.tinyui/TextFieldStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(app.tinyui.TextFieldStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?){}[0]
 
     final val checkbox // app.tinyui/TinyUIDefaults.checkbox|{}checkbox[0]
         final fun <get-checkbox>(): app.tinyui/CheckboxStyle? // app.tinyui/TinyUIDefaults.checkbox.<get-checkbox>|<get-checkbox>(){}[0]
@@ -604,6 +604,8 @@ final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
         final fun <get-textButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.textButton.<get-textButton>|<get-textButton>(){}[0]
     final val textField // app.tinyui/TinyUIDefaults.textField|{}textField[0]
         final fun <get-textField>(): app.tinyui/TextFieldStyle? // app.tinyui/TinyUIDefaults.textField.<get-textField>|<get-textField>(){}[0]
+    final val textLinks // app.tinyui/TinyUIDefaults.textLinks|{}textLinks[0]
+        final fun <get-textLinks>(): androidx.compose.ui.text/TextLinkStyles? // app.tinyui/TinyUIDefaults.textLinks.<get-textLinks>|<get-textLinks>(){}[0]
 }
 
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
