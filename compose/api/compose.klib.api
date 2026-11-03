@@ -299,6 +299,21 @@ final class app.tinyui/Bundle { // app.tinyui/Bundle|null[0]
     }
 }
 
+final class app.tinyui/ButtonStyle { // app.tinyui/ButtonStyle|null[0]
+    constructor <init>(androidx.compose.material3/ButtonColors? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.ui.graphics/Shape? = ..., androidx.compose.foundation.layout/PaddingValues? = ...) // app.tinyui/ButtonStyle.<init>|<init>(androidx.compose.material3.ButtonColors?;androidx.compose.foundation.BorderStroke?;androidx.compose.foundation.BorderStroke?;androidx.compose.ui.graphics.Shape?;androidx.compose.foundation.layout.PaddingValues?){}[0]
+
+    final val border // app.tinyui/ButtonStyle.border|{}border[0]
+        final fun <get-border>(): androidx.compose.foundation/BorderStroke? // app.tinyui/ButtonStyle.border.<get-border>|<get-border>(){}[0]
+    final val colors // app.tinyui/ButtonStyle.colors|{}colors[0]
+        final fun <get-colors>(): androidx.compose.material3/ButtonColors? // app.tinyui/ButtonStyle.colors.<get-colors>|<get-colors>(){}[0]
+    final val contentPadding // app.tinyui/ButtonStyle.contentPadding|{}contentPadding[0]
+        final fun <get-contentPadding>(): androidx.compose.foundation.layout/PaddingValues? // app.tinyui/ButtonStyle.contentPadding.<get-contentPadding>|<get-contentPadding>(){}[0]
+    final val disabledBorder // app.tinyui/ButtonStyle.disabledBorder|{}disabledBorder[0]
+        final fun <get-disabledBorder>(): androidx.compose.foundation/BorderStroke? // app.tinyui/ButtonStyle.disabledBorder.<get-disabledBorder>|<get-disabledBorder>(){}[0]
+    final val shape // app.tinyui/ButtonStyle.shape|{}shape[0]
+        final fun <get-shape>(): androidx.compose.ui.graphics/Shape? // app.tinyui/ButtonStyle.shape.<get-shape>|<get-shape>(){}[0]
+}
+
 final class app.tinyui/CapabilityRegistry { // app.tinyui/CapabilityRegistry|null[0]
     constructor <init>() // app.tinyui/CapabilityRegistry.<init>|<init>(){}[0]
 
@@ -555,8 +570,14 @@ final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
 }
 
 final class app.tinyui/TinyUIDefaults { // app.tinyui/TinyUIDefaults|null[0]
-    constructor <init>(androidx.compose.material3/TextFieldColors? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(androidx.compose.material3.TextFieldColors?){}[0]
+    constructor <init>(androidx.compose.material3/TextFieldColors? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ..., app.tinyui/ButtonStyle? = ...) // app.tinyui/TinyUIDefaults.<init>|<init>(androidx.compose.material3.TextFieldColors?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?;app.tinyui.ButtonStyle?){}[0]
 
+    final val filledButton // app.tinyui/TinyUIDefaults.filledButton|{}filledButton[0]
+        final fun <get-filledButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.filledButton.<get-filledButton>|<get-filledButton>(){}[0]
+    final val outlinedButton // app.tinyui/TinyUIDefaults.outlinedButton|{}outlinedButton[0]
+        final fun <get-outlinedButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.outlinedButton.<get-outlinedButton>|<get-outlinedButton>(){}[0]
+    final val textButton // app.tinyui/TinyUIDefaults.textButton|{}textButton[0]
+        final fun <get-textButton>(): app.tinyui/ButtonStyle? // app.tinyui/TinyUIDefaults.textButton.<get-textButton>|<get-textButton>(){}[0]
     final val textFieldColors // app.tinyui/TinyUIDefaults.textFieldColors|{}textFieldColors[0]
         final fun <get-textFieldColors>(): androidx.compose.material3/TextFieldColors? // app.tinyui/TinyUIDefaults.textFieldColors.<get-textFieldColors>|<get-textFieldColors>(){}[0]
 }
@@ -806,6 +827,7 @@ final val app.tinyui/LocalTinyUIDefaults // app.tinyui/LocalTinyUIDefaults|{}Loc
     final fun <get-LocalTinyUIDefaults>(): androidx.compose.runtime/ProvidableCompositionLocal<app.tinyui/TinyUIDefaults> // app.tinyui/LocalTinyUIDefaults.<get-LocalTinyUIDefaults>|<get-LocalTinyUIDefaults>(){}[0]
 final val app.tinyui/app_tinyui_BuildManifest$stableprop // app.tinyui/app_tinyui_BuildManifest$stableprop|#static{}app_tinyui_BuildManifest$stableprop[0]
 final val app.tinyui/app_tinyui_Bundle$stableprop // app.tinyui/app_tinyui_Bundle$stableprop|#static{}app_tinyui_Bundle$stableprop[0]
+final val app.tinyui/app_tinyui_ButtonStyle$stableprop // app.tinyui/app_tinyui_ButtonStyle$stableprop|#static{}app_tinyui_ButtonStyle$stableprop[0]
 final val app.tinyui/app_tinyui_CapabilityRegistry$stableprop // app.tinyui/app_tinyui_CapabilityRegistry$stableprop|#static{}app_tinyui_CapabilityRegistry$stableprop[0]
 final val app.tinyui/app_tinyui_EventBus$stableprop // app.tinyui/app_tinyui_EventBus$stableprop|#static{}app_tinyui_EventBus$stableprop[0]
 final val app.tinyui/app_tinyui_HostException$stableprop // app.tinyui/app_tinyui_HostException$stableprop|#static{}app_tinyui_HostException$stableprop[0]
@@ -868,6 +890,7 @@ final fun app.tinyui/PageFailureScreen(app.tinyui/PageFailure, androidx.compose.
 final fun app.tinyui/TinyUIPage(app.tinyui/PageModule, app.tinyui/TinyUIHost, kotlin/String?, kotlin.collections/List<app.tinyui/PageLocalValue<*>>?, androidx.compose.ui/Modifier?, app.tinyui/SourceMaps?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui/TinyUIPage|TinyUIPage(app.tinyui.PageModule;app.tinyui.TinyUIHost;kotlin.String?;kotlin.collections.List<app.tinyui.PageLocalValue<*>>?;androidx.compose.ui.Modifier?;app.tinyui.SourceMaps?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun app.tinyui/app_tinyui_BuildManifest$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_BuildManifest$stableprop_getter|app_tinyui_BuildManifest$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_Bundle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_Bundle$stableprop_getter|app_tinyui_Bundle$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_ButtonStyle$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_ButtonStyle$stableprop_getter|app_tinyui_ButtonStyle$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_CapabilityRegistry$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_CapabilityRegistry$stableprop_getter|app_tinyui_CapabilityRegistry$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_EventBus$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_EventBus$stableprop_getter|app_tinyui_EventBus$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_HostException$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HostException$stableprop_getter|app_tinyui_HostException$stableprop_getter(){}[0]
