@@ -128,6 +128,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import app.tinyui.components.generated.BuiltinSchemas
+import app.tinyui.buttonStyle
 import app.tinyui.oneTimeCodeImeOptions
 import app.tinyui.node.UINode
 import app.tinyui.schema.Commands
@@ -200,10 +201,13 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         val enabled = scope.get<Boolean>("enabled") ?: true
         val label: @Composable () -> Unit = { if (scope.node.children.isEmpty()) Text(scope["text"] ?: "") else scope.Children() }
         val modifier = scope.modifier(clickable = false) // the button owns the click and its enabled state
-        when (scope.get<String>("variant")) {
-            "outlined" -> OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
-            "text" -> TextButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
-            else -> Button(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
+        val variant = scope.get<String>("variant")
+        // the host's look for this variant where it set one, else M3's (TinyUIDefaults)
+        val style = buttonStyle(variant, enabled)
+        when (variant) {
+            "outlined" -> OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, shape = style.shape, colors = style.colors, border = style.border, contentPadding = style.contentPadding, content = { label() })
+            "text" -> TextButton(onClick = onClick, enabled = enabled, modifier = modifier, shape = style.shape, colors = style.colors, border = style.border, contentPadding = style.contentPadding, content = { label() })
+            else -> Button(onClick = onClick, enabled = enabled, modifier = modifier, shape = style.shape, colors = style.colors, border = style.border, contentPadding = style.contentPadding, content = { label() })
         }
     }
     register(BuiltinSchemas.RadioButton) { scope ->
