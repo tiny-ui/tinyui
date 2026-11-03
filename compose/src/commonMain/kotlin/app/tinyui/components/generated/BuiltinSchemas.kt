@@ -127,6 +127,7 @@ object BuiltinSchemas {
             "prefixIconSize" to PropSpec.Dp(default = null, required = false, initial = false),
             "prefixBackground" to PropSpec.ColorSpec(default = null, required = false, initial = false),
             "trailingIcon" to PropSpec.IconSpec(required = false, initial = false),
+            "trailingIconSize" to PropSpec.Dp(default = null, required = false, initial = false),
             "imeAction" to PropSpec.Enum(values = setOf("done", "next"), default = "done", required = false, initial = false),
             "maxLength" to PropSpec.Num(default = 0.0, required = false, initial = false),
             "autofill" to PropSpec.Enum(values = setOf("oneTimeCode"), default = null, required = false, initial = false),

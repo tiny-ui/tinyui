@@ -15,6 +15,7 @@ export default defineComponent("TextField", {
         prefixIconSize: dp({ doc: "size of the prefix icon; unset, the icon's own size (24dp for a packaged icon)" }),
         prefixBackground: color({ doc: "fills the prefix as a block inset 4dp in the field, its corners concentric with the field's; unset, plain text" }),
         trailingIcon: icon({ doc: "icon at the end, such as show / hide or clear; tappable when onTrailingClick is set" }),
+        trailingIconSize: dp({ doc: "size of the trailing icon; unset, the icon's own size (24dp for a packaged icon). The 48dp tap target stays" }),
         imeAction: enumOf(["done", "next"], { default: "done", doc: "next moves focus to the following field" }),
         maxLength: number({ default: 0, doc: "0 = unlimited; longer input is cut, not rejected" }),
         autofill: enumOf(["oneTimeCode"], { doc: "what the field holds, so the system can offer it; oneTimeCode offers a code just received by SMS. Unset, the system decides" }),
