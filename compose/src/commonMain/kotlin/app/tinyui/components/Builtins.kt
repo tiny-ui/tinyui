@@ -66,7 +66,10 @@ import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -249,7 +252,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
     register(BuiltinSchemas.CodeField) { scope -> CodeFieldComponent(scope) }
     register(BuiltinSchemas.Select) { scope -> SelectComponent(scope) }
-    // data for its Select, never drawn
+    // data for its Select / Menu / Tabs, never drawn
     register(BuiltinSchemas.Option) { }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
@@ -263,6 +266,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.TopAppBar) { scope -> TopAppBarComponent(scope) }
     register(BuiltinSchemas.BackHandler) { scope -> BackHandlerComponent(scope) }
     register(BuiltinSchemas.Menu) { scope -> MenuComponent(scope) }
+    register(BuiltinSchemas.Tabs) { scope -> TabsComponent(scope) }
     register(BuiltinSchemas.Divider) { scope ->
         HorizontalDivider(
             modifier = scope.modifier(),
@@ -881,6 +885,31 @@ private fun MenuComponent(scope: NodeScope) {
     DropdownMenu(expanded = showing, onDismissRequest = { showing = false; if (scope.has("onDismiss")) scope.dispatch("onDismiss") }) {
         for ((value, text) in options) {
             DropdownMenuItem(text = { Text(text) }, onClick = { showing = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
+        }
+    }
+}
+
+/**
+ * M3 primary tab row; the tabs are the `Option` children, read as data like [SelectComponent] reads them, and the
+ * selection is the page's prop: a tap only reports `onSelect`, the page writes it back to `value`. An unmatched or
+ * unset `value` selects no tab and draws no indicator; M3 still wants an index, so the first tab stands in for it.
+ */
+@Composable
+private fun TabsComponent(scope: NodeScope) {
+    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val value = scope.get<String>("value")
+    val selected = options.indexOfFirst { it.first == value }
+    PrimaryTabRow(
+        selectedTabIndex = selected.coerceAtLeast(0),
+        modifier = scope.modifier(clickable = false),
+        indicator = { if (selected >= 0) TabRowDefaults.PrimaryIndicator(Modifier.tabIndicatorOffset(selected, matchContentSize = true), width = Dp.Unspecified) },
+    ) {
+        for ((index, option) in options.withIndex()) {
+            Tab(
+                selected = index == selected,
+                onClick = { if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", option.first)) },
+                text = { Text(option.second) },
+            )
         }
     }
 }

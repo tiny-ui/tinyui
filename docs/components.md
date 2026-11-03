@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -88,7 +88,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`prefixIcon`（`icon` 类型）、`trailingIconSize`（dp，同 `prefixIconSize`）、`prefixIconSize`（dp，不设用图标自带的 24dp）、`prefixBackground`（颜色）、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限）、`autofill`（oneTimeCode；不设交给系统） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
-| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select` 与 `Menu` 读它 | | | |
+| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu` 与 `Tabs` 读它 | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
@@ -98,6 +98,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TopAppBar` | `title`、`backIcon`（`icon` 类型，设了才有返回按钮）、`backLabel`（返回按钮的读屏名）、`backIconSize`（dp，返回图标的尺寸；不设用图标自带的 24dp） | | | 是：右侧的操作 |
 | `BackHandler` | `enabled`（默认 true）；不接受布局 prop | `onBack` | | |
 | `Menu` | `open`（必填）；不接受布局 prop | `onSelect{value}`、`onDismiss`（点了菜单外面） | | 是：`Option` |
+| `Tabs` | `value`（选中的 `Option` 的 value；不设或对不上就一个都不选） | `onSelect{value}` | | 是：`Option` |
 | `Divider` | `thickness`（dp，默认 1）、`color`（默认 `outlineVariant`） | | | |
 
 `align="stretch"`（2026-11-02 加，注册流程触发：验证码输入框与「重新发送」等高）与 CSS `align-items: stretch`、Flutter `CrossAxisAlignment.stretch` 同义：占版面、且没设交叉轴尺寸的子节点撑满容器的交叉轴（Row 撑高、Column 撑宽）；设了 `height` / `width` 的子节点（含 `wrap`）保持自己的，和 CSS 一样。**一个 M3 的边角**（2026-11-03）：stretch 靠 intrinsic 测量问子节点「最矮多矮」，M3 `OutlinedTextField` 内部的 `defaultMinSize(56dp)` 在 intrinsic 里无条件答 56，宿主经 `TinyUIDefaults.textField.minHeight` 给的更矮高度盖不过它（正常测量盖得过）；所以 `TextField` 所在的行不要用 stretch 对齐高度，旁边的节点直接给和输入框一样的 `height`。容器的交叉轴是固定值或 `fill` 时只是撑满；否则容器先按子节点定自己的尺寸——Row 取最高的子节点（Compose `IntrinsicSize.Min`），Column 取最宽的（`IntrinsicSize.Max`）——这要对整棵子树做固有尺寸测量，多测一遍，所以缺省仍是 `start`，不像 CSS 那样默认拉伸。回答不了固有尺寸的组件（schema `intrinsics: false`，内置只有 `LazyColumn`；宿主组件基于 `SubcomposeLayout` 的也要这样声明）在子树里时，问它会让整页崩溃，所以框架放弃拉伸、按 E5 上报（`NodeScope.reportProblem`），页面仍画出来；给容器一个固定交叉轴尺寸就不需要测量。宽高都固定的节点由尺寸直接作答、内容不会被问，所以放在这样的盒子里的 `LazyColumn` 不算（只固定一个轴不够：嵌套的 Row 分配空间时会问子节点的固有宽度）。子树是逐层读的，任何一层后来插进这样的组件，容器都会重新检查。
@@ -191,6 +192,17 @@ const [open, setOpen] = signal(false);
         <Option value="zh" text="简体中文" />
     </Menu>
 </Row>
+```
+
+`Tabs` 是 M3 的主级标签栏 `PrimaryTabRow`（2026-11-03 加，登录流程的「手机号 / 邮箱」切换触发）。标签是 `Option` children，与 `Select` / `Menu` 同一份数据写法；选中态归页面，与 `RadioButton` 同一模式：`onSelect` 只报点了哪个，页面写回 `value`，不写回就不动。`value` 不设或对不上任何 `Option` 时一个都不选、不画指示条，页面挂载时没有默认选中。尺寸与形态全是 M3 的：标签等分宽度、文字 `titleSmall`、选中 `primary` 未选 `onSurfaceVariant`、指示条 3dp 随文字宽、底下一条分隔线、48dp 触控区；设计系统与此有偏离时按 §6 的宿主默认值规则补槽位，不在页面上调。不做：图标标签、滚动标签栏（`PrimaryScrollableTabRow`）、次级标签栏（`SecondaryTabRow`）、标签内容区（切换后画什么由页面按 `value` 条件渲染）。
+
+```tsx
+const [method, setMethod] = signal("phone");
+<Tabs width="fill" value={method()} onSelect={(e) => setMethod(e.value)}>
+    <Option value="phone" text={t("phone")} />
+    <Option value="email" text={t("email")} />
+</Tabs>
+<Show when={method() === "phone"}>{() => <PhoneField />}</Show>
 ```
 
 `Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
