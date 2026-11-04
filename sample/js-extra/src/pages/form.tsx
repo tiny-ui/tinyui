@@ -1,4 +1,4 @@
-import { BackHandler, Box, Button, Checkbox, CodeField, Column, Icon, Menu, Option, Popover, ref, Row, Select, signal, Text, TextField, TopAppBar, type CodeFieldCommands } from "tinyui-core";
+import { BackHandler, Box, Button, Checkbox, CodeField, Column, Icon, Menu, Option, Popover, ref, Row, Select, Show, signal, Tabs, Text, TextField, TopAppBar, type CodeFieldCommands } from "tinyui-core";
 import { crypto, navigation, ui } from "tinyui-native";
 import visibility from "@material-symbols/svg-400/outlined/visibility.svg";
 import visibilityOff from "@material-symbols/svg-400/outlined/visibility_off.svg";
@@ -12,6 +12,7 @@ const DEMO_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu1h+fpBuEFQ
 
 /** The form pieces a sign-up flow needs: top bar with back and a menu, back guard, checkbox, field adornments, rule popover, code cells, dropdown, inline links, RSA. */
 export default function Form() {
+    const [method, setMethod] = signal("email");
     const [email, setEmail] = signal("");
     const [password, setPassword] = signal("");
     const [shown, setShown] = signal(false);
@@ -57,11 +58,23 @@ export default function Form() {
                     <Checkbox checked={guarded()} />
                     <Text text="Ask before leaving" />
                 </Row>
-                <TextField
-                    width="fill" placeholder="Email" keyboard="email" imeAction="next"
-                    error={emailError()} supportingText={emailError() ? "Not an email address" : ""}
-                    onChange={(e) => setEmail(e.text)}
-                />
+                {/* the tab row only reports the tap; what sits under it is the page's choice by `method` */}
+                <Tabs width="fill" value={method()} onSelect={(e) => setMethod(e.value)}>
+                    <Option value="email" text="Email" />
+                    <Option value="phone" text="Phone" />
+                </Tabs>
+                <Show when={method() === "email"}>
+                    {() => (
+                        <TextField
+                            width="fill" placeholder="Email" keyboard="email" imeAction="next"
+                            error={emailError()} supportingText={emailError() ? "Not an email address" : ""}
+                            onChange={(e) => setEmail(e.text)}
+                        />
+                    )}
+                </Show>
+                <Show when={method() === "phone"}>
+                    {() => <TextField width="fill" placeholder="Phone" keyboard="phone" prefixText="+86" prefixIcon={arrowDown} prefixIconSize={20} prefixBackground="surfaceVariant" onPrefixClick={() => void ui.toast("pick a calling code")} />}
+                </Show>
                 <Box width="fill">
                     <TextField
                         width="fill" placeholder="Password" keyboard="password" secure={!shown()}
@@ -78,7 +91,6 @@ export default function Form() {
                     </Popover>
                 </Box>
                 <Button text="Encrypt password" variant="outlined" onClick={() => void encrypt()} />
-                <TextField width="fill" placeholder="Phone" keyboard="phone" prefixText="+86" prefixIcon={arrowDown} prefixIconSize={20} prefixBackground="surfaceVariant" onPrefixClick={() => void ui.toast("pick a calling code")} />
                 <Row align="center" gap={4} role="checkbox" selected={agreed()} onClick={() => setAgreed(!agreed())}>
                     <Checkbox checked={agreed()} />
                     <Text weight={1} text="I agree to the [Privacy Policy](privacy) and the [Terms of Service](terms)" onLinkClick={(e) => void ui.toast(`open ${e.id}`)} />

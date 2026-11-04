@@ -774,6 +774,8 @@ final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.comp
         final fun <get-Select>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Select.<get-Select>|<get-Select>(){}[0]
     final val Spacer // app.tinyui.components.generated/BuiltinSchemas.Spacer|{}Spacer[0]
         final fun <get-Spacer>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Spacer.<get-Spacer>|<get-Spacer>(){}[0]
+    final val Tabs // app.tinyui.components.generated/BuiltinSchemas.Tabs|{}Tabs[0]
+        final fun <get-Tabs>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Tabs.<get-Tabs>|<get-Tabs>(){}[0]
     final val Text // app.tinyui.components.generated/BuiltinSchemas.Text|{}Text[0]
         final fun <get-Text>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Text.<get-Text>|<get-Text>(){}[0]
     final val TextField // app.tinyui.components.generated/BuiltinSchemas.TextField|{}TextField[0]

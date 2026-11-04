@@ -315,7 +315,7 @@ export interface SelectProps extends LayoutProps {
     children?: Node | Node[];
 }
 
-/** One choice of its parent Select or Menu, which reads these props; renders nothing anywhere else. */
+/** One choice of its parent Select, Menu or Tabs, which reads these props; renders nothing anywhere else. */
 export interface OptionProps {
     value: string;
     text: string;
@@ -371,6 +371,18 @@ export interface MenuProps {
     children?: Node | Node[];
 }
 
+export interface TabsSelectPayload {
+    value: string;
+}
+
+/** M3 primary tab row; the tabs are its `Option` children, sharing the width equally. The selection is the page's: `onSelect` reports the tap, `value` shows it. */
+export interface TabsProps extends LayoutProps {
+    /** value of the selected Option; unset or unmatched selects none (not `selected`, the common selectable-container prop) */
+    value?: string;
+    onSelect?: (e: TabsSelectPayload) => void;
+    children?: Node | Node[];
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -393,6 +405,7 @@ export interface IntrinsicElements {
     TopAppBar: TopAppBarProps;
     BackHandler: BackHandlerProps;
     Menu: MenuProps;
+    Tabs: TabsProps;
 }
 
 export const Column = "Column";
@@ -416,3 +429,4 @@ export const Popover = "Popover";
 export const TopAppBar = "TopAppBar";
 export const BackHandler = "BackHandler";
 export const Menu = "Menu";
+export const Tabs = "Tabs";
