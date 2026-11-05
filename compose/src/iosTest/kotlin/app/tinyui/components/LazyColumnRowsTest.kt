@@ -10,6 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -82,5 +83,20 @@ class LazyColumnRowsTest {
         onNodeWithText("row 3").assertExists()
         onNodeWithText("row 4").assertDoesNotExist()
         onNodeWithText("row 11").assertDoesNotExist()
+    }
+
+    /** `jumpTo` brings a far row into view at once. */
+    @Test
+    fun jumpToShowsAFarRow() = runComposeUiTest {
+        val rows = (2..61).joinToString("") { id -> """["c",$id,"Text"],["p",$id,"text","row $id"],["i",1,$id,${id - 2}],""" }
+        tree.apply("""[["c",1,"LazyColumn"],["p",1,"width",360],["p",1,"height",200],$rows["i",0,1,0]]""")
+        setContent { MaterialTheme { Box { registry.Render(tree.node(1)!!.type, scopeOf(tree.node(1)!!)) } } }
+        waitForIdle()
+        onNodeWithText("row 50").assertDoesNotExist()
+        tree.apply("""[["x",1,"jumpTo",{"index":48}]]""")
+        waitForIdle()
+        assertTrue(problems.isEmpty(), problems.toString())
+        onNodeWithText("row 50").assertIsDisplayed()
+        onNodeWithText("row 2").assertDoesNotExist()
     }
 }

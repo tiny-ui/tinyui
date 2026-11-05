@@ -192,11 +192,18 @@ export interface LazyColumnScrollEndPayload {
 }
 
 export interface LazyColumnScrollToArgs {
+    /** child to bring to the top, animated */
+    index: number;
+}
+
+export interface LazyColumnJumpToArgs {
+    /** child to bring to the top at once, without animation */
     index: number;
 }
 
 export type LazyColumnCommands = {
     scrollTo: LazyColumnScrollToArgs;
+    jumpTo: LazyColumnJumpToArgs;
 };
 
 /** Virtualised vertical list; children are usually a <For>. */
@@ -315,7 +322,7 @@ export interface SelectProps extends LayoutProps {
     children?: Node | Node[];
 }
 
-/** One choice of its parent Select, Menu or Tabs, which reads these props; renders nothing anywhere else. */
+/** One choice of its parent Select, Menu, Tabs or IndexBar, which reads these props; renders nothing anywhere else. */
 export interface OptionProps {
     value: string;
     text: string;
@@ -383,6 +390,19 @@ export interface TabsProps extends LayoutProps {
     children?: Node | Node[];
 }
 
+export interface IndexBarSelectPayload {
+    /** the Option the finger reached: once on touch down, then each time it moves onto another */
+    value: string;
+}
+
+/** A vertical strip of short labels beside a long list (the A–Z of a contact list); the labels are its `Option` children. A tap or a slide over it reports each label the finger reaches; scrolling the list is the page's. */
+export interface IndexBarProps extends LayoutProps {
+    /** value of the highlighted Option, usually the section the list is at; unset or unmatched highlights none */
+    value?: string;
+    onSelect?: (e: IndexBarSelectPayload) => void;
+    children?: Node | Node[];
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -406,6 +426,7 @@ export interface IntrinsicElements {
     BackHandler: BackHandlerProps;
     Menu: MenuProps;
     Tabs: TabsProps;
+    IndexBar: IndexBarProps;
 }
 
 export const Column = "Column";
@@ -430,3 +451,4 @@ export const TopAppBar = "TopAppBar";
 export const BackHandler = "BackHandler";
 export const Menu = "Menu";
 export const Tabs = "Tabs";
+export const IndexBar = "IndexBar";

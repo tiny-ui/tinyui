@@ -5,6 +5,16 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -252,7 +262,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
     register(BuiltinSchemas.CodeField) { scope -> CodeFieldComponent(scope) }
     register(BuiltinSchemas.Select) { scope -> SelectComponent(scope) }
-    // data for its Select / Menu / Tabs, never drawn
+    // data for its Select / Menu / Tabs / IndexBar, never drawn
     register(BuiltinSchemas.Option) { }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
@@ -267,6 +277,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.BackHandler) { scope -> BackHandlerComponent(scope) }
     register(BuiltinSchemas.Menu) { scope -> MenuComponent(scope) }
     register(BuiltinSchemas.Tabs) { scope -> TabsComponent(scope) }
+    register(BuiltinSchemas.IndexBar) { scope -> IndexBarComponent(scope) }
     register(BuiltinSchemas.Divider) { scope ->
         HorizontalDivider(
             modifier = scope.modifier(),
@@ -699,7 +710,11 @@ private fun LazyColumnComponent(scope: NodeScope) {
     val state = retain { LazyListState() }
     val node = scope.node
     scope.Commands { command ->
-        if (command.name == "scrollTo") state.animateScrollToItem(((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1)))
+        val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1))
+        when (command.name) {
+            "scrollTo" -> state.animateScrollToItem(index)
+            "jumpTo" -> state.scrollToItem(index)
+        }
     }
     // with the scroll position: a list coming back still at its end has already reported that length
     val reachedEnd = retain { ReachedEnd() }
@@ -915,6 +930,80 @@ private fun TabsComponent(scope: NodeScope) {
                 // M3's inactive label is onSurfaceVariant (primary-navigation-tab tokens); Compose's Tab defaults it to the active color
                 unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** An index label's circle, and the height of the cell it sits in when the bar has all the room it wants. */
+private val IndexLabelSize = 16.dp
+private val IndexLabelPitch = 20.dp
+
+/**
+ * A strip of labels, one cell each. Which cell the finger is on is tracked here, at frame rate, and reported each time
+ * it changes (docs/adr-004 §3.1: a continuous gesture crosses the bridge at thresholds only); the page hears of it a
+ * transaction later and moves its list. The highlight is the cell under the finger while it is down, the page's `value`
+ * otherwise. Neither Compose nor M3 has this component: the sizes are the framework's, the colours the theme's.
+ */
+@Composable
+private fun IndexBarComponent(scope: NodeScope) {
+    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val current = rememberUpdatedState(options)
+    val value = scope.get<String>("value")
+    var pressed by remember { mutableStateOf<Int?>(null) }
+    val highlighted = pressed ?: options.indexOfFirst { it.first == value }
+    fun select(index: Int) {
+        val option = current.value.getOrNull(index) ?: return
+        if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", option.first))
+    }
+    Layout(
+        content = {
+            for ((index, option) in options.withIndex()) {
+                val on = index == highlighted
+                Box(
+                    Modifier.size(IndexLabelSize)
+                        .then(if (on) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
+                        // the gesture is the strip's; this is the same action for a screen reader
+                        .semantics(mergeDescendants = true) { role = Role.Button; selected = on; onClick { select(index); true } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        option.second,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
+        },
+        // everything is consumed: inside a sheet or a pager a slide along the bar must not drag the container
+        modifier = scope.modifier(clickable = false).pointerInput(Unit) {
+            awaitEachGesture {
+                fun reach(y: Float) {
+                    val count = current.value.size
+                    if (count == 0 || size.height == 0) return
+                    val index = (y / size.height * count).toInt().coerceIn(0, count - 1)
+                    if (index != pressed) { pressed = index; select(index) }
+                }
+                val down = awaitFirstDown()
+                down.consume()
+                try {
+                    reach(down.position.y)
+                    drag(down.id) { change -> change.consume(); reach(change.position.y) }
+                } finally {
+                    pressed = null
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        val label = IndexLabelSize.roundToPx()
+        val placeables = measurables.map { it.measure(Constraints.fixed(label, label)) }
+        val width = label.coerceIn(constraints.minWidth, maxOf(constraints.minWidth, constraints.maxWidth))
+        // a cell per label, squeezed evenly when there is less room than the bar wants, spread when the page gives it more
+        val height = (IndexLabelPitch.roundToPx() * placeables.size).coerceIn(constraints.minHeight, maxOf(constraints.minHeight, constraints.maxHeight))
+        val cell = if (placeables.isEmpty()) 0f else height.toFloat() / placeables.size
+        layout(width, height) {
+            placeables.forEachIndexed { index, placeable -> placeable.place((width - label) / 2, (index * cell + (cell - label) / 2).toInt()) }
         }
     }
 }
