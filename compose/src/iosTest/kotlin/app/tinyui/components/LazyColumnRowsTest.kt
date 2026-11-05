@@ -85,6 +85,36 @@ class LazyColumnRowsTest {
         onNodeWithText("row 11").assertDoesNotExist()
     }
 
+    /**
+     * A row appended and scrolled to in the same flush is reached: the command runs once the flush is applied, before
+     * the recomposition it causes, and the list must already know the new row by then (docs/components.md §4).
+     */
+    @Test
+    fun aRowAppendedAndScrolledToInOneFlushIsReached() = runComposeUiTest {
+        val rows = (2..31).joinToString("") { id -> """["c",$id,"Text"],["p",$id,"text","row $id"],["i",1,$id,${id - 2}],""" }
+        tree.apply("""[["c",1,"LazyColumn"],["p",1,"width",360],["p",1,"height",200],$rows["i",0,1,0]]""")
+        setContent { MaterialTheme { Box { registry.Render(tree.node(1)!!.type, scopeOf(tree.node(1)!!)) } } }
+        waitForIdle()
+        tree.apply("""[["c",99,"Text"],["p",99,"text","row 99"],["i",1,99,30],["x",1,"scrollTo",{"index":30}]]""")
+        waitForIdle()
+        assertTrue(problems.isEmpty(), problems.toString())
+        onNodeWithText("row 99").assertIsDisplayed()
+    }
+
+    /** The same for `jumpTo`, which has no animation frames in which a later recomposition could still bring the row in. */
+    @Test
+    fun aRowAppendedAndJumpedToInOneFlushIsReached() = runComposeUiTest {
+        val rows = (2..31).joinToString("") { id -> """["c",$id,"Text"],["p",$id,"text","row $id"],["i",1,$id,${id - 2}],""" }
+        tree.apply("""[["c",1,"LazyColumn"],["p",1,"width",360],["p",1,"height",200],$rows["i",0,1,0]]""")
+        setContent { MaterialTheme { Box { registry.Render(tree.node(1)!!.type, scopeOf(tree.node(1)!!)) } } }
+        waitForIdle()
+        tree.apply("""[["c",99,"Text"],["p",99,"text","row 99"],["i",1,99,30],["x",1,"jumpTo",{"index":30}]]""")
+        waitForIdle()
+        assertTrue(problems.isEmpty(), problems.toString())
+        onNodeWithText("row 99").assertIsDisplayed()
+        onNodeWithText("row 2").assertDoesNotExist()
+    }
+
     /** `jumpTo` brings a far row into view at once. */
     @Test
     fun jumpToShowsAFarRow() = runComposeUiTest {

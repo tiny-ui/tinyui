@@ -740,10 +740,13 @@ private fun LazyColumnComponent(scope: NodeScope) {
         }
     }
     val gap = scope.get<Dp>("gap") ?: 0.dp
-    // the rows as of this composition, not the live list: the lazy list takes the count once per measure pass and then
-    // asks for each row by index, outside any snapshot, while the engine thread may apply the next patch in between
-    val rows = node.children.toList()
     LazyColumn(state = state, modifier = scope.modifier(), verticalArrangement = if (gap > 0.dp) Arrangement.spacedBy(gap) else Arrangement.Top) {
+        // one immutable copy of the rows per item provider, not the live list: a measure pass takes its provider once,
+        // then asks it for the count and for each row by index, outside any snapshot, while the engine thread may apply
+        // the next patch in between. Taken in here rather than in the composition: this block is the provider's derived
+        // state, recomputed at the next measure after the rows change, so a command of the same flush (which runs
+        // before the recomposition that flush causes) already finds the new rows
+        val rows = node.children.toList()
         items(rows, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
     }
 }
