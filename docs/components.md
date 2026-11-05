@@ -208,7 +208,7 @@ const [method, setMethod] = signal("phone");
 
 `IndexBar` 是长列表旁的一条索引（2026-11-05 加，登录流程的手机区号选择触发：按首字母分组的列表，右侧 A–Z，点按或上下滑动跳到对应分组）。标签是 `Option` children，与 `Select` / `Menu` / `Tabs` 同一份数据写法。它是第一个内置的连续手势组件（ADR-004 §3.1 的「连续」类）：手指在哪一格由 Kotlin 逐帧跟踪，**只在换格时过桥**——按下报一次，之后每移到另一个标签报一次 `onSelect`，一次滑动最多报标签数那么多次。报的是手指**现在所在**的标签：快速滑动时一次移动跨过几格，只报落点、不补报中间的——页面拿它去滚列表，补报只会让列表多跳到手指已经离开的分组（iOS 的列表索引同样只认当前触点）；页面在里面给列表发 `jumpTo`（不带动画，手指扫过一串字母时带动画的 `scrollTo` 会排队追不上）。它不认识列表：滚哪个列表、标签对应第几行、没有对应分组的标签落到哪，都是页面的事。
 
-高亮分两段：手指按着时亮手指下面那一格（Kotlin 自己的状态，跟手），抬起后回到页面的 `value`——通常是列表当前所在的分组，页面在 `onSelect` 与 `LazyColumn` 的 `onScrollEnd` 里更新它；不设就不亮。Compose 与 M3 都没有对应组件，它和 `CodeField` 一样是框架自绘的：标签 16dp 圆、`bodySmall` 字、`onSurfaceVariant` 色，高亮是 `primary` 圆底 `onPrimary` 字；每个标签占 20dp 高的一格，放不下时各格等比收窄（标签会相互压住，但每格仍对应自己的标签），页面给了更高的 `height` 时等比拉开。触摸区就是组件自己的盒子，圆点在其中水平居中：想要比 16dp 更宽的触摸条，给它一个 `width`。条上的触摸全部消费掉，放在 `BottomSheet` 里上下滑不会拖动弹层。读屏把每个标签当一个按钮。不做：按压时的放大气泡、触感反馈、横向索引。
+高亮分两段：手指按着时亮手指下面那一格（Kotlin 自己的状态，跟手），抬起后回到页面的 `value`——通常是列表当前所在的分组，页面在 `onSelect` 与 `LazyColumn` 的 `onScrollEnd` 里更新它；不设就不亮。Compose 与 M3 都没有对应组件，它和 `CodeField` 一样是框架自绘的：标签 16dp 圆、`bodySmall` 字、`onSurfaceVariant` 色，高亮是 `primary` 圆底 `onPrimary` 字；每个标签占 20dp 高的一格，放不下时各格等比收窄（标签会相互压住，但每格仍对应自己的标签），页面给了更高的 `height` 时等比拉开。触摸区就是组件自己的盒子，圆点在其中水平居中：想要比 16dp 更宽的触摸条，给它一个 `width`；`padding` 在这条之外，是留白、不算触摸区（标签与手势一起内移）。`invisible` 时手势不挂，隐形的索引条不接触摸。条上的触摸全部消费掉，放在 `BottomSheet` 里上下滑不会拖动弹层。读屏把每个标签当一个按钮。不做：按压时的放大气泡、触感反馈、横向索引。
 
 ```tsx
 const list = ref<LazyColumnCommands>();
@@ -227,7 +227,7 @@ const [section, setSection] = signal("A");
 
 ## 4. 命令怎么消费
 
-命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。
+命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。滚动命令不排队等前一个的动画：后到的接手，最后一条说了算（`scrollTo` 的动画还在跑时来了 `jumpTo`，当场跳过去）。
 
 **处理器要在执行时读 props**：命令在它那批 flush 提交后送达，但早于这批引起的重组。处理器若用组合期捕获的值（`val maxLength = scope.get(...)` 再闭包进去），同一批里改 prop 又发命令时就用了旧值。`TextField.setText` 裁剪、`CodeField.setText` 取位数都在处理器里现读 `scope.get`，自定义组件照此办。
 

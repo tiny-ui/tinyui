@@ -2,6 +2,7 @@ package app.tinyui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -18,7 +19,9 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.tinyui.invisible
 import app.tinyui.node.NodeTree
 import app.tinyui.node.PatchProblem
 import app.tinyui.node.UINode
@@ -48,6 +51,9 @@ class IndexBarTest {
             var m = LocalChildModifier.current
             (get<SizeValue>("width") as? SizeValue.Fixed)?.let { m = m.width(it.dp) }
             (get<SizeValue>("height") as? SizeValue.Fixed)?.let { m = m.height(it.dp) }
+            // the two common props the gesture's place in the modifier chain matters for, in the page's order (docs/components.md §2)
+            if (get<Boolean>("invisible") == true) m = m.invisible()
+            get<Dp>("paddingVertical")?.let { m = m.padding(vertical = it) }
             return m
         }
         @Composable override fun Children() = Children { Modifier }
@@ -66,6 +72,9 @@ class IndexBarTest {
         assertTrue(problems.isEmpty(), problems.toString())
         block()
     }
+
+    /** What the page hears for these labels, in order: the event by name and its whole payload. */
+    private fun selected(vararg labels: String) = labels.map { "onSelect" to """{"value":"$it"}""" }
 
     private fun ComposeUiTest.centerOf(label: String): Offset = onNodeWithText(label).getUnclippedBoundsInRoot().let {
         with(density) { Offset(((it.left + it.right) / 2).toPx(), ((it.top + it.bottom) / 2).toPx()) }
@@ -93,7 +102,7 @@ class IndexBarTest {
         val (a, b, c) = listOf("A", "B", "C").map { centerOf(it) }
         onRoot().performTouchInput { down(a); moveTo(Offset(a.x, a.y + 1f)); moveTo(b) }
         waitForIdle()
-        assertEquals(listOf("A", "B"), dispatched.map { it.second.substringAfter(":\"").substringBefore("\"") })
+        assertEquals(selected("A", "B"), dispatched)
         onNodeWithText("B").assertIsSelected()
         onRoot().performTouchInput { moveTo(c); moveTo(Offset(c.x, c.y + 1f)) }
         waitForIdle()
@@ -101,7 +110,7 @@ class IndexBarTest {
         onNodeWithText("B").assertIsNotSelected()
         onRoot().performTouchInput { up() }
         waitForIdle()
-        assertEquals(listOf("A", "B", "C"), dispatched.map { it.second.substringAfter(":\"").substringBefore("\"") })
+        assertEquals(selected("A", "B", "C"), dispatched)
         onNodeWithText("B").assertIsSelected()
     }
 
@@ -112,7 +121,7 @@ class IndexBarTest {
         val c = centerOf("C")
         onRoot().performTouchInput { down(a); moveTo(c); up() }
         waitForIdle()
-        assertEquals(listOf("A", "C"), dispatched.map { it.second.substringAfter(":\"").substringBefore("\"") })
+        assertEquals(selected("A", "C"), dispatched)
     }
 
     private fun ComposeUiTest.middleOf(label: String) = onNodeWithText(label).getUnclippedBoundsInRoot().let { (it.top + it.bottom) / 2 }
@@ -130,5 +139,27 @@ class IndexBarTest {
         onRoot().performTouchInput { down(Offset(centerOf("C").x, with(density) { 28.dp.toPx() })); up() }
         waitForIdle()
         assertEquals(listOf("onSelect" to """{"value":"C"}"""), dispatched)
+    }
+
+    /** `invisible` hides the gesture with the rest: a touch on a hidden bar reports nothing. */
+    @Test
+    fun anInvisibleBarTakesNoTouch() = bar(props = """["p",1,"invisible",true],""") {
+        onRoot().performTouchInput { down(Offset(8.dp.toPx(), 30.dp.toPx())); moveBy(Offset(0f, 20.dp.toPx())); up() }
+        waitForIdle()
+        assertEquals(emptyList(), dispatched)
+    }
+
+    /** Padding is outside the strip: the labels and the gesture move in together, so a label still answers at its own place. */
+    @Test
+    fun paddingMovesTheLabelsAndTheGestureTogether() = bar(props = """["p",1,"paddingVertical",30],""") {
+        assertEquals(40.dp, middleOf("A"))
+        onNodeWithText("C").performClick()
+        waitForIdle()
+        assertEquals(selected("C"), dispatched)
+        // the padding itself is not part of the strip
+        dispatched.clear()
+        onRoot().performTouchInput { down(Offset(8.dp.toPx(), 10.dp.toPx())); up() }
+        waitForIdle()
+        assertEquals(emptyList(), dispatched)
     }
 }

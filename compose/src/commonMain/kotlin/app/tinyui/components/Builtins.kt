@@ -93,6 +93,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
@@ -148,6 +149,8 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -709,11 +712,16 @@ internal fun markedText(text: String, linkStyles: TextLinkStyles, onLink: ((Stri
 private fun LazyColumnComponent(scope: NodeScope) {
     val state = retain { LazyListState() }
     val node = scope.node
+    // each scroll in a job of its own, started where the command is taken so they begin in order. A command must not
+    // wait for the animation of the one before it: the list's scroll mutex hands over to the later one, the last
+    // command wins. And a scroll that is interrupted (by that later command, by the user's finger) ends with a
+    // cancellation, which must end that scroll only, not the loop that takes commands
+    val scrolls = rememberCoroutineScope()
     scope.Commands { command ->
         val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1))
         when (command.name) {
-            "scrollTo" -> state.animateScrollToItem(index)
-            "jumpTo" -> state.scrollToItem(index)
+            "scrollTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.animateScrollToItem(index) }
+            "jumpTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.scrollToItem(index) }
         }
     }
     // with the scroll position: a list coming back still at its end has already reported that length
@@ -980,8 +988,10 @@ private fun IndexBarComponent(scope: NodeScope) {
                 }
             }
         },
-        // everything is consumed: inside a sheet or a pager a slide along the bar must not drag the container
-        modifier = scope.modifier(clickable = false).pointerInput(Unit) {
+        // everything is consumed: inside a sheet or a pager a slide along the bar must not drag the container.
+        // Not attached while `invisible`, like the common click: the empty clip that prop adds keeps touches from the
+        // children of a node, not from a gesture on the node itself
+        modifier = if (scope.get<Boolean>("invisible") == true) scope.modifier(clickable = false) else scope.modifier(clickable = false).pointerInput(Unit) {
             awaitEachGesture {
                 fun reach(y: Float) {
                     val count = current.value.size
