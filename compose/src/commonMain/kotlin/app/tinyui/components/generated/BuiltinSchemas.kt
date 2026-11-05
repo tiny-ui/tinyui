@@ -395,7 +395,38 @@ object BuiltinSchemas {
         intrinsics = true,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs)
+    val SectionHeader = ComponentSchema(
+        type = "SectionHeader",
+        props = mapOf(
+            "index" to PropSpec.Str(default = null, required = false, initial = false),
+            "sticky" to PropSpec.Bool(default = true, required = false, initial = false),
+            "align" to PropSpec.Enum(values = setOf("topStart", "topCenter", "topEnd", "centerStart", "center", "centerEnd", "bottomStart", "bottomCenter", "bottomEnd"), default = "topStart", required = false, initial = false),
+        ),
+        events = mapOf(
+            "onClick" to emptyMap(),
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = true,
+        intrinsics = true,
+    )
+
+    val IndexBar = ComponentSchema(
+        type = "IndexBar",
+        props = mapOf(
+            "label" to PropSpec.Str(default = null, required = false, initial = false),
+        ),
+        events = mapOf(
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = false,
+        intrinsics = true,
+    )
+
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs, SectionHeader, IndexBar)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")

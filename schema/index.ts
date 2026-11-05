@@ -22,5 +22,7 @@ import TopAppBar from "./components/top-app-bar.ts";
 import BackHandler from "./components/back-handler.ts";
 import Menu from "./components/menu.ts";
 import Tabs from "./components/tabs.ts";
+import SectionHeader from "./components/section-header.ts";
+import IndexBar from "./components/index-bar.ts";
 
-export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs];
+export default [Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs, SectionHeader, IndexBar];

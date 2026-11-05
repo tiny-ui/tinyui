@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）与 `jumpTo`
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -26,7 +26,7 @@ defineComponent("TextField", {
     events: { onChange: { text: field.string() } },
     commands: { setText: { text: field.string() }, focus: {} },
     children: false,   // 是否接受 children
-    layout: true,      // 是否接受公共布局 prop，默认 true；false 即不占父容器版面（Menu / Popover / BottomSheet / Option / BackHandler），Row / Column 的 gap 不计它
+    layout: true,      // 是否接受公共布局 prop，默认 true；false 即不占父容器版面（Menu / Popover / BottomSheet / Option / BackHandler / IndexBar），Row / Column 的 gap 不计它
 });
 ```
 
@@ -79,7 +79,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|
-| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` 不计）、`align`（交叉轴 start / center / end / stretch）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
+| `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` / `IndexBar` 不计）、`align`（交叉轴 start / center / end / stretch）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
 | `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick`、`onLinkClick{id}`（给了它，`text` 里的 `[文案](id)` 渲染成链接；`**文案**` 渲染成粗体，不需要事件） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
@@ -88,8 +88,10 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`prefixIcon`（`icon` 类型）、`trailingIconSize`（dp，同 `prefixIconSize`）、`prefixIconSize`（dp，不设用图标自带的 24dp）、`prefixBackground`（颜色）、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限）、`autofill`（oneTimeCode；不设交给系统） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
-| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu` 与 `Tabs` 读它 | | | |
-| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}`（带动画）、`jumpTo{index}`（一步到位） | 是，通常是一个 `<For>` |
+| `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu`、`Tabs` 与 `IndexBar` 读它 | | | |
+| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}`（带动画）、`jumpTo{index}`（一步到位） | 是，通常是一个 `<For>`；`SectionHeader` 是吸顶的行，`IndexBar` 不是行 |
+| `SectionHeader` | `index`（这一组在 `IndexBar` 上的标签值，不设就不进索引）、`sticky`（默认 true）、`align`（同 `Box`） | `onClick` | | 是：标题的内容 |
+| `IndexBar` | `label`（读屏念的名字）；不接受布局 prop；只在 `LazyColumn` 的直接 children 里起作用 | | | 是：`Option`，不写就取各 `SectionHeader` 的 `index` |
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
@@ -103,7 +105,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 `align="stretch"`（2026-11-02 加，注册流程触发：验证码输入框与「重新发送」等高）与 CSS `align-items: stretch`、Flutter `CrossAxisAlignment.stretch` 同义：占版面、且没设交叉轴尺寸的子节点撑满容器的交叉轴（Row 撑高、Column 撑宽）；设了 `height` / `width` 的子节点（含 `wrap`）保持自己的，和 CSS 一样。**一个 M3 的边角**（2026-11-03）：stretch 靠 intrinsic 测量问子节点「最矮多矮」，M3 `OutlinedTextField` 内部的 `defaultMinSize(56dp)` 在 intrinsic 里无条件答 56，宿主经 `TinyUIDefaults.textField.minHeight` 给的更矮高度盖不过它（正常测量盖得过）；所以 `TextField` 所在的行不要用 stretch 对齐高度，旁边的节点直接给和输入框一样的 `height`。容器的交叉轴是固定值或 `fill` 时只是撑满；否则容器先按子节点定自己的尺寸——Row 取最高的子节点（Compose `IntrinsicSize.Min`），Column 取最宽的（`IntrinsicSize.Max`）——这要对整棵子树做固有尺寸测量，多测一遍，所以缺省仍是 `start`，不像 CSS 那样默认拉伸。回答不了固有尺寸的组件（schema `intrinsics: false`，内置只有 `LazyColumn`；宿主组件基于 `SubcomposeLayout` 的也要这样声明）在子树里时，问它会让整页崩溃，所以框架放弃拉伸、按 E5 上报（`NodeScope.reportProblem`），页面仍画出来；给容器一个固定交叉轴尺寸就不需要测量。宽高都固定的节点由尺寸直接作答、内容不会被问，所以放在这样的盒子里的 `LazyColumn` 不算（只固定一个轴不够：嵌套的 Row 分配空间时会问子节点的固有宽度）。子树是逐层读的，任何一层后来插进这样的组件，容器都会重新检查。
 
-`RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`onChange` 报的是文本的每一次变化，不问是谁改的——用户敲的、`setText` 设的、`maxLength` 调低裁掉的都报，同样的文本再设一次不报（2026-11-03 改；此前 `setText` 无条件报一次，`CodeField.setText` 仍是无条件）。顺序有保证：`onCommit` 之前一定先报完 `onChange`，`setText` 当场报；用户连续敲的字经 state 观察送达，同一次调度里的多次变化只报最后一次——`onChange` 说的是「现在是什么」，不是每一次按键。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。列表每次测量拿一份不可变的行，不读活的 children：惰性列表一次测量先取行数、再按下标逐行要，测量不在快照里，引擎线程此时应用下一批 patch（搜索框一边输入一边筛掉大半行）会让下标越界。这一份在行变了之后的下一次测量就换新，不等重组——同一 flush 里「加行并滚过去」的命令早于重组执行（§4），那时列表已经认得新行。
+`RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`onChange` 报的是文本的每一次变化，不问是谁改的——用户敲的、`setText` 设的、`maxLength` 调低裁掉的都报，同样的文本再设一次不报（2026-11-03 改；此前 `setText` 无条件报一次，`CodeField.setText` 仍是无条件）。顺序有保证：`onCommit` 之前一定先报完 `onChange`，`setText` 当场报；用户连续敲的字经 state 观察送达，同一次调度里的多次变化只报最后一次——`onChange` 说的是「现在是什么」，不是每一次按键。`LazyColumn` 的行就是它的 children（`IndexBar` 除外，见下），虚拟化只在组合层（ADR-003 §3.6）。列表每次测量拿一份不可变的行，不读活的 children：惰性列表一次测量先取行数、再按下标逐行要，测量不在快照里，引擎线程此时应用下一批 patch（搜索框一边输入一边筛掉大半行）会让下标越界。这一份在行变了之后的下一次测量就换新，不等重组——同一 flush 里「加行并滚过去」的命令早于重组执行（§4），那时列表已经认得新行。
 
 `Text` 的行内标记（2026-11-03 加 `**粗体**`，注册流程触发：协议句里的链接半粗、激活提示里的邮箱与分钟数加粗）：`[文案](id)` 链接与 `**文案**` 粗体，就是 SwiftUI `Text` 读的那个 Markdown 子集，扁平、不嵌套，落单的标记按字面显示。选字符串内标记而不是拆成多个节点，是为了翻译：译者拿整句，加粗位置随语序走。渲染走 Compose 的 `AnnotatedString`：粗体是 `SpanStyle(fontWeight)`，链接是 `LinkAnnotation` + `TextLinkStyles`。链接长什么样归宿主（§6 `TinyUIDefaults.textLinks`），页面只写语义；文案里字面量 `**` 目前不支持转义，需要时再加。
 
@@ -203,6 +205,35 @@ const [method, setMethod] = signal("phone");
     <Option value="email" text={t("email")} />
 </Tabs>
 <Show when={method() === "phone"}>{() => <PhoneField />}</Show>
+```
+
+`LazyColumn` 的分组（2026-11-05 加，登录流程的手机区号选择触发：按首字母分组的长列表，标题吸顶，右侧 A–Z 索引条点按或滑动跳到对应分组）。分组的知识在列表里，所以分组归列表，页面不接线：
+
+- **`SectionHeader`** 是一组行的标题：在 `LazyColumn` 里它是吸顶的行（Compose 的 `stickyHeader`），这一组的行从它下面滚过，下一组的标题把它顶走；放在别处、或 `sticky={false}` 时就是一个 `Box`（`align` 与公共布局 prop 都认）。吸顶时行在它底下，页面要给它不透明的 `background`。children 仍是扁平的：标题与行是兄弟，不是标题包住行——`For` 的增删改、命令与事件里的下标都不用换算，页面本来也是把分组摊平成一个行数组（Compose `stickyHeader`、Vant 的 `IndexAnchor` 同此；SwiftUI / UIKit 是分组包住行）。
+- **`IndexBar`** 是列表旁的索引条。它是独立组件而不是 `LazyColumn` 的 prop：Compose 与 M3 的列表都没有它，它有自己的外观、标签与读屏行为，做成 prop 会让一个通用列表永久背上一组只有少数页面用的属性。绑定靠位置，与 `Popover` / `Menu`「放进它依附的节点里」同一个习惯：**写成 `LazyColumn` 的直接子节点，它就是这个列表的索引条**，浮在列表末端一侧、垂直居中；放在别处不渲染并按 E5 上报。标签是 `Option` children（`value` 对应 `SectionHeader` 的 `index`），不写就按各标题的 `index` 依次生成；显隐用 `Show`。
+- **`IndexBar` 不是行**：它不随内容滚动、不被虚拟化、不占 `gap`，`scrollTo` / `jumpTo` / `onScrollEnd` 的下标与 `onReachEnd` 的行数都不计它——页面行数组的第 i 项就是列表的第 i 行。其他不占版面的子节点（`BottomSheet` 等）在 `LazyColumn` 里仍按行算，与此前相同。
+
+索引条的行为全在 Kotlin 里（ADR-004 §3.1 的「连续」类，一次桥都不过）：手指按下或滑到一个标签，列表当场跳到 `index` 等于它的那个标题；没有对应分组的标签落到标签表里排在它后面、最近的有分组的标签，后面没有就落到最后一组。亮着的标签是手指下面那个，手指抬起后是列表当前所在的分组，随滚动实时更新；当前分组不在标签表里时不亮。Compose 与 M3 都没有对应组件，它和 `CodeField` 一样是框架自绘的：标签 16dp 圆、`bodySmall` 字、`onSurfaceVariant` 色，高亮 `primary` 圆底 `onPrimary` 字，每标签 20dp 一格，触摸条宽 40dp；条上的触摸全部消费，放在 `BottomSheet` 里滑动不会拖动弹层。放不下时（每格不足标签自身的 16dp，比如键盘弹起）整条不显示，不把标签挤到看不清。读屏把整条当一个可调节的元素（念 `label` 与当前分组，上下调节换组），不是二十几个按钮。不做：按压时的放大气泡、触感反馈、横向索引、分组变化的事件。
+
+`scrollTo` / `jumpTo` 到一行时，这一行不会被它那组吸顶的标题盖住：列表让出标题的高度。索引条出现过的列表外面多一层放它的容器，之后隐藏再显示（搜索时）不会重建行；从没有过索引条的列表与此前逐节点相同。
+
+```tsx
+<LazyColumn width="fill" weight={1}>
+    <Show when={keyword() === ""}>
+        {() => (
+            <IndexBar label={t("index")}>
+                <For each={LETTERS} key={(l) => l}>{(l) => <Option value={l()} text={l()} />}</For>
+            </IndexBar>
+        )}
+    </Show>
+    <For each={rows()} key={(row) => row.key}>
+        {(row) => row().kind === "header"
+            ? <SectionHeader index={row().title} height={36} paddingHorizontal={16} background="surfaceVariant" align="centerStart">
+                  <Text text={row().title} style="bodySmall" />
+              </SectionHeader>
+            : <ContactRow contact={row().contact} />}
+    </For>
+</LazyColumn>
 ```
 
 `Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
