@@ -160,6 +160,7 @@ object BuiltinSchemas {
         ),
         commands = mapOf(
             "scrollTo" to mapOf("index" to FieldSpec.Num),
+            "jumpTo" to mapOf("index" to FieldSpec.Num),
         ),
         children = true,
         layout = true,

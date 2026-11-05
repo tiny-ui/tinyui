@@ -89,7 +89,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu` 与 `Tabs` 读它 | | | |
-| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
+| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}`（带动画）、`jumpTo{index}`（一步到位） | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
@@ -211,7 +211,7 @@ const [method, setMethod] = signal("phone");
 
 ## 4. 命令怎么消费
 
-命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。
+命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。滚动命令不排队等前一个的动画：后到的接手，最后一条说了算（`scrollTo` 的动画还在跑时来了 `jumpTo`，当场跳过去）。
 
 **处理器要在执行时读 props**：命令在它那批 flush 提交后送达，但早于这批引起的重组。处理器若用组合期捕获的值（`val maxLength = scope.get(...)` 再闭包进去），同一批里改 prop 又发命令时就用了旧值。`TextField.setText` 裁剪、`CodeField.setText` 取位数都在处理器里现读 `scope.get`，自定义组件照此办。
 
