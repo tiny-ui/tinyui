@@ -73,9 +73,12 @@ class LazyColumnSectionsTest {
 
     private val BAR = 900
 
-    /** The IndexBar node with these labels as Options (none: the bar takes its labels from the headers). */
-    private fun bar(vararg labels: String) = """["c",$BAR,"IndexBar"],["p",$BAR,"label","Index"],""" +
-        labels.mapIndexed { i, l -> """["c",${901 + i},"Option"],["p",${901 + i},"value","$l"],["p",${901 + i},"text","$l"],["i",$BAR,${901 + i},$i],""" }.joinToString("")
+    /**
+     * The IndexBar node with these labels as Options (none: the bar takes its labels from the headers). A label is the
+     * Option's value, shown as "Label <value>": what the strip shows is not what it matches a header's `index` with.
+     */
+    private fun bar(vararg labels: String, id: Int = BAR) = """["c",$id,"IndexBar"],["p",$id,"label","Index"],""" +
+        labels.mapIndexed { i, l -> """["c",${id + 1 + i},"Option"],["p",${id + 1 + i},"value","$l"],["p",${id + 1 + i},"text","Label $l"],["i",$id,${id + 1 + i},$i],""" }.joinToString("")
 
     /**
      * A 360 × [height] list of three groups, A, B and D: a 30dp header "Group X" and six 40dp rows "x1"…"x6" each, so
@@ -109,7 +112,8 @@ class LazyColumnSectionsTest {
     }
 
     private fun ComposeUiTest.top(text: String) = onNodeWithText(text).getUnclippedBoundsInRoot().top
-    private fun ComposeUiTest.bottom(text: String) = onNodeWithText(text).getUnclippedBoundsInRoot().bottom
+    /** Where the header titled [text] ends: its text sits at its top, the header itself is [height] tall (30 unless a test changed it). */
+    private fun ComposeUiTest.under(text: String, height: Int = 30) = top(text) + height.dp
     private fun ComposeUiTest.strip() = onNode(hasContentDescription("Index"))
     private fun at(label: String) = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, label)
 
@@ -125,12 +129,12 @@ class LazyColumnSectionsTest {
         jumpTo(4)
         assertEquals(0.dp, top("Group A"))
         onNodeWithText("a4").assertIsDisplayed()
-        assertTrue(top("a4") >= bottom("Group A"), "a4 at ${top("a4")} under the header ending at ${bottom("Group A")}")
+        assertEquals(under("Group A"), top("a4"))
         // the next group's header takes over
         jumpTo(9)
         assertEquals(0.dp, top("Group B"))
         onNodeWithText("Group A").assertDoesNotExist()
-        assertTrue(top("b2") >= bottom("Group B"))
+        assertEquals(under("Group B"), top("b2"))
     }
 
     /** `sticky` off: the header scrolls away like any row. */
@@ -157,10 +161,10 @@ class LazyColumnSectionsTest {
     /** A touch on a label takes the list to the header with that `index`, and the strip then says that group. */
     @Test
     fun aTouchOnALabelTakesTheListToItsGroup() = list(bar("A", "B", "C", "D")) {
-        strip().assert(at("A"))
+        strip().assert(at("Label A"))
         touch(3, 4)
         assertEquals(0.dp, top("Group D"))
-        strip().assert(at("D"))
+        strip().assert(at("Label D"))
         touch(0, 4)
         assertEquals(0.dp, top("Group A"))
     }
@@ -176,9 +180,9 @@ class LazyColumnSectionsTest {
     @Test
     fun theHighlightFollowsTheList() = list(bar("A", "B", "C", "D")) {
         jumpTo(9)
-        strip().assert(at("B"))
+        strip().assert(at("Label B"))
         jumpTo(2)
-        strip().assert(at("A"))
+        strip().assert(at("Label A"))
     }
 
     /** Without Options the labels are the headers' own, in order. */
@@ -224,5 +228,55 @@ class LazyColumnSectionsTest {
         strip().assertDoesNotExist()
         assertEquals(1, reported.size, reported.toString())
         assertTrue("IndexBar" in reported[0], reported[0])
+    }
+
+    /** An animated scroll lands the row right under its own header, whatever the height of the header pinned when it set off. */
+    @Test
+    fun scrollToLandsTheRowUnderAHeaderOfAnotherHeight() = list {
+        tree.apply("""[["p",200,"height",60]]""")
+        waitForIdle()
+        tree.apply("""[["x",1,"scrollTo",{"index":9}]]""")
+        waitForIdle()
+        assertEquals(0.dp, top("Group B"))
+        assertEquals(under("Group B", 60), top("b2"))
+        // and back, from under the taller header to a row of the shorter one
+        tree.apply("""[["x",1,"scrollTo",{"index":3}]]""")
+        waitForIdle()
+        assertEquals(0.dp, top("Group A"))
+        assertEquals(under("Group A"), top("a3"))
+    }
+
+    /** A header with `sticky` off is a row like any other to the header pinned before it: the index does not leave it underneath. */
+    @Test
+    fun anIndexJumpToAHeaderThatIsNotStickyShowsIt() = list(bar("A", "B", "C", "D")) {
+        tree.apply("""[["p",200,"sticky",false]]""")
+        waitForIdle()
+        touch(1, 4)
+        assertEquals(0.dp, top("Group A"))
+        assertEquals(under("Group A"), top("Group B"))
+    }
+
+    /** Under a header without an `index` the list is in no group the strip knows: nothing is highlighted. */
+    @Test
+    fun aGroupWithoutAnIndexHighlightsNothing() = list(bar("A", "B", "C", "D")) {
+        tree.apply("""[["p",200,"index",null]]""")
+        waitForIdle()
+        jumpTo(9)
+        strip().assert(at(""))
+        jumpTo(16)
+        strip().assert(at("Label D"))
+    }
+
+    /** One list, one index: a second bar is not drawn, and the page hears of it. */
+    @Test
+    fun aSecondIndexBarIsReported() = list(bar("A", "B", "C", "D")) {
+        assertTrue(reported.isEmpty(), reported.toString())
+        tree.apply("""[${bar("A", "B", id = 950).trimEnd(',')},["i",1,950,1]]""")
+        waitForIdle()
+        assertEquals(1, reported.size, reported.toString())
+        assertTrue("IndexBar" in reported[0], reported[0])
+        // still not rows: the second header is row 7
+        jumpTo(7)
+        assertEquals(0.dp, top("Group B"))
     }
 }

@@ -726,10 +726,11 @@ private const val SECTION_HEADER = "SectionHeader"
 
 /**
  * What a list makes of its children (docs/components.md §3): the [rows], which are the children but for an IndexBar;
- * that [bar], which floats over them; and which rows are [headers] the list pins. The children themselves are the
- * rows when there is no bar, so a plain list allocates nothing here.
+ * that [bar], which floats over them (the first, when the page wrote more than one: [bars]); and which rows are
+ * [headers] the list pins. The children themselves are the rows when there is no bar, so a plain list allocates
+ * nothing here.
  */
-private class ListShape(val rows: List<UINode>, val bar: UINode?, val headers: IntArray) {
+private class ListShape(val rows: List<UINode>, val bar: UINode?, val bars: Int, val headers: IntArray) {
     /** The header pinned over row [index] once it is at the top: the last one before it. -1 for a header, or with none before. */
     fun headerOver(index: Int): Int {
         var over = -1
@@ -746,24 +747,24 @@ private fun shapeOf(node: UINode): ListShape {
     val children = node.children.toList()
     var bar: UINode? = null
     var bars = 0
+    // only once a bar is met: the children before it, then every row after
+    var rows: ArrayList<UINode>? = null
     var headers: ArrayList<Int>? = null
     var row = 0
     for (child in children) {
         val type = child.type
         if (type == INDEX_BAR) {
             if (bar == null) bar = child
+            if (rows == null) rows = ArrayList<UINode>(children.size).also { it.addAll(children.subList(0, row)) }
             bars++
             continue
         }
         // `sticky` is on unless the page turned it off
         if (type == SECTION_HEADER && child.props["sticky"] != false) (headers ?: ArrayList<Int>().also { headers = it }).add(row)
+        rows?.add(child)
         row++
     }
-    return ListShape(
-        rows = if (bars == 0) children else children.filter { it.type != INDEX_BAR },
-        bar = bar,
-        headers = headers?.toIntArray() ?: NoHeaders,
-    )
+    return ListShape(rows = rows ?: children, bar = bar, bars = bars, headers = headers?.toIntArray() ?: NoHeaders)
 }
 
 /**
@@ -783,18 +784,10 @@ private fun LazyColumnComponent(scope: NodeScope) {
     // index strip all read this one
     val shape = remember(node) { derivedStateOf { shapeOf(node) } }
     scope.Commands { command ->
-        val now = shape.value
-        val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, now.rows.size - 1))
-        val header = now.headerOver(index)
+        val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, shape.value.rows.size - 1))
         when (command.name) {
-            "scrollTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) {
-                state.animateScrollToItem(index, if (header < 0) 0 else -state.pinnedHeaderSize(now))
-                state.uncover(index, header)
-            }
-            "jumpTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) {
-                state.scrollToItem(index)
-                state.uncover(index, header)
-            }
+            "scrollTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = true) }
+            "jumpTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = false) }
         }
     }
     // with the scroll position: a list coming back still at its end has already reported that length
@@ -847,6 +840,8 @@ private fun LazyColumnComponent(scope: NodeScope) {
     }
     // read through a derived state: the list is recomposed when a bar comes or goes, not each time a row does
     val bar by remember(node) { derivedStateOf { shape.value.bar } }
+    val bars by remember(node) { derivedStateOf { shape.value.bars } }
+    if (bars > 1) LaunchedEffect(Unit) { scope.reportProblem("a LazyColumn takes one IndexBar; it has $bars, the first one is used") }
     // the strip needs a box around the list. Kept once there has been a bar, so that showing and hiding it (while
     // searching, say) does not move the list in the composition and rebuild its rows; a list that never has one is
     // composed exactly as before
@@ -886,16 +881,26 @@ private fun LazyListState.pinnedHeaderSize(shape: ListShape): Int =
     layoutInfo.visibleItemsInfo.firstOrNull { item -> shape.headers.any { it == item.index } }?.size ?: 0
 
 /**
- * After a scroll to row [index]: at the top of the list it lies under [header], the pinned header of its group.
- * Moves it out from under, so the row a page scrolled to is the row the user sees first.
+ * Brings row [index] to the top of the list, and out from under the header pinned over it there: the row a page (or the
+ * index strip) scrolled to is the row the user sees first.
  */
-private suspend fun LazyListState.uncover(index: Int, header: Int) {
+private suspend fun LazyListState.showRow(shape: State<ListShape>, index: Int, animated: Boolean) {
+    if (animated) {
+        // the header over the row is not laid out until the list gets there: aim with the one pinned now, settle after
+        val room = if (shape.value.headerOver(index) < 0) 0 else pinnedHeaderSize(shape.value)
+        animateScrollToItem(index, -room)
+    } else {
+        scrollToItem(index)
+    }
+    // read again: rows may have come or gone while it animated
+    val header = shape.value.headerOver(index)
     if (header < 0) return
     val visible = layoutInfo.visibleItemsInfo
     val pinned = visible.firstOrNull { it.index == header } ?: return
     val target = visible.firstOrNull { it.index == index } ?: return
-    val covered = pinned.offset + pinned.size - target.offset
-    if (covered > 0) scrollBy(-covered.toFloat())
+    // under the header by this much, or (aimed with a taller header than its own) short of it by as much
+    val off = pinned.offset + pinned.size - target.offset
+    if (off != 0) scrollBy(-off.toFloat())
 }
 
 /** An index label's circle, the height of the cell it sits in when the strip has all the room it wants, and the strip's width. */
@@ -905,14 +910,15 @@ private val IndexStripWidth = 40.dp
 
 /**
  * What an IndexBar knows of its list: the labels it shows, the row each one takes the list to, and which label a row
- * belongs under. The groups are the list's SectionHeaders that carry an `index`; a label without a group of its own
- * goes to the next label down that has one, the last group when none follows.
+ * belongs under. The groups are the list's SectionHeaders; one that carries an `index` answers to the label of that
+ * value, one without is in no label's group. A label without a group of its own goes to the next label down that has
+ * one, the last such group when none follows.
  */
 private class IndexModel(val labels: List<Pair<String, String>>, private val targets: IntArray, private val groupRows: IntArray, private val groupLabels: IntArray) {
     /** The row label [label] takes the list to; -1 when the list has no group at all. */
     fun rowOf(label: Int): Int = targets.getOrElse(label) { -1 }
 
-    /** The label of the group row [row] is in; -1 above the first group, or when that group is not among the labels. */
+    /** The label of the group row [row] is in; -1 above the first group, or when that group has no label of its own. */
     fun labelAt(row: Int): Int {
         var group = -1
         for (i in groupRows.indices) if (groupRows[i] <= row) group = i else break
@@ -921,21 +927,21 @@ private class IndexModel(val labels: List<Pair<String, String>>, private val tar
 }
 
 private fun indexModel(bar: UINode, rows: List<UINode>): IndexModel {
-    val groups = ArrayList<Pair<String, Int>>()
+    val groups = ArrayList<Pair<String?, Int>>()
     for (at in rows.indices) {
         val row = rows[at]
-        if (row.type == SECTION_HEADER) (row.props["index"] as? String)?.let { groups += it to at }
+        if (row.type == SECTION_HEADER) groups += (row.props["index"] as? String) to at
     }
     val options = bar.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
-    val labels = options.ifEmpty { groups.map { it.first }.distinct().map { it to it } }
+    val labels = options.ifEmpty { groups.mapNotNull { it.first }.distinct().map { it to it } }
     val own = IntArray(labels.size) { label -> groups.firstOrNull { it.first == labels[label].first }?.second ?: -1 }
-    val last = groups.lastOrNull()?.second ?: -1
+    val last = groups.lastOrNull { it.first != null }?.second ?: -1
     val targets = IntArray(labels.size) { label -> (label until labels.size).firstOrNull { own[it] >= 0 }?.let { own[it] } ?: last }
     return IndexModel(
         labels = labels,
         targets = targets,
         groupRows = IntArray(groups.size) { groups[it].second },
-        groupLabels = IntArray(groups.size) { group -> labels.indexOfFirst { it.first == groups[group].first } },
+        groupLabels = IntArray(groups.size) { group -> groups[group].first?.let { index -> labels.indexOfFirst { it.first == index } } ?: -1 },
     )
 }
 
@@ -954,7 +960,7 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
     val highlighted = pressed ?: at
     fun go(label: Int) {
         val row = current.value.rowOf(label)
-        if (row >= 0) scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.scrollToItem(row) }
+        if (row >= 0) scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, row, animated = false) }
     }
     val labels = model.labels
     val name = bar.props["label"] as? String
