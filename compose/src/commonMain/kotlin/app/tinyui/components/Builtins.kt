@@ -725,8 +725,11 @@ private fun LazyColumnComponent(scope: NodeScope) {
         }
     }
     val gap = scope.get<Dp>("gap") ?: 0.dp
+    // the rows as of this composition, not the live list: the lazy list takes the count once per measure pass and then
+    // asks for each row by index, outside any snapshot, while the engine thread may apply the next patch in between
+    val rows = node.children.toList()
     LazyColumn(state = state, modifier = scope.modifier(), verticalArrangement = if (gap > 0.dp) Arrangement.spacedBy(gap) else Arrangement.Top) {
-        items(node.children, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
+        items(rows, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
     }
 }
 
