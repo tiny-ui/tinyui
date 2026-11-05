@@ -941,8 +941,9 @@ private val IndexLabelPitch = 20.dp
 /**
  * A strip of labels, one cell each. Which cell the finger is on is tracked here, at frame rate, and reported each time
  * it changes (docs/adr-004 §3.1: a continuous gesture crosses the bridge at thresholds only); the page hears of it a
- * transaction later and moves its list. The highlight is the cell under the finger while it is down, the page's `value`
- * otherwise. Neither Compose nor M3 has this component: the sizes are the framework's, the colours the theme's.
+ * transaction later and moves its list. A move that crosses several cells reports the one it lands on, not the ones
+ * in between: the report is where the finger is, for a list to jump there. The highlight is the cell under the finger
+ * while it is down, the page's `value` otherwise. Neither Compose nor M3 has this component: the sizes are the framework's, the colours the theme's.
  */
 @Composable
 private fun IndexBarComponent(scope: NodeScope) {

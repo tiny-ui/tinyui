@@ -87,9 +87,9 @@ class IndexBarTest {
         onNodeWithText("B").assertIsSelected()
     }
 
-    /** Sliding reports each label once as the finger reaches it, and the label under the finger is the highlighted one. */
+    /** Sliding reports the label under the finger each time it changes, and that label is the highlighted one. */
     @Test
-    fun slideReportsEachLabelReached() = bar {
+    fun slideReportsTheLabelUnderTheFinger() = bar {
         val (a, b, c) = listOf("A", "B", "C").map { centerOf(it) }
         onRoot().performTouchInput { down(a); moveTo(Offset(a.x, a.y + 1f)); moveTo(b) }
         waitForIdle()
@@ -103,6 +103,16 @@ class IndexBarTest {
         waitForIdle()
         assertEquals(listOf("A", "B", "C"), dispatched.map { it.second.substringAfter(":\"").substringBefore("\"") })
         onNodeWithText("B").assertIsSelected()
+    }
+
+    /** One move from A straight onto C reports C, not B on the way: the report is where the finger is. */
+    @Test
+    fun aMoveAcrossSeveralLabelsReportsWhereItLands() = bar {
+        val a = centerOf("A")
+        val c = centerOf("C")
+        onRoot().performTouchInput { down(a); moveTo(c); up() }
+        waitForIdle()
+        assertEquals(listOf("A", "C"), dispatched.map { it.second.substringAfter(":\"").substringBefore("\"") })
     }
 
     private fun ComposeUiTest.middleOf(label: String) = onNodeWithText(label).getUnclippedBoundsInRoot().let { (it.top + it.bottom) / 2 }
