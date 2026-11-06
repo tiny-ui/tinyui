@@ -10,6 +10,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -911,9 +912,18 @@ private val IndexStripWidth = 40.dp
  * value, one without is in no label's group. A label without a group of its own goes to the next label down that has
  * one, the last such group when none follows.
  */
-private class IndexModel(val labels: List<Pair<String, String>>, private val targets: IntArray, private val groupRows: IntArray, private val groupLabels: IntArray) {
+private class IndexModel(
+    val labels: List<Pair<String, String>>,
+    private val own: IntArray,
+    private val targets: IntArray,
+    private val groupRows: IntArray,
+    private val groupLabels: IntArray,
+) {
     /** The row label [label] takes the list to; -1 when the list has no group at all. */
     fun rowOf(label: Int): Int = targets.getOrElse(label) { -1 }
+
+    /** Whether [label] has a group of its own, rather than standing in for the next one down. */
+    fun hasGroup(label: Int): Boolean = own.getOrElse(label) { -1 } >= 0
 
     /** The label of the group row [row] is in; -1 above the first group, or when that group has no label of its own. */
     fun labelAt(row: Int): Int {
@@ -936,6 +946,7 @@ private fun indexModel(bar: UINode, rows: List<UINode>): IndexModel {
     val targets = IntArray(labels.size) { label -> (label until labels.size).firstOrNull { own[it] >= 0 }?.let { own[it] } ?: last }
     return IndexModel(
         labels = labels,
+        own = own,
         targets = targets,
         groupRows = IntArray(groups.size) { groups[it].second },
         groupLabels = IntArray(groups.size) { group -> groups[group].first?.let { index -> labels.indexOfFirst { it.first == index } } ?: -1 },
@@ -986,8 +997,21 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
                 if (name != null) contentDescription = name
                 stateDescription = labels.getOrNull(highlighted)?.second ?: ""
                 if (labels.size > 1) {
-                    progressBarRangeInfo = ProgressBarRangeInfo(highlighted.coerceAtLeast(0).toFloat(), 0f..(labels.size - 1).toFloat(), labels.size - 2)
-                    setProgress { value -> go(value.roundToInt().coerceIn(0, labels.size - 1)); true }
+                    val from = highlighted.coerceAtLeast(0)
+                    progressBarRangeInfo = ProgressBarRangeInfo(from.toFloat(), 0f..(labels.size - 1).toFloat(), labels.size - 2)
+                    setProgress { value ->
+                        // a step lands on a group, not on a label standing in for the next one: stepping back onto
+                        // such a label would come straight back to where it started and never get past it
+                        val to = value.roundToInt().coerceIn(0, labels.size - 1)
+                        val step = if (to < from) -1 else 1
+                        var label = to
+                        while (label in labels.indices && !current.value.hasGroup(label)) label += step
+                        if (label in labels.indices) go(label)
+                        true
+                    }
+                } else if (labels.size == 1) {
+                    // nothing to step between; the one label can still be activated
+                    onClick { go(0); true }
                 }
             }
             // everything is consumed: inside a sheet or a pager a slide along the strip must not drag the container
@@ -1011,8 +1035,8 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
             },
     ) { measurables, constraints ->
         val label = IndexLabelSize.roundToPx()
-        // labels squeezed into less than their own height cannot be read or hit: no strip then (a keyboard is up, say)
-        if (measurables.isEmpty() || constraints.maxHeight < label * measurables.size) return@Layout layout(0, 0) {}
+        // labels squeezed into less than their own size cannot be read or hit: no strip then (a keyboard is up, say)
+        if (measurables.isEmpty() || constraints.maxHeight < label * measurables.size || constraints.maxWidth < label) return@Layout layout(0, 0) {}
         val placeables = measurables.map { it.measure(Constraints.fixed(label, label)) }
         val width = IndexStripWidth.roundToPx().coerceAtMost(constraints.maxWidth)
         val height = (IndexLabelPitch.roundToPx() * placeables.size).coerceAtMost(constraints.maxHeight)

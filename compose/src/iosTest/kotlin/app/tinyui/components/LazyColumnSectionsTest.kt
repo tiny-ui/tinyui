@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -18,6 +19,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -278,5 +280,31 @@ class LazyColumnSectionsTest {
         // still not rows: the second header is row 7
         scrollTo(7)
         assertEquals(0.dp, top("Group B"))
+    }
+
+    /**
+     * A screen reader steps from group to group: a label without a group of its own is passed over, in the direction
+     * of the step, or stepping back from D over C (which lands on D again) would never get to B.
+     */
+    @Test
+    fun adjustingStepsOverLabelsWithoutAGroup() = list(bar("A", "B", "C", "D")) {
+        touch(3, 4)
+        strip().assert(at("Label D"))
+        strip().performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
+        waitForIdle()
+        assertEquals(0.dp, top("Group B"))
+        strip().assert(at("Label B"))
+        // and forward again, over C to D
+        strip().performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
+        waitForIdle()
+        assertEquals(0.dp, top("Group D"))
+    }
+
+    /** A strip of one label has nothing to adjust between, but the label can still be activated. */
+    @Test
+    fun aSingleLabelCanBeActivated() = list(bar("D")) {
+        strip().performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        assertEquals(0.dp, top("Group D"))
     }
 }
