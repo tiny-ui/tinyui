@@ -24,7 +24,7 @@ import app.tinyui.textFieldStyle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SelectComponent(scope: NodeScope) {
-    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val options = scope.node.options()
     val selected = scope.get<String>("value")
     val enabled = scope.get<Boolean>("enabled") ?: true
     var expanded by remember { mutableStateOf(false) }

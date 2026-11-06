@@ -102,7 +102,7 @@ private fun indexModel(bar: UINode, rows: List<UINode>): IndexModel {
         val row = rows[at]
         if (row.type == SECTION_HEADER) groups += (row.props["index"] as? String) to at
     }
-    val options = bar.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val options = bar.options()
     val labels = options.ifEmpty { groups.mapNotNull { it.first }.distinct().map { it to it } }
     val own = IntArray(labels.size) { label -> groups.firstOrNull { it.first == labels[label].first }?.second ?: -1 }
     val last = groups.lastOrNull { it.first != null }?.second ?: -1

@@ -17,7 +17,7 @@ import app.tinyui.schema.NodeScope
  */
 @Composable
 internal fun TabsComponent(scope: NodeScope) {
-    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val options = scope.node.options()
     val value = scope.get<String>("value")
     val selected = options.indexOfFirst { it.first == value }
     PrimaryTabRow(

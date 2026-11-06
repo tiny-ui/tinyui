@@ -21,7 +21,7 @@ internal fun MenuComponent(scope: NodeScope) {
     val open = scope.get<Boolean>("open") == true
     var showing by remember { mutableStateOf(false) }
     LaunchedEffect(open) { showing = open }
-    val options = scope.node.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val options = scope.node.options()
     DropdownMenu(expanded = showing, onDismissRequest = { showing = false; if (scope.has("onDismiss")) scope.dispatch("onDismiss") }) {
         for ((value, text) in options) {
             DropdownMenuItem(text = { Text(text) }, onClick = { showing = false; if (scope.has("onSelect")) scope.dispatch("onSelect", payload("value", value)) })
