@@ -994,6 +994,14 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
             else model.labelAt(state.firstVisibleItemIndex)
         }
     }
+    // forgotten the first time the list is anywhere else: coming back to the very same place later (the end of the
+    // list, scrolled away from and back to) is the list's own doing
+    LaunchedEffect(state) {
+        snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            val there = arrived
+            if (there != null && (there.index != index || there.offset != offset)) arrived = null
+        }
+    }
     val highlighted = pressed ?: at
     fun go(label: Int) {
         val model = current.value

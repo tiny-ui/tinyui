@@ -326,5 +326,9 @@ class LazyColumnSectionsTest {
         // once the list moves on its own account, the strip follows the list again
         scrollTo(8)
         strip().assert(at("Label B"))
+        // for good: back at the very end, where the strip had left it, it is the list's own place that shows
+        scrollTo(20)
+        onNodeWithText("d6").assertIsDisplayed()
+        strip().assert(at("Label B"))
     }
 }
