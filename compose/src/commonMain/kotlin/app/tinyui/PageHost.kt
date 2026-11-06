@@ -84,9 +84,9 @@ class PageHost internal constructor(
     internal val context = PageContext(page.name, locals.associate { it.local to it.value })
     internal val ui = PageUI()
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
-    private val renderer = NodeRenderer(registry, ::dispatch) { node, reason -> report("E5", reason, op = "node ${node.id} (${node.type})") }
     var failure: PageFailure? by mutableStateOf(null)
         private set
+    private val renderer = NodeRenderer(registry, ::dispatch) { node, reason -> report("E5", reason, op = "node ${node.id} (${node.type})") }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     // the engine lock is fair, but entries launched on a multi-threaded pool can reach it out of order: one lane keeps
