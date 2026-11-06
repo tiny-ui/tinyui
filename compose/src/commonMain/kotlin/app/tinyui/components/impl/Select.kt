@@ -17,8 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import app.tinyui.components.NodeScope
 import app.tinyui.host.textFieldStyle
-import app.tinyui.schema.NodeScope
 
 /** Choices are the `Option` children, read as data; the selection is the page's prop. */
 @OptIn(ExperimentalMaterial3Api::class)

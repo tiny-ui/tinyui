@@ -109,13 +109,13 @@ app.tinyui              入口：TinyUI、TinyUIHost、TinyUIPage
 ├── page                跑一个页面：PageHost、PageModule，以及它的错误（PageError、PageSink、SourceMaps）
 ├── bundle              包：Bundle、BuildManifest，以及兼容性检查 PackageCheck、HostSnapshot
 ├── node                节点表
-├── schema              组件 schema、注册表、NodeScope
-└── components          内置组件，公开入口只有 registerBuiltins()，实现在 components/impl
+└── components          组件：schema、注册表、NodeScope、主题 token；内置组件的入口 registerBuiltins()，实现在 components/impl
 ```
 
 - 依赖方向是 `host` ← `page` ← `bundle`，三者之间不成环；根包是把它们接在一起的入口，所以它和 `page` 互相引用。
 - 为了不成环，有几个类型不按字面归类：`PageContext` / `PageLocal` 在 `host`（宿主接口的签名带着它们），`PageSink` 在 `page`（它的参数是 `PageError`），`PageModule` / `PackageI18n` 在 `page`（`bundle` 产出它们，反过来不行）。
-- 不设 `internal` 子包：内部实现和它服务的公开类型放在同一个包里，靠 `internal` 修饰符区分。唯一的例外是 `components/impl`，二十几个组件的实现放在一起会把公开入口淹掉；里面的顶层声明全是 `internal` 或 `private`。
+- 组件的声明（`ComponentSchema`）、注册（`ComponentRegistry`）、渲染（`NodeScope`、`Theme`）原来在 `schema` 包，名字只盖住了声明那一半，现在都在 `components`。
+- 不设 `internal` 子包：内部实现和它服务的公开类型放在同一个包里，靠 `internal` 修饰符区分。唯一的例外是 `components/impl`，二十几个内置组件的实现放在一起会把组件的公开契约淹掉；里面的顶层声明全是 `internal` 或 `private`。
 - 子包名 `host` 指宿主 App 提供的东西，与 `TinyUIHost`、`HostCapability` 是同一个意思；上文否掉的是把 `host` 用作 npm 包名和顶层目录名。
 
 ## 实现期文档

@@ -1,6 +1,7 @@
 package app.tinyui.sample
 
 import app.tinyui.TinyUIHost
+import app.tinyui.components.ComponentRegistry
 import app.tinyui.components.registerBuiltins
 import app.tinyui.host.AnalyticsSink
 import app.tinyui.host.HttpChannel
@@ -11,7 +12,6 @@ import app.tinyui.host.Session
 import app.tinyui.host.SessionSource
 import app.tinyui.page.PageError
 import app.tinyui.page.PageSink
-import app.tinyui.schema.ComponentRegistry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import okio.Path

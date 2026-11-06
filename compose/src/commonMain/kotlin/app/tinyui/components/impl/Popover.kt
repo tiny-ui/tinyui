@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 /**
  * A card next to the parent node, which is the anchor: Compose's `Popup` anchors to the layout it is called in, and

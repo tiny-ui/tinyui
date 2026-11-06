@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import wang.harlon.quickjs.JsBytecode
 import app.tinyui.components.registerBuiltins
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

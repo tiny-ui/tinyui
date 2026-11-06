@@ -6,21 +6,25 @@
 // - Show declarations: true
 
 // Library unique name: <tinyui:compose>
-final enum class app.tinyui.schema/FieldSpec : kotlin/Enum<app.tinyui.schema/FieldSpec> { // app.tinyui.schema/FieldSpec|null[0]
-    enum entry Bool // app.tinyui.schema/FieldSpec.Bool|null[0]
-    enum entry Num // app.tinyui.schema/FieldSpec.Num|null[0]
-    enum entry Str // app.tinyui.schema/FieldSpec.Str|null[0]
+final enum class app.tinyui.components/FieldSpec : kotlin/Enum<app.tinyui.components/FieldSpec> { // app.tinyui.components/FieldSpec|null[0]
+    enum entry Bool // app.tinyui.components/FieldSpec.Bool|null[0]
+    enum entry Num // app.tinyui.components/FieldSpec.Num|null[0]
+    enum entry Str // app.tinyui.components/FieldSpec.Str|null[0]
 
-    final val entries // app.tinyui.schema/FieldSpec.entries|#static{}entries[0]
-        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.schema/FieldSpec> // app.tinyui.schema/FieldSpec.entries.<get-entries>|<get-entries>#static(){}[0]
+    final val entries // app.tinyui.components/FieldSpec.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<app.tinyui.components/FieldSpec> // app.tinyui.components/FieldSpec.entries.<get-entries>|<get-entries>#static(){}[0]
 
-    final fun accepts(kotlinx.serialization.json/JsonPrimitive): kotlin/Boolean // app.tinyui.schema/FieldSpec.accepts|accepts(kotlinx.serialization.json.JsonPrimitive){}[0]
-    final fun valueOf(kotlin/String): app.tinyui.schema/FieldSpec // app.tinyui.schema/FieldSpec.valueOf|valueOf#static(kotlin.String){}[0]
-    final fun values(): kotlin/Array<app.tinyui.schema/FieldSpec> // app.tinyui.schema/FieldSpec.values|values#static(){}[0]
+    final fun accepts(kotlinx.serialization.json/JsonPrimitive): kotlin/Boolean // app.tinyui.components/FieldSpec.accepts|accepts(kotlinx.serialization.json.JsonPrimitive){}[0]
+    final fun valueOf(kotlin/String): app.tinyui.components/FieldSpec // app.tinyui.components/FieldSpec.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<app.tinyui.components/FieldSpec> // app.tinyui.components/FieldSpec.values|values#static(){}[0]
 }
 
 abstract fun interface app.tinyui.bundle/BundleFiles { // app.tinyui.bundle/BundleFiles|null[0]
     abstract suspend fun read(kotlin/String): kotlin/ByteArray? // app.tinyui.bundle/BundleFiles.read|read(kotlin.String){}[0]
+}
+
+abstract fun interface app.tinyui.components/Component { // app.tinyui.components/Component|null[0]
+    abstract fun Render(app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/Component.Render|Render(app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 }
 
 abstract fun interface app.tinyui.host/AnalyticsSink { // app.tinyui.host/AnalyticsSink|null[0]
@@ -44,8 +48,23 @@ abstract fun interface app.tinyui.host/LinkOpener { // app.tinyui.host/LinkOpene
     }
 }
 
-abstract fun interface app.tinyui.schema/Component { // app.tinyui.schema/Component|null[0]
-    abstract fun Render(app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/Component.Render|Render(app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+abstract interface app.tinyui.components/NodeScope { // app.tinyui.components/NodeScope|null[0]
+    abstract val node // app.tinyui.components/NodeScope.node|{}node[0]
+        abstract fun <get-node>(): app.tinyui.node/UINode // app.tinyui.components/NodeScope.node.<get-node>|<get-node>(){}[0]
+
+    abstract fun <#A1: kotlin/Any?> get(kotlin/String): #A1? // app.tinyui.components/NodeScope.get|get(kotlin.String){0§<kotlin.Any?>}[0]
+    abstract fun Children(androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/NodeScope.Children|Children(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun RenderChild(app.tinyui.node/UINode, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/NodeScope.RenderChild|RenderChild(app.tinyui.node.UINode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun dispatch(kotlin/String, kotlin/String = ...) // app.tinyui.components/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
+    abstract fun has(kotlin/String): kotlin/Boolean // app.tinyui.components/NodeScope.has|has(kotlin.String){}[0]
+    abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun Children(kotlin/Function1<app.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/NodeScope.Children|Children(kotlin.Function1<app.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // app.tinyui.components/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun reportProblem(kotlin/String) // app.tinyui.components/NodeScope.reportProblem|reportProblem(kotlin.String){}[0]
+
+    final class ComposeDefaultImpls { // app.tinyui.components/NodeScope.ComposeDefaultImpls|null[0]
+        final fun modifier$default(kotlin/Boolean, app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+    }
 }
 
 abstract interface app.tinyui.host/Navigator { // app.tinyui.host/Navigator|null[0]
@@ -69,79 +88,60 @@ abstract interface app.tinyui.page/PageSink { // app.tinyui.page/PageSink|null[0
     abstract fun log(kotlin/String) // app.tinyui.page/PageSink.log|log(kotlin.String){}[0]
 }
 
-abstract interface app.tinyui.schema/NodeScope { // app.tinyui.schema/NodeScope|null[0]
-    abstract val node // app.tinyui.schema/NodeScope.node|{}node[0]
-        abstract fun <get-node>(): app.tinyui.node/UINode // app.tinyui.schema/NodeScope.node.<get-node>|<get-node>(){}[0]
+sealed interface app.tinyui.components/ColorValue { // app.tinyui.components/ColorValue|null[0]
+    open fun resolve(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color // app.tinyui.components/ColorValue.resolve|resolve(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
-    abstract fun <#A1: kotlin/Any?> get(kotlin/String): #A1? // app.tinyui.schema/NodeScope.get|get(kotlin.String){0§<kotlin.Any?>}[0]
-    abstract fun Children(androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.Children|Children(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    abstract fun RenderChild(app.tinyui.node/UINode, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.RenderChild|RenderChild(app.tinyui.node.UINode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    abstract fun dispatch(kotlin/String, kotlin/String = ...) // app.tinyui.schema/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
-    abstract fun has(kotlin/String): kotlin/Boolean // app.tinyui.schema/NodeScope.has|has(kotlin.String){}[0]
-    abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun Children(kotlin/Function1<app.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/NodeScope.Children|Children(kotlin.Function1<app.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // app.tinyui.schema/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    open fun reportProblem(kotlin/String) // app.tinyui.schema/NodeScope.reportProblem|reportProblem(kotlin.String){}[0]
+    final class Literal : app.tinyui.components/ColorValue { // app.tinyui.components/ColorValue.Literal|null[0]
+        constructor <init>(androidx.compose.ui.graphics/Color) // app.tinyui.components/ColorValue.Literal.<init>|<init>(androidx.compose.ui.graphics.Color){}[0]
 
-    final class ComposeDefaultImpls { // app.tinyui.schema/NodeScope.ComposeDefaultImpls|null[0]
-        final fun modifier$default(kotlin/Boolean, app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.schema/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+        final val color // app.tinyui.components/ColorValue.Literal.color|{}color[0]
+            final fun <get-color>(): androidx.compose.ui.graphics/Color // app.tinyui.components/ColorValue.Literal.color.<get-color>|<get-color>(){}[0]
+
+        final fun component1(): androidx.compose.ui.graphics/Color // app.tinyui.components/ColorValue.Literal.component1|component1(){}[0]
+        final fun copy(androidx.compose.ui.graphics/Color = ...): app.tinyui.components/ColorValue.Literal // app.tinyui.components/ColorValue.Literal.copy|copy(androidx.compose.ui.graphics.Color){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.components/ColorValue.Literal.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.components/ColorValue.Literal.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.components/ColorValue.Literal.toString|toString(){}[0]
+    }
+
+    final class Token : app.tinyui.components/ColorValue { // app.tinyui.components/ColorValue.Token|null[0]
+        constructor <init>(kotlin/String) // app.tinyui.components/ColorValue.Token.<init>|<init>(kotlin.String){}[0]
+
+        final val name // app.tinyui.components/ColorValue.Token.name|{}name[0]
+            final fun <get-name>(): kotlin/String // app.tinyui.components/ColorValue.Token.name.<get-name>|<get-name>(){}[0]
+
+        final fun component1(): kotlin/String // app.tinyui.components/ColorValue.Token.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): app.tinyui.components/ColorValue.Token // app.tinyui.components/ColorValue.Token.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.components/ColorValue.Token.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.components/ColorValue.Token.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.components/ColorValue.Token.toString|toString(){}[0]
     }
 }
 
-sealed interface app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue|null[0]
-    open fun resolve(androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.resolve|resolve(androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+sealed interface app.tinyui.components/SizeValue { // app.tinyui.components/SizeValue|null[0]
+    final class Fixed : app.tinyui.components/SizeValue { // app.tinyui.components/SizeValue.Fixed|null[0]
+        constructor <init>(androidx.compose.ui.unit/Dp) // app.tinyui.components/SizeValue.Fixed.<init>|<init>(androidx.compose.ui.unit.Dp){}[0]
 
-    final class Literal : app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue.Literal|null[0]
-        constructor <init>(androidx.compose.ui.graphics/Color) // app.tinyui.schema/ColorValue.Literal.<init>|<init>(androidx.compose.ui.graphics.Color){}[0]
+        final val dp // app.tinyui.components/SizeValue.Fixed.dp|{}dp[0]
+            final fun <get-dp>(): androidx.compose.ui.unit/Dp // app.tinyui.components/SizeValue.Fixed.dp.<get-dp>|<get-dp>(){}[0]
 
-        final val color // app.tinyui.schema/ColorValue.Literal.color|{}color[0]
-            final fun <get-color>(): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.Literal.color.<get-color>|<get-color>(){}[0]
-
-        final fun component1(): androidx.compose.ui.graphics/Color // app.tinyui.schema/ColorValue.Literal.component1|component1(){}[0]
-        final fun copy(androidx.compose.ui.graphics/Color = ...): app.tinyui.schema/ColorValue.Literal // app.tinyui.schema/ColorValue.Literal.copy|copy(androidx.compose.ui.graphics.Color){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/ColorValue.Literal.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // app.tinyui.schema/ColorValue.Literal.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // app.tinyui.schema/ColorValue.Literal.toString|toString(){}[0]
+        final fun component1(): androidx.compose.ui.unit/Dp // app.tinyui.components/SizeValue.Fixed.component1|component1(){}[0]
+        final fun copy(androidx.compose.ui.unit/Dp = ...): app.tinyui.components/SizeValue.Fixed // app.tinyui.components/SizeValue.Fixed.copy|copy(androidx.compose.ui.unit.Dp){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.components/SizeValue.Fixed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.components/SizeValue.Fixed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.components/SizeValue.Fixed.toString|toString(){}[0]
     }
 
-    final class Token : app.tinyui.schema/ColorValue { // app.tinyui.schema/ColorValue.Token|null[0]
-        constructor <init>(kotlin/String) // app.tinyui.schema/ColorValue.Token.<init>|<init>(kotlin.String){}[0]
-
-        final val name // app.tinyui.schema/ColorValue.Token.name|{}name[0]
-            final fun <get-name>(): kotlin/String // app.tinyui.schema/ColorValue.Token.name.<get-name>|<get-name>(){}[0]
-
-        final fun component1(): kotlin/String // app.tinyui.schema/ColorValue.Token.component1|component1(){}[0]
-        final fun copy(kotlin/String = ...): app.tinyui.schema/ColorValue.Token // app.tinyui.schema/ColorValue.Token.copy|copy(kotlin.String){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/ColorValue.Token.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // app.tinyui.schema/ColorValue.Token.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // app.tinyui.schema/ColorValue.Token.toString|toString(){}[0]
-    }
-}
-
-sealed interface app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue|null[0]
-    final class Fixed : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Fixed|null[0]
-        constructor <init>(androidx.compose.ui.unit/Dp) // app.tinyui.schema/SizeValue.Fixed.<init>|<init>(androidx.compose.ui.unit.Dp){}[0]
-
-        final val dp // app.tinyui.schema/SizeValue.Fixed.dp|{}dp[0]
-            final fun <get-dp>(): androidx.compose.ui.unit/Dp // app.tinyui.schema/SizeValue.Fixed.dp.<get-dp>|<get-dp>(){}[0]
-
-        final fun component1(): androidx.compose.ui.unit/Dp // app.tinyui.schema/SizeValue.Fixed.component1|component1(){}[0]
-        final fun copy(androidx.compose.ui.unit/Dp = ...): app.tinyui.schema/SizeValue.Fixed // app.tinyui.schema/SizeValue.Fixed.copy|copy(androidx.compose.ui.unit.Dp){}[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Fixed.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Fixed.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Fixed.toString|toString(){}[0]
+    final object Fill : app.tinyui.components/SizeValue { // app.tinyui.components/SizeValue.Fill|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.components/SizeValue.Fill.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.components/SizeValue.Fill.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.components/SizeValue.Fill.toString|toString(){}[0]
     }
 
-    final object Fill : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Fill|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Fill.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Fill.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Fill.toString|toString(){}[0]
-    }
-
-    final object Wrap : app.tinyui.schema/SizeValue { // app.tinyui.schema/SizeValue.Wrap|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.schema/SizeValue.Wrap.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // app.tinyui.schema/SizeValue.Wrap.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // app.tinyui.schema/SizeValue.Wrap.toString|toString(){}[0]
+    final object Wrap : app.tinyui.components/SizeValue { // app.tinyui.components/SizeValue.Wrap|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.components/SizeValue.Wrap.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // app.tinyui.components/SizeValue.Wrap.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // app.tinyui.components/SizeValue.Wrap.toString|toString(){}[0]
     }
 }
 
@@ -242,6 +242,46 @@ final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|n
         final fun <get-channels>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.channels.<get-channels>|<get-channels>(){}[0]
     final val components // app.tinyui.bundle/PageRequires.components|{}components[0]
         final fun <get-components>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.components.<get-components>|<get-components>(){}[0]
+}
+
+final class app.tinyui.components/ComponentRegistry { // app.tinyui.components/ComponentRegistry|null[0]
+    constructor <init>() // app.tinyui.components/ComponentRegistry.<init>|<init>(){}[0]
+
+    final fun Render(kotlin/String, app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/ComponentRegistry.Render|Render(kotlin.String;app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    final fun manifest(kotlin.collections/List<kotlin/String>): kotlin/String // app.tinyui.components/ComponentRegistry.manifest|manifest(kotlin.collections.List<kotlin.String>){}[0]
+    final fun register(app.tinyui.components/ComponentSchema, app.tinyui.components/Component) // app.tinyui.components/ComponentRegistry.register|register(app.tinyui.components.ComponentSchema;app.tinyui.components.Component){}[0]
+    final fun schema(kotlin/String): app.tinyui.components/ComponentSchema? // app.tinyui.components/ComponentRegistry.schema|schema(kotlin.String){}[0]
+
+    final object Companion { // app.tinyui.components/ComponentRegistry.Companion|null[0]
+        final const val PLACEHOLDER // app.tinyui.components/ComponentRegistry.Companion.PLACEHOLDER|{}PLACEHOLDER[0]
+            final fun <get-PLACEHOLDER>(): kotlin/String // app.tinyui.components/ComponentRegistry.Companion.PLACEHOLDER.<get-PLACEHOLDER>|<get-PLACEHOLDER>(){}[0]
+    }
+}
+
+final class app.tinyui.components/ComponentSchema { // app.tinyui.components/ComponentSchema|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.components/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.components/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.components/FieldSpec>>, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean = ...) // app.tinyui.components/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.components.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.components.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.components.FieldSpec>>;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
+
+    final val children // app.tinyui.components/ComponentSchema.children|{}children[0]
+        final fun <get-children>(): kotlin/Boolean // app.tinyui.components/ComponentSchema.children.<get-children>|<get-children>(){}[0]
+    final val commands // app.tinyui.components/ComponentSchema.commands|{}commands[0]
+        final fun <get-commands>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.components/FieldSpec>> // app.tinyui.components/ComponentSchema.commands.<get-commands>|<get-commands>(){}[0]
+    final val events // app.tinyui.components/ComponentSchema.events|{}events[0]
+        final fun <get-events>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.components/FieldSpec>> // app.tinyui.components/ComponentSchema.events.<get-events>|<get-events>(){}[0]
+    final val intrinsics // app.tinyui.components/ComponentSchema.intrinsics|{}intrinsics[0]
+        final fun <get-intrinsics>(): kotlin/Boolean // app.tinyui.components/ComponentSchema.intrinsics.<get-intrinsics>|<get-intrinsics>(){}[0]
+    final val layout // app.tinyui.components/ComponentSchema.layout|{}layout[0]
+        final fun <get-layout>(): kotlin/Boolean // app.tinyui.components/ComponentSchema.layout.<get-layout>|<get-layout>(){}[0]
+    final val props // app.tinyui.components/ComponentSchema.props|{}props[0]
+        final fun <get-props>(): kotlin.collections/Map<kotlin/String, app.tinyui.components/PropSpec> // app.tinyui.components/ComponentSchema.props.<get-props>|<get-props>(){}[0]
+    final val type // app.tinyui.components/ComponentSchema.type|{}type[0]
+        final fun <get-type>(): kotlin/String // app.tinyui.components/ComponentSchema.type.<get-type>|<get-type>(){}[0]
+
+    final fun prop(kotlin/String): app.tinyui.components/PropSpec? // app.tinyui.components/ComponentSchema.prop|prop(kotlin.String){}[0]
+}
+
+final class app.tinyui.components/IconValue { // app.tinyui.components/IconValue|null[0]
+    final val vector // app.tinyui.components/IconValue.vector|{}vector[0]
+        final fun <get-vector>(): androidx.compose.ui.graphics.vector/ImageVector // app.tinyui.components/IconValue.vector.<get-vector>|<get-vector>(){}[0]
 }
 
 final class app.tinyui.host/ButtonStyle { // app.tinyui.host/ButtonStyle|null[0]
@@ -411,7 +451,7 @@ final class app.tinyui.node/Command { // app.tinyui.node/Command|null[0]
 }
 
 final class app.tinyui.node/NodeTree { // app.tinyui.node/NodeTree|null[0]
-    constructor <init>(app.tinyui.schema/ComponentRegistry, kotlin/Function1<app.tinyui.node/PatchProblem, kotlin/Unit>) // app.tinyui.node/NodeTree.<init>|<init>(app.tinyui.schema.ComponentRegistry;kotlin.Function1<app.tinyui.node.PatchProblem,kotlin.Unit>){}[0]
+    constructor <init>(app.tinyui.components/ComponentRegistry, kotlin/Function1<app.tinyui.node/PatchProblem, kotlin/Unit>) // app.tinyui.node/NodeTree.<init>|<init>(app.tinyui.components.ComponentRegistry;kotlin.Function1<app.tinyui.node.PatchProblem,kotlin.Unit>){}[0]
 
     final val root // app.tinyui.node/NodeTree.root|{}root[0]
         final fun <get-root>(): app.tinyui.node/UINode // app.tinyui.node/NodeTree.root.<get-root>|<get-root>(){}[0]
@@ -568,48 +608,8 @@ final class app.tinyui.page/StackFrame { // app.tinyui.page/StackFrame|null[0]
     final fun toString(): kotlin/String // app.tinyui.page/StackFrame.toString|toString(){}[0]
 }
 
-final class app.tinyui.schema/ComponentRegistry { // app.tinyui.schema/ComponentRegistry|null[0]
-    constructor <init>() // app.tinyui.schema/ComponentRegistry.<init>|<init>(){}[0]
-
-    final fun Render(kotlin/String, app.tinyui.schema/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/ComponentRegistry.Render|Render(kotlin.String;app.tinyui.schema.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    final fun manifest(kotlin.collections/List<kotlin/String>): kotlin/String // app.tinyui.schema/ComponentRegistry.manifest|manifest(kotlin.collections.List<kotlin.String>){}[0]
-    final fun register(app.tinyui.schema/ComponentSchema, app.tinyui.schema/Component) // app.tinyui.schema/ComponentRegistry.register|register(app.tinyui.schema.ComponentSchema;app.tinyui.schema.Component){}[0]
-    final fun schema(kotlin/String): app.tinyui.schema/ComponentSchema? // app.tinyui.schema/ComponentRegistry.schema|schema(kotlin.String){}[0]
-
-    final object Companion { // app.tinyui.schema/ComponentRegistry.Companion|null[0]
-        final const val PLACEHOLDER // app.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER|{}PLACEHOLDER[0]
-            final fun <get-PLACEHOLDER>(): kotlin/String // app.tinyui.schema/ComponentRegistry.Companion.PLACEHOLDER.<get-PLACEHOLDER>|<get-PLACEHOLDER>(){}[0]
-    }
-}
-
-final class app.tinyui.schema/ComponentSchema { // app.tinyui.schema/ComponentSchema|null[0]
-    constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>>, kotlin/Boolean, kotlin/Boolean, kotlin/Boolean = ...) // app.tinyui.schema/ComponentSchema.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.schema.PropSpec>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,app.tinyui.schema.FieldSpec>>;kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
-
-    final val children // app.tinyui.schema/ComponentSchema.children|{}children[0]
-        final fun <get-children>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.children.<get-children>|<get-children>(){}[0]
-    final val commands // app.tinyui.schema/ComponentSchema.commands|{}commands[0]
-        final fun <get-commands>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.commands.<get-commands>|<get-commands>(){}[0]
-    final val events // app.tinyui.schema/ComponentSchema.events|{}events[0]
-        final fun <get-events>(): kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, app.tinyui.schema/FieldSpec>> // app.tinyui.schema/ComponentSchema.events.<get-events>|<get-events>(){}[0]
-    final val intrinsics // app.tinyui.schema/ComponentSchema.intrinsics|{}intrinsics[0]
-        final fun <get-intrinsics>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.intrinsics.<get-intrinsics>|<get-intrinsics>(){}[0]
-    final val layout // app.tinyui.schema/ComponentSchema.layout|{}layout[0]
-        final fun <get-layout>(): kotlin/Boolean // app.tinyui.schema/ComponentSchema.layout.<get-layout>|<get-layout>(){}[0]
-    final val props // app.tinyui.schema/ComponentSchema.props|{}props[0]
-        final fun <get-props>(): kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec> // app.tinyui.schema/ComponentSchema.props.<get-props>|<get-props>(){}[0]
-    final val type // app.tinyui.schema/ComponentSchema.type|{}type[0]
-        final fun <get-type>(): kotlin/String // app.tinyui.schema/ComponentSchema.type.<get-type>|<get-type>(){}[0]
-
-    final fun prop(kotlin/String): app.tinyui.schema/PropSpec? // app.tinyui.schema/ComponentSchema.prop|prop(kotlin.String){}[0]
-}
-
-final class app.tinyui.schema/IconValue { // app.tinyui.schema/IconValue|null[0]
-    final val vector // app.tinyui.schema/IconValue.vector|{}vector[0]
-        final fun <get-vector>(): androidx.compose.ui.graphics.vector/ImageVector // app.tinyui.schema/IconValue.vector.<get-vector>|<get-vector>(){}[0]
-}
-
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
-    constructor <init>(app.tinyui.schema/ComponentRegistry, app.tinyui.page/PageSink, app.tinyui.host/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui.host/HttpChannel> = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui.host/SessionSource? = ..., app.tinyui.host/AnalyticsSink? = ..., app.tinyui.host/LinkOpener? = ..., app.tinyui.host/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.schema.ComponentRegistry;app.tinyui.page.PageSink;app.tinyui.host.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.host.HttpChannel>;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.host.SessionSource?;app.tinyui.host.AnalyticsSink?;app.tinyui.host.LinkOpener?;app.tinyui.host.Navigator;okio.Path?){}[0]
+    constructor <init>(app.tinyui.components/ComponentRegistry, app.tinyui.page/PageSink, app.tinyui.host/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui.host/HttpChannel> = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui.host/SessionSource? = ..., app.tinyui.host/AnalyticsSink? = ..., app.tinyui.host/LinkOpener? = ..., app.tinyui.host/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.components.ComponentRegistry;app.tinyui.page.PageSink;app.tinyui.host.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.host.HttpChannel>;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.host.SessionSource?;app.tinyui.host.AnalyticsSink?;app.tinyui.host.LinkOpener?;app.tinyui.host.Navigator;okio.Path?){}[0]
 
     final val analytics // app.tinyui/TinyUIHost.analytics|{}analytics[0]
         final fun <get-analytics>(): app.tinyui.host/AnalyticsSink? // app.tinyui/TinyUIHost.analytics.<get-analytics>|<get-analytics>(){}[0]
@@ -620,7 +620,7 @@ final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
     final val channels // app.tinyui/TinyUIHost.channels|{}channels[0]
         final fun <get-channels>(): kotlin.collections/Map<kotlin/String, app.tinyui.host/HttpChannel> // app.tinyui/TinyUIHost.channels.<get-channels>|<get-channels>(){}[0]
     final val components // app.tinyui/TinyUIHost.components|{}components[0]
-        final fun <get-components>(): app.tinyui.schema/ComponentRegistry // app.tinyui/TinyUIHost.components.<get-components>|<get-components>(){}[0]
+        final fun <get-components>(): app.tinyui.components/ComponentRegistry // app.tinyui/TinyUIHost.components.<get-components>|<get-components>(){}[0]
     final val dataDir // app.tinyui/TinyUIHost.dataDir|{}dataDir[0]
         final fun <get-dataDir>(): okio/Path? // app.tinyui/TinyUIHost.dataDir.<get-dataDir>|<get-dataDir>(){}[0]
     final val events // app.tinyui/TinyUIHost.events|{}events[0]
@@ -641,99 +641,99 @@ final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
         final fun <get-timeZone>(): kotlinx.coroutines.flow/StateFlow<kotlin/String>? // app.tinyui/TinyUIHost.timeZone.<get-timeZone>|<get-timeZone>(){}[0]
 }
 
-sealed class app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec|null[0]
-    abstract val default // app.tinyui.schema/PropSpec.default|{}default[0]
-        abstract fun <get-default>(): kotlin/Any? // app.tinyui.schema/PropSpec.default.<get-default>|<get-default>(){}[0]
-    final val initial // app.tinyui.schema/PropSpec.initial|{}initial[0]
-        final fun <get-initial>(): kotlin/Boolean // app.tinyui.schema/PropSpec.initial.<get-initial>|<get-initial>(){}[0]
-    final val kind // app.tinyui.schema/PropSpec.kind|{}kind[0]
-        final fun <get-kind>(): kotlin/String // app.tinyui.schema/PropSpec.kind.<get-kind>|<get-kind>(){}[0]
-    final val required // app.tinyui.schema/PropSpec.required|{}required[0]
-        final fun <get-required>(): kotlin/Boolean // app.tinyui.schema/PropSpec.required.<get-required>|<get-required>(){}[0]
+sealed class app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec|null[0]
+    abstract val default // app.tinyui.components/PropSpec.default|{}default[0]
+        abstract fun <get-default>(): kotlin/Any? // app.tinyui.components/PropSpec.default.<get-default>|<get-default>(){}[0]
+    final val initial // app.tinyui.components/PropSpec.initial|{}initial[0]
+        final fun <get-initial>(): kotlin/Boolean // app.tinyui.components/PropSpec.initial.<get-initial>|<get-initial>(){}[0]
+    final val kind // app.tinyui.components/PropSpec.kind|{}kind[0]
+        final fun <get-kind>(): kotlin/String // app.tinyui.components/PropSpec.kind.<get-kind>|<get-kind>(){}[0]
+    final val required // app.tinyui.components/PropSpec.required|{}required[0]
+        final fun <get-required>(): kotlin/Boolean // app.tinyui.components/PropSpec.required.<get-required>|<get-required>(){}[0]
 
-    abstract fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+    abstract fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
 
-    final class Bool : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Bool|null[0]
-        constructor <init>(kotlin/Boolean?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Bool.<init>|<init>(kotlin.Boolean?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Bool : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Bool|null[0]
+        constructor <init>(kotlin/Boolean?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Bool.<init>|<init>(kotlin.Boolean?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Bool.default|{}default[0]
-            final fun <get-default>(): kotlin/Boolean? // app.tinyui.schema/PropSpec.Bool.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Bool.default|{}default[0]
+            final fun <get-default>(): kotlin/Boolean? // app.tinyui.components/PropSpec.Bool.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Bool.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Bool.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class ColorSpec : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.ColorSpec|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.ColorSpec.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class ColorSpec : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.ColorSpec|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.ColorSpec.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.ColorSpec.default|{}default[0]
-            final fun <get-default>(): app.tinyui.schema/ColorValue? // app.tinyui.schema/PropSpec.ColorSpec.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.ColorSpec.default|{}default[0]
+            final fun <get-default>(): app.tinyui.components/ColorValue? // app.tinyui.components/PropSpec.ColorSpec.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.ColorSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.ColorSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Dp : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Dp|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Dp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Dp : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Dp|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Dp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Dp.default|{}default[0]
-            final fun <get-default>(): androidx.compose.ui.unit/Dp? // app.tinyui.schema/PropSpec.Dp.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Dp.default|{}default[0]
+            final fun <get-default>(): androidx.compose.ui.unit/Dp? // app.tinyui.components/PropSpec.Dp.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Dp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Dp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Enum : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Enum|null[0]
-        constructor <init>(kotlin.collections/Set<kotlin/String>, kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Enum.<init>|<init>(kotlin.collections.Set<kotlin.String>;kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Enum : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Enum|null[0]
+        constructor <init>(kotlin.collections/Set<kotlin/String>, kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Enum.<init>|<init>(kotlin.collections.Set<kotlin.String>;kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Enum.default|{}default[0]
-            final fun <get-default>(): kotlin/String? // app.tinyui.schema/PropSpec.Enum.default.<get-default>|<get-default>(){}[0]
-        final val values // app.tinyui.schema/PropSpec.Enum.values|{}values[0]
-            final fun <get-values>(): kotlin.collections/Set<kotlin/String> // app.tinyui.schema/PropSpec.Enum.values.<get-values>|<get-values>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Enum.default|{}default[0]
+            final fun <get-default>(): kotlin/String? // app.tinyui.components/PropSpec.Enum.default.<get-default>|<get-default>(){}[0]
+        final val values // app.tinyui.components/PropSpec.Enum.values|{}values[0]
+            final fun <get-values>(): kotlin.collections/Set<kotlin/String> // app.tinyui.components/PropSpec.Enum.values.<get-values>|<get-values>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Enum.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Enum.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class IconSpec : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.IconSpec|null[0]
-        constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.IconSpec.<init>|<init>(kotlin.Boolean;kotlin.Boolean){}[0]
+    final class IconSpec : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.IconSpec|null[0]
+        constructor <init>(kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.IconSpec.<init>|<init>(kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.IconSpec.default|{}default[0]
-            final fun <get-default>(): app.tinyui.schema/IconValue? // app.tinyui.schema/PropSpec.IconSpec.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.IconSpec.default|{}default[0]
+            final fun <get-default>(): app.tinyui.components/IconValue? // app.tinyui.components/PropSpec.IconSpec.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.IconSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.IconSpec.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Num : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Num|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Num.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Num : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Num|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Num.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Num.default|{}default[0]
-            final fun <get-default>(): kotlin/Double? // app.tinyui.schema/PropSpec.Num.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Num.default|{}default[0]
+            final fun <get-default>(): kotlin/Double? // app.tinyui.components/PropSpec.Num.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Num.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Num.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Size : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Size|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Size.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Size : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Size|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Size.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Size.default|{}default[0]
-            final fun <get-default>(): app.tinyui.schema/SizeValue? // app.tinyui.schema/PropSpec.Size.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Size.default|{}default[0]
+            final fun <get-default>(): app.tinyui.components/SizeValue? // app.tinyui.components/PropSpec.Size.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Size.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Size.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Sp : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Sp|null[0]
-        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Sp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Sp : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Sp|null[0]
+        constructor <init>(kotlin/Double?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Sp.<init>|<init>(kotlin.Double?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Sp.default|{}default[0]
-            final fun <get-default>(): androidx.compose.ui.unit/TextUnit? // app.tinyui.schema/PropSpec.Sp.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Sp.default|{}default[0]
+            final fun <get-default>(): androidx.compose.ui.unit/TextUnit? // app.tinyui.components/PropSpec.Sp.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Sp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Sp.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 
-    final class Str : app.tinyui.schema/PropSpec { // app.tinyui.schema/PropSpec.Str|null[0]
-        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.schema/PropSpec.Str.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
+    final class Str : app.tinyui.components/PropSpec { // app.tinyui.components/PropSpec.Str|null[0]
+        constructor <init>(kotlin/String?, kotlin/Boolean = ..., kotlin/Boolean = ...) // app.tinyui.components/PropSpec.Str.<init>|<init>(kotlin.String?;kotlin.Boolean;kotlin.Boolean){}[0]
 
-        final val default // app.tinyui.schema/PropSpec.Str.default|{}default[0]
-            final fun <get-default>(): kotlin/String? // app.tinyui.schema/PropSpec.Str.default.<get-default>|<get-default>(){}[0]
+        final val default // app.tinyui.components/PropSpec.Str.default|{}default[0]
+            final fun <get-default>(): kotlin/String? // app.tinyui.components/PropSpec.Str.default.<get-default>|<get-default>(){}[0]
 
-        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.schema/PropSpec.Str.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
+        final fun convert(kotlinx.serialization.json/JsonPrimitive): kotlin/Any? // app.tinyui.components/PropSpec.Str.convert|convert(kotlinx.serialization.json.JsonPrimitive){}[0]
     }
 }
 
@@ -748,70 +748,70 @@ final object app.tinyui.bundle/PackageCheck { // app.tinyui.bundle/PackageCheck|
 
 final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.components.generated/BuiltinSchemas|null[0]
     final val BackHandler // app.tinyui.components.generated/BuiltinSchemas.BackHandler|{}BackHandler[0]
-        final fun <get-BackHandler>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.BackHandler.<get-BackHandler>|<get-BackHandler>(){}[0]
+        final fun <get-BackHandler>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.BackHandler.<get-BackHandler>|<get-BackHandler>(){}[0]
     final val BottomSheet // app.tinyui.components.generated/BuiltinSchemas.BottomSheet|{}BottomSheet[0]
-        final fun <get-BottomSheet>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.BottomSheet.<get-BottomSheet>|<get-BottomSheet>(){}[0]
+        final fun <get-BottomSheet>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.BottomSheet.<get-BottomSheet>|<get-BottomSheet>(){}[0]
     final val Box // app.tinyui.components.generated/BuiltinSchemas.Box|{}Box[0]
-        final fun <get-Box>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Box.<get-Box>|<get-Box>(){}[0]
+        final fun <get-Box>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Box.<get-Box>|<get-Box>(){}[0]
     final val Button // app.tinyui.components.generated/BuiltinSchemas.Button|{}Button[0]
-        final fun <get-Button>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
+        final fun <get-Button>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Button.<get-Button>|<get-Button>(){}[0]
     final val Checkbox // app.tinyui.components.generated/BuiltinSchemas.Checkbox|{}Checkbox[0]
-        final fun <get-Checkbox>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Checkbox.<get-Checkbox>|<get-Checkbox>(){}[0]
+        final fun <get-Checkbox>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Checkbox.<get-Checkbox>|<get-Checkbox>(){}[0]
     final val CodeField // app.tinyui.components.generated/BuiltinSchemas.CodeField|{}CodeField[0]
-        final fun <get-CodeField>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.CodeField.<get-CodeField>|<get-CodeField>(){}[0]
+        final fun <get-CodeField>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.CodeField.<get-CodeField>|<get-CodeField>(){}[0]
     final val Column // app.tinyui.components.generated/BuiltinSchemas.Column|{}Column[0]
-        final fun <get-Column>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
+        final fun <get-Column>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
     final val Divider // app.tinyui.components.generated/BuiltinSchemas.Divider|{}Divider[0]
-        final fun <get-Divider>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Divider.<get-Divider>|<get-Divider>(){}[0]
+        final fun <get-Divider>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Divider.<get-Divider>|<get-Divider>(){}[0]
     final val Icon // app.tinyui.components.generated/BuiltinSchemas.Icon|{}Icon[0]
-        final fun <get-Icon>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Icon.<get-Icon>|<get-Icon>(){}[0]
+        final fun <get-Icon>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Icon.<get-Icon>|<get-Icon>(){}[0]
     final val IndexBar // app.tinyui.components.generated/BuiltinSchemas.IndexBar|{}IndexBar[0]
-        final fun <get-IndexBar>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.IndexBar.<get-IndexBar>|<get-IndexBar>(){}[0]
+        final fun <get-IndexBar>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.IndexBar.<get-IndexBar>|<get-IndexBar>(){}[0]
     final val LazyColumn // app.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]
-        final fun <get-LazyColumn>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.LazyColumn.<get-LazyColumn>|<get-LazyColumn>(){}[0]
+        final fun <get-LazyColumn>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.LazyColumn.<get-LazyColumn>|<get-LazyColumn>(){}[0]
     final val Loading // app.tinyui.components.generated/BuiltinSchemas.Loading|{}Loading[0]
-        final fun <get-Loading>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Loading.<get-Loading>|<get-Loading>(){}[0]
+        final fun <get-Loading>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Loading.<get-Loading>|<get-Loading>(){}[0]
     final val Menu // app.tinyui.components.generated/BuiltinSchemas.Menu|{}Menu[0]
-        final fun <get-Menu>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Menu.<get-Menu>|<get-Menu>(){}[0]
+        final fun <get-Menu>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Menu.<get-Menu>|<get-Menu>(){}[0]
     final val Option // app.tinyui.components.generated/BuiltinSchemas.Option|{}Option[0]
-        final fun <get-Option>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Option.<get-Option>|<get-Option>(){}[0]
+        final fun <get-Option>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Option.<get-Option>|<get-Option>(){}[0]
     final val Popover // app.tinyui.components.generated/BuiltinSchemas.Popover|{}Popover[0]
-        final fun <get-Popover>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Popover.<get-Popover>|<get-Popover>(){}[0]
+        final fun <get-Popover>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Popover.<get-Popover>|<get-Popover>(){}[0]
     final val RadioButton // app.tinyui.components.generated/BuiltinSchemas.RadioButton|{}RadioButton[0]
-        final fun <get-RadioButton>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
+        final fun <get-RadioButton>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
     final val Row // app.tinyui.components.generated/BuiltinSchemas.Row|{}Row[0]
-        final fun <get-Row>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Row.<get-Row>|<get-Row>(){}[0]
+        final fun <get-Row>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Row.<get-Row>|<get-Row>(){}[0]
     final val SectionHeader // app.tinyui.components.generated/BuiltinSchemas.SectionHeader|{}SectionHeader[0]
-        final fun <get-SectionHeader>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.SectionHeader.<get-SectionHeader>|<get-SectionHeader>(){}[0]
+        final fun <get-SectionHeader>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.SectionHeader.<get-SectionHeader>|<get-SectionHeader>(){}[0]
     final val Select // app.tinyui.components.generated/BuiltinSchemas.Select|{}Select[0]
-        final fun <get-Select>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Select.<get-Select>|<get-Select>(){}[0]
+        final fun <get-Select>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Select.<get-Select>|<get-Select>(){}[0]
     final val Spacer // app.tinyui.components.generated/BuiltinSchemas.Spacer|{}Spacer[0]
-        final fun <get-Spacer>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Spacer.<get-Spacer>|<get-Spacer>(){}[0]
+        final fun <get-Spacer>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Spacer.<get-Spacer>|<get-Spacer>(){}[0]
     final val Tabs // app.tinyui.components.generated/BuiltinSchemas.Tabs|{}Tabs[0]
-        final fun <get-Tabs>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Tabs.<get-Tabs>|<get-Tabs>(){}[0]
+        final fun <get-Tabs>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Tabs.<get-Tabs>|<get-Tabs>(){}[0]
     final val Text // app.tinyui.components.generated/BuiltinSchemas.Text|{}Text[0]
-        final fun <get-Text>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Text.<get-Text>|<get-Text>(){}[0]
+        final fun <get-Text>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.Text.<get-Text>|<get-Text>(){}[0]
     final val TextField // app.tinyui.components.generated/BuiltinSchemas.TextField|{}TextField[0]
-        final fun <get-TextField>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.TextField.<get-TextField>|<get-TextField>(){}[0]
+        final fun <get-TextField>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.TextField.<get-TextField>|<get-TextField>(){}[0]
     final val TopAppBar // app.tinyui.components.generated/BuiltinSchemas.TopAppBar|{}TopAppBar[0]
-        final fun <get-TopAppBar>(): app.tinyui.schema/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.TopAppBar.<get-TopAppBar>|<get-TopAppBar>(){}[0]
+        final fun <get-TopAppBar>(): app.tinyui.components/ComponentSchema // app.tinyui.components.generated/BuiltinSchemas.TopAppBar.<get-TopAppBar>|<get-TopAppBar>(){}[0]
     final val all // app.tinyui.components.generated/BuiltinSchemas.all|{}all[0]
-        final fun <get-all>(): kotlin.collections/List<app.tinyui.schema/ComponentSchema> // app.tinyui.components.generated/BuiltinSchemas.all.<get-all>|<get-all>(){}[0]
+        final fun <get-all>(): kotlin.collections/List<app.tinyui.components/ComponentSchema> // app.tinyui.components.generated/BuiltinSchemas.all.<get-all>|<get-all>(){}[0]
     final val colorTokens // app.tinyui.components.generated/BuiltinSchemas.colorTokens|{}colorTokens[0]
         final fun <get-colorTokens>(): kotlin.collections/Set<kotlin/String> // app.tinyui.components.generated/BuiltinSchemas.colorTokens.<get-colorTokens>|<get-colorTokens>(){}[0]
     final val textStyles // app.tinyui.components.generated/BuiltinSchemas.textStyles|{}textStyles[0]
         final fun <get-textStyles>(): kotlin.collections/Set<kotlin/String> // app.tinyui.components.generated/BuiltinSchemas.textStyles.<get-textStyles>|<get-textStyles>(){}[0]
 }
 
-final object app.tinyui.schema/LayoutProps { // app.tinyui.schema/LayoutProps|null[0]
-    final val specs // app.tinyui.schema/LayoutProps.specs|{}specs[0]
-        final fun <get-specs>(): kotlin.collections/Map<kotlin/String, app.tinyui.schema/PropSpec> // app.tinyui.schema/LayoutProps.specs.<get-specs>|<get-specs>(){}[0]
+final object app.tinyui.components/LayoutProps { // app.tinyui.components/LayoutProps|null[0]
+    final val specs // app.tinyui.components/LayoutProps.specs|{}specs[0]
+        final fun <get-specs>(): kotlin.collections/Map<kotlin/String, app.tinyui.components/PropSpec> // app.tinyui.components/LayoutProps.specs.<get-specs>|<get-specs>(){}[0]
 }
 
-final object app.tinyui.schema/Theme { // app.tinyui.schema/Theme|null[0]
-    final fun color(androidx.compose.material3/ColorScheme, kotlin/String): androidx.compose.ui.graphics/Color? // app.tinyui.schema/Theme.color|color(androidx.compose.material3.ColorScheme;kotlin.String){}[0]
-    final fun isColorToken(kotlin/String): kotlin/Boolean // app.tinyui.schema/Theme.isColorToken|isColorToken(kotlin.String){}[0]
-    final fun textStyle(androidx.compose.material3/Typography, kotlin/String): androidx.compose.ui.text/TextStyle? // app.tinyui.schema/Theme.textStyle|textStyle(androidx.compose.material3.Typography;kotlin.String){}[0]
+final object app.tinyui.components/Theme { // app.tinyui.components/Theme|null[0]
+    final fun color(androidx.compose.material3/ColorScheme, kotlin/String): androidx.compose.ui.graphics/Color? // app.tinyui.components/Theme.color|color(androidx.compose.material3.ColorScheme;kotlin.String){}[0]
+    final fun isColorToken(kotlin/String): kotlin/Boolean // app.tinyui.components/Theme.isColorToken|isColorToken(kotlin.String){}[0]
+    final fun textStyle(androidx.compose.material3/Typography, kotlin/String): androidx.compose.ui.text/TextStyle? // app.tinyui.components/Theme.textStyle|textStyle(androidx.compose.material3.Typography;kotlin.String){}[0]
 }
 
 final object app.tinyui/TinyUI { // app.tinyui/TinyUI|null[0]
@@ -838,6 +838,26 @@ final val app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop // app.tinyu
 final val app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop // app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop|#static{}app_tinyui_bundle_PackageCheck$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop // app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop|#static{}app_tinyui_bundle_PageRequires$stableprop[0]
 final val app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop|#static{}app_tinyui_components_generated_BuiltinSchemas$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop // app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop|#static{}app_tinyui_components_ColorValue_Literal$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_ColorValue_Token$stableprop // app.tinyui.components/app_tinyui_components_ColorValue_Token$stableprop|#static{}app_tinyui_components_ColorValue_Token$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_ComponentRegistry$stableprop // app.tinyui.components/app_tinyui_components_ComponentRegistry$stableprop|#static{}app_tinyui_components_ComponentRegistry$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop // app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop|#static{}app_tinyui_components_ComponentSchema$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_IconValue$stableprop // app.tinyui.components/app_tinyui_components_IconValue$stableprop|#static{}app_tinyui_components_IconValue$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_LayoutProps$stableprop // app.tinyui.components/app_tinyui_components_LayoutProps$stableprop|#static{}app_tinyui_components_LayoutProps$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec$stableprop // app.tinyui.components/app_tinyui_components_PropSpec$stableprop|#static{}app_tinyui_components_PropSpec$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop|#static{}app_tinyui_components_PropSpec_Bool$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop|#static{}app_tinyui_components_PropSpec_ColorSpec$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Dp$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Dp$stableprop|#static{}app_tinyui_components_PropSpec_Dp$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Enum$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Enum$stableprop|#static{}app_tinyui_components_PropSpec_Enum$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_IconSpec$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_IconSpec$stableprop|#static{}app_tinyui_components_PropSpec_IconSpec$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Num$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Num$stableprop|#static{}app_tinyui_components_PropSpec_Num$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Size$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Size$stableprop|#static{}app_tinyui_components_PropSpec_Size$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Sp$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Sp$stableprop|#static{}app_tinyui_components_PropSpec_Sp$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_PropSpec_Str$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Str$stableprop|#static{}app_tinyui_components_PropSpec_Str$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_SizeValue_Fill$stableprop // app.tinyui.components/app_tinyui_components_SizeValue_Fill$stableprop|#static{}app_tinyui_components_SizeValue_Fill$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_SizeValue_Fixed$stableprop // app.tinyui.components/app_tinyui_components_SizeValue_Fixed$stableprop|#static{}app_tinyui_components_SizeValue_Fixed$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop // app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop|#static{}app_tinyui_components_SizeValue_Wrap$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_Theme$stableprop // app.tinyui.components/app_tinyui_components_Theme$stableprop|#static{}app_tinyui_components_Theme$stableprop[0]
 final val app.tinyui.host/LocalTinyUIDefaults // app.tinyui.host/LocalTinyUIDefaults|{}LocalTinyUIDefaults[0]
     final fun <get-LocalTinyUIDefaults>(): androidx.compose.runtime/ProvidableCompositionLocal<app.tinyui.host/TinyUIDefaults> // app.tinyui.host/LocalTinyUIDefaults.<get-LocalTinyUIDefaults>|<get-LocalTinyUIDefaults>(){}[0]
 final val app.tinyui.host/app_tinyui_host_ButtonStyle$stableprop // app.tinyui.host/app_tinyui_host_ButtonStyle$stableprop|#static{}app_tinyui_host_ButtonStyle$stableprop[0]
@@ -869,31 +889,11 @@ final val app.tinyui.page/app_tinyui_page_PageModule$stableprop // app.tinyui.pa
 final val app.tinyui.page/app_tinyui_page_SourceMap_Position$stableprop // app.tinyui.page/app_tinyui_page_SourceMap_Position$stableprop|#static{}app_tinyui_page_SourceMap_Position$stableprop[0]
 final val app.tinyui.page/app_tinyui_page_SourceMaps$stableprop // app.tinyui.page/app_tinyui_page_SourceMaps$stableprop|#static{}app_tinyui_page_SourceMaps$stableprop[0]
 final val app.tinyui.page/app_tinyui_page_StackFrame$stableprop // app.tinyui.page/app_tinyui_page_StackFrame$stableprop|#static{}app_tinyui_page_StackFrame$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop // app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop|#static{}app_tinyui_schema_ColorValue_Literal$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop // app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop|#static{}app_tinyui_schema_ColorValue_Token$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop // app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop|#static{}app_tinyui_schema_ComponentRegistry$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop // app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop|#static{}app_tinyui_schema_ComponentSchema$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_IconValue$stableprop // app.tinyui.schema/app_tinyui_schema_IconValue$stableprop|#static{}app_tinyui_schema_IconValue$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop // app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop|#static{}app_tinyui_schema_LayoutProps$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop|#static{}app_tinyui_schema_PropSpec$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop|#static{}app_tinyui_schema_PropSpec_Bool$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop|#static{}app_tinyui_schema_PropSpec_ColorSpec$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop|#static{}app_tinyui_schema_PropSpec_Dp$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop|#static{}app_tinyui_schema_PropSpec_Enum$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_IconSpec$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_IconSpec$stableprop|#static{}app_tinyui_schema_PropSpec_IconSpec$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop|#static{}app_tinyui_schema_PropSpec_Num$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop|#static{}app_tinyui_schema_PropSpec_Size$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop|#static{}app_tinyui_schema_PropSpec_Sp$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop // app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop|#static{}app_tinyui_schema_PropSpec_Str$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop|#static{}app_tinyui_schema_SizeValue_Fill$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop|#static{}app_tinyui_schema_SizeValue_Fixed$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop // app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop|#static{}app_tinyui_schema_SizeValue_Wrap$stableprop[0]
-final val app.tinyui.schema/app_tinyui_schema_Theme$stableprop // app.tinyui.schema/app_tinyui_schema_Theme$stableprop|#static{}app_tinyui_schema_Theme$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUI$stableprop // app.tinyui/app_tinyui_TinyUI$stableprop|#static{}app_tinyui_TinyUI$stableprop[0]
 final val app.tinyui/app_tinyui_TinyUIHost$stableprop // app.tinyui/app_tinyui_TinyUIHost$stableprop|#static{}app_tinyui_TinyUIHost$stableprop[0]
 
-final fun (app.tinyui.schema/ComponentRegistry).app.tinyui.components/registerBuiltins(): app.tinyui.schema/ComponentRegistry // app.tinyui.components/registerBuiltins|registerBuiltins@app.tinyui.schema.ComponentRegistry(){}[0]
-final fun (app.tinyui.schema/NodeScope).app.tinyui.schema/Commands(kotlin.coroutines/SuspendFunction1<app.tinyui.node/Command, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.schema/Commands|Commands@app.tinyui.schema.NodeScope(kotlin.coroutines.SuspendFunction1<app.tinyui.node.Command,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+final fun (app.tinyui.components/ComponentRegistry).app.tinyui.components/registerBuiltins(): app.tinyui.components/ComponentRegistry // app.tinyui.components/registerBuiltins|registerBuiltins@app.tinyui.components.ComponentRegistry(){}[0]
+final fun (app.tinyui.components/NodeScope).app.tinyui.components/Commands(kotlin.coroutines/SuspendFunction1<app.tinyui.node/Command, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/Commands|Commands@app.tinyui.components.NodeScope(kotlin.coroutines.SuspendFunction1<app.tinyui.node.Command,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun <#A: kotlin/Any?> (app.tinyui.host/Store).app.tinyui.host/bind(kotlin/String, kotlinx.coroutines.flow/Flow<#A>, kotlinx.coroutines/CoroutineScope, kotlinx.serialization/KSerializer<#A>): kotlinx.coroutines/Job // app.tinyui.host/bind|bind@app.tinyui.host.Store(kotlin.String;kotlinx.coroutines.flow.Flow<0:0>;kotlinx.coroutines.CoroutineScope;kotlinx.serialization.KSerializer<0:0>){0§<kotlin.Any?>}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_BuildManifest$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_BuildManifest$stableprop_getter|app_tinyui_bundle_BuildManifest$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_Bundle$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_Bundle$stableprop_getter|app_tinyui_bundle_Bundle$stableprop_getter(){}[0]
@@ -903,6 +903,26 @@ final fun app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop_getter(): ko
 final fun app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter|app_tinyui_bundle_PackageCheck$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter|app_tinyui_bundle_PageRequires$stableprop_getter(){}[0]
 final fun app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(): kotlin/Int // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter|app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop_getter|app_tinyui_components_ColorValue_Literal$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_ColorValue_Token$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ColorValue_Token$stableprop_getter|app_tinyui_components_ColorValue_Token$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_ComponentRegistry$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ComponentRegistry$stableprop_getter|app_tinyui_components_ComponentRegistry$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop_getter|app_tinyui_components_ComponentSchema$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_IconValue$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_IconValue$stableprop_getter|app_tinyui_components_IconValue$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_LayoutProps$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_LayoutProps$stableprop_getter|app_tinyui_components_LayoutProps$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec$stableprop_getter|app_tinyui_components_PropSpec$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop_getter|app_tinyui_components_PropSpec_Bool$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop_getter|app_tinyui_components_PropSpec_ColorSpec$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Dp$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Dp$stableprop_getter|app_tinyui_components_PropSpec_Dp$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Enum$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Enum$stableprop_getter|app_tinyui_components_PropSpec_Enum$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_IconSpec$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_IconSpec$stableprop_getter|app_tinyui_components_PropSpec_IconSpec$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Num$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Num$stableprop_getter|app_tinyui_components_PropSpec_Num$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Size$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Size$stableprop_getter|app_tinyui_components_PropSpec_Size$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Sp$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Sp$stableprop_getter|app_tinyui_components_PropSpec_Sp$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_PropSpec_Str$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Str$stableprop_getter|app_tinyui_components_PropSpec_Str$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_SizeValue_Fill$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_SizeValue_Fill$stableprop_getter|app_tinyui_components_SizeValue_Fill$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_SizeValue_Fixed$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_SizeValue_Fixed$stableprop_getter|app_tinyui_components_SizeValue_Fixed$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop_getter|app_tinyui_components_SizeValue_Wrap$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_Theme$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_Theme$stableprop_getter|app_tinyui_components_Theme$stableprop_getter(){}[0]
 final fun app.tinyui.host/app_tinyui_host_ButtonStyle$stableprop_getter(): kotlin/Int // app.tinyui.host/app_tinyui_host_ButtonStyle$stableprop_getter|app_tinyui_host_ButtonStyle$stableprop_getter(){}[0]
 final fun app.tinyui.host/app_tinyui_host_CapabilityRegistry$stableprop_getter(): kotlin/Int // app.tinyui.host/app_tinyui_host_CapabilityRegistry$stableprop_getter|app_tinyui_host_CapabilityRegistry$stableprop_getter(){}[0]
 final fun app.tinyui.host/app_tinyui_host_CheckboxStyle$stableprop_getter(): kotlin/Int // app.tinyui.host/app_tinyui_host_CheckboxStyle$stableprop_getter|app_tinyui_host_CheckboxStyle$stableprop_getter(){}[0]
@@ -933,26 +953,6 @@ final fun app.tinyui.page/app_tinyui_page_PageModule$stableprop_getter(): kotlin
 final fun app.tinyui.page/app_tinyui_page_SourceMap_Position$stableprop_getter(): kotlin/Int // app.tinyui.page/app_tinyui_page_SourceMap_Position$stableprop_getter|app_tinyui_page_SourceMap_Position$stableprop_getter(){}[0]
 final fun app.tinyui.page/app_tinyui_page_SourceMaps$stableprop_getter(): kotlin/Int // app.tinyui.page/app_tinyui_page_SourceMaps$stableprop_getter|app_tinyui_page_SourceMaps$stableprop_getter(){}[0]
 final fun app.tinyui.page/app_tinyui_page_StackFrame$stableprop_getter(): kotlin/Int // app.tinyui.page/app_tinyui_page_StackFrame$stableprop_getter|app_tinyui_page_StackFrame$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ColorValue_Literal$stableprop_getter|app_tinyui_schema_ColorValue_Literal$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ColorValue_Token$stableprop_getter|app_tinyui_schema_ColorValue_Token$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ComponentRegistry$stableprop_getter|app_tinyui_schema_ComponentRegistry$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_ComponentSchema$stableprop_getter|app_tinyui_schema_ComponentSchema$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_IconValue$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_IconValue$stableprop_getter|app_tinyui_schema_IconValue$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_LayoutProps$stableprop_getter|app_tinyui_schema_LayoutProps$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec$stableprop_getter|app_tinyui_schema_PropSpec$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Bool$stableprop_getter|app_tinyui_schema_PropSpec_Bool$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter|app_tinyui_schema_PropSpec_ColorSpec$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Dp$stableprop_getter|app_tinyui_schema_PropSpec_Dp$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Enum$stableprop_getter|app_tinyui_schema_PropSpec_Enum$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_IconSpec$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_IconSpec$stableprop_getter|app_tinyui_schema_PropSpec_IconSpec$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Num$stableprop_getter|app_tinyui_schema_PropSpec_Num$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Size$stableprop_getter|app_tinyui_schema_PropSpec_Size$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Sp$stableprop_getter|app_tinyui_schema_PropSpec_Sp$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_PropSpec_Str$stableprop_getter|app_tinyui_schema_PropSpec_Str$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Fill$stableprop_getter|app_tinyui_schema_SizeValue_Fill$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Fixed$stableprop_getter|app_tinyui_schema_SizeValue_Fixed$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_SizeValue_Wrap$stableprop_getter|app_tinyui_schema_SizeValue_Wrap$stableprop_getter(){}[0]
-final fun app.tinyui.schema/app_tinyui_schema_Theme$stableprop_getter(): kotlin/Int // app.tinyui.schema/app_tinyui_schema_Theme$stableprop_getter|app_tinyui_schema_Theme$stableprop_getter(){}[0]
 final fun app.tinyui/TinyUIPage(app.tinyui.page/PageModule, app.tinyui/TinyUIHost, kotlin/String?, kotlin.collections/List<app.tinyui.host/PageLocalValue<*>>?, androidx.compose.ui/Modifier?, app.tinyui.page/SourceMaps?, kotlin/Function3<app.tinyui.page/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui.page/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui/TinyUIPage|TinyUIPage(app.tinyui.page.PageModule;app.tinyui.TinyUIHost;kotlin.String?;kotlin.collections.List<app.tinyui.host.PageLocalValue<*>>?;androidx.compose.ui.Modifier?;app.tinyui.page.SourceMaps?;kotlin.Function3<app.tinyui.page.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.page.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun app.tinyui/app_tinyui_TinyUI$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUI$stableprop_getter|app_tinyui_TinyUI$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_TinyUIHost$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_TinyUIHost$stableprop_getter|app_tinyui_TinyUIHost$stableprop_getter(){}[0]

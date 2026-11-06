@@ -2,7 +2,7 @@ package app.tinyui.components.impl
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 internal const val SECTION_HEADER = "SectionHeader"
 

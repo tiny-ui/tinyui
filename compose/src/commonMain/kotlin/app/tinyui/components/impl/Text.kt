@@ -16,9 +16,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
+import app.tinyui.components.NodeScope
+import app.tinyui.components.Theme
 import app.tinyui.host.LocalTinyUIDefaults
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.Theme
 
 @Composable
 internal fun TextComponent(scope: NodeScope) {

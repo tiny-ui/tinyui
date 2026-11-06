@@ -8,7 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 /**
  * M3 primary tab row; the tabs are the `Option` children, read as data like [SelectComponent] reads them, and the

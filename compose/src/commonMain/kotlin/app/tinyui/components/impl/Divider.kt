@@ -4,7 +4,7 @@ import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 @Composable
 internal fun DividerComponent(scope: NodeScope) {

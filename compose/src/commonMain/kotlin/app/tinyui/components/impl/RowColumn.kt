@@ -6,10 +6,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.NodeScope
+import app.tinyui.components.SizeValue
 import app.tinyui.node.UINode
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.SizeValue
 
 /**
  * What a user did to a component that a retained page must come back with (docs/app-model.md §5): typed text, code

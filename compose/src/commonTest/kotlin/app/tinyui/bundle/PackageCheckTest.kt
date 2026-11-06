@@ -6,8 +6,8 @@ import app.tinyui.components.registerBuiltins
 import app.tinyui.host.CapabilityRegistry
 import app.tinyui.page.PageError
 import app.tinyui.page.PageSink
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.ComponentSchema
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.ComponentSchema
 import wang.harlon.quickjs.QuickJs
 import kotlin.test.Test
 import kotlin.test.assertEquals

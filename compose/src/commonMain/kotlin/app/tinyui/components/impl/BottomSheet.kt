@@ -10,7 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 /**
  * `open` is the page's; going false animates the sheet out before it leaves composition. A user dismissal (swipe, scrim,

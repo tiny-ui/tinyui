@@ -7,11 +7,11 @@ import androidx.compose.runtime.setValue
 import app.tinyui.FrameworkCapabilities
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
+import app.tinyui.components.ComponentRegistry
 import app.tinyui.host.PageContext
 import app.tinyui.host.PageLocalValue
 import app.tinyui.node.NodeTree
 import app.tinyui.node.UINode
-import app.tinyui.schema.ComponentRegistry
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope

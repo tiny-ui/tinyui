@@ -25,7 +25,6 @@ import app.tinyui.components.impl.TabsComponent
 import app.tinyui.components.impl.TextComponent
 import app.tinyui.components.impl.TextFieldComponent
 import app.tinyui.components.impl.TopAppBarComponent
-import app.tinyui.schema.ComponentRegistry
 
 /**
  * The built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. This file is the whole public

@@ -2,7 +2,7 @@ package app.tinyui.components.impl
 
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 @Composable
 internal fun RadioButtonComponent(scope: NodeScope) {

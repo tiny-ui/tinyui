@@ -2,9 +2,9 @@ package app.tinyui.bundle
 
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
-import app.tinyui.schema.ComponentSchema
-import app.tinyui.schema.FieldSpec
-import app.tinyui.schema.PropSpec
+import app.tinyui.components.ComponentSchema
+import app.tinyui.components.FieldSpec
+import app.tinyui.components.PropSpec
 import kotlinx.serialization.json.JsonPrimitive
 
 /** The host snapshot `tinyui-host/<hostVersion>.txt` (docs/updates.md §4.1, format §6.4). */

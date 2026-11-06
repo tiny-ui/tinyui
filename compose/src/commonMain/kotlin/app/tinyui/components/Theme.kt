@@ -1,4 +1,4 @@
-package app.tinyui.schema
+package app.tinyui.components
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme

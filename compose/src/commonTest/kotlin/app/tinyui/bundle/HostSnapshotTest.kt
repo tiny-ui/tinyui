@@ -9,10 +9,10 @@ import app.tinyui.host.Session
 import app.tinyui.host.SessionSource
 import app.tinyui.page.PageError
 import app.tinyui.page.PageSink
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.ComponentSchema
-import app.tinyui.schema.FieldSpec
-import app.tinyui.schema.PropSpec
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.ComponentSchema
+import app.tinyui.components.FieldSpec
+import app.tinyui.components.PropSpec
 import kotlin.test.Test
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.assertEquals

@@ -21,9 +21,9 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.tinyui.components.Commands
+import app.tinyui.components.NodeScope
 import app.tinyui.node.UINode
-import app.tinyui.schema.Commands
-import app.tinyui.schema.NodeScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch

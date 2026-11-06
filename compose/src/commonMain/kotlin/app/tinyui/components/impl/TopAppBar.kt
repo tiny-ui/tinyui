@@ -20,9 +20,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.navigationevent.DirectNavigationEventInput
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
-import app.tinyui.schema.IconValue
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.SizeValue
+import app.tinyui.components.IconValue
+import app.tinyui.components.NodeScope
+import app.tinyui.components.SizeValue
 
 /**
  * M3 small top app bar under the status bar; the children are the actions. The status bar padding sits outside the

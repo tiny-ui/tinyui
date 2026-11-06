@@ -2,11 +2,11 @@ package app.tinyui.node
 
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.graphics.Color
-import app.tinyui.schema.ColorValue
+import app.tinyui.components.ColorValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.tinyui.components.registerBuiltins
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -196,8 +196,8 @@ class NodeTreeTest {
     fun layoutPropsApplyToEveryLayoutComponent() {
         tree.apply("""[["c",1,"Spacer"],["p",1,"width","fill"],["p",1,"height",12],["p",1,"padding",4],["i",0,1,0]]""")
         val node = tree.node(1)!!
-        assertEquals(app.tinyui.schema.SizeValue.Fill, node.props["width"])
-        assertEquals(app.tinyui.schema.SizeValue.Fixed(12.dp), node.props["height"])
+        assertEquals(app.tinyui.components.SizeValue.Fill, node.props["width"])
+        assertEquals(app.tinyui.components.SizeValue.Fixed(12.dp), node.props["height"])
         assertEquals(4.dp, node.props["padding"])
         assertTrue(problems.isEmpty(), problems.toString())
     }

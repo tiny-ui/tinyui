@@ -9,7 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 /**
  * M3 dropdown menu anchored to the parent node, like [PopoverComponent]; the items are the `Option` children, read as

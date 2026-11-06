@@ -5,7 +5,7 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 /** Takes back from the system dispatcher while enabled, which is also where the `TopAppBar` button sends it. */
 @Composable

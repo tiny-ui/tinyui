@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.NodeScope
 
 @Composable
 internal fun ComponentRegistry.RowComponent(scope: NodeScope) {

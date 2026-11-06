@@ -6,8 +6,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.tinyui.schema.IconValue
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.IconValue
+import app.tinyui.components.NodeScope
 
 @Composable
 internal fun IconComponent(scope: NodeScope) {

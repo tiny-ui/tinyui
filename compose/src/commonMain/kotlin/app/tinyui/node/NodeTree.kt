@@ -12,7 +12,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
 
 const val ROOT_ID = 0
 

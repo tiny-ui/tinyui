@@ -17,10 +17,6 @@ import androidx.compose.ui.unit.dp
 import app.tinyui.node.NodeTree
 import app.tinyui.node.PatchProblem
 import app.tinyui.node.UINode
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.LocalChildModifier
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.SizeValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -1,8 +1,8 @@
 package app.tinyui.components.impl
 
 import androidx.compose.runtime.Composable
+import app.tinyui.components.NodeScope
 import app.tinyui.node.UINode
-import app.tinyui.schema.NodeScope
 
 /** Data for its Select / Menu / Tabs / IndexBar, never drawn: they read it with [options]. */
 @Composable

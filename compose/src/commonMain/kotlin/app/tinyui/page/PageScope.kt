@@ -22,11 +22,11 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.LocalChildModifier
+import app.tinyui.components.NodeScope
+import app.tinyui.components.SizeValue
 import app.tinyui.node.UINode
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.LocalChildModifier
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.SizeValue
 
 /** The scope a component renders through. */
 internal class PageScope(private val pageHost: PageHost, override val node: UINode) : NodeScope {

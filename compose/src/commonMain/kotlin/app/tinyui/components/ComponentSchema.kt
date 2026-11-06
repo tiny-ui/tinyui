@@ -1,4 +1,4 @@
-package app.tinyui.schema
+package app.tinyui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color

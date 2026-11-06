@@ -16,7 +16,7 @@ import wang.harlon.quickjs.JsEngine
 import wang.harlon.quickjs.JsEngineConfig
 import wang.harlon.quickjs.JsValue
 import app.tinyui.components.registerBuiltins
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

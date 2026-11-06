@@ -7,7 +7,7 @@ import androidx.compose.material3.LoadingIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.tinyui.schema.NodeScope
+import app.tinyui.components.NodeScope
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

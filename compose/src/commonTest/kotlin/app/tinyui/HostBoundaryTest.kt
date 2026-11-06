@@ -5,7 +5,7 @@ import app.tinyui.host.KtorChannel
 import app.tinyui.page.PackageI18n
 import app.tinyui.page.PageError
 import app.tinyui.page.PageSink
-import app.tinyui.schema.parseIcon
+import app.tinyui.components.parseIcon
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
