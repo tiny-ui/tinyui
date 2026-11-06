@@ -39,7 +39,8 @@ internal class MissingKeys {
 
     fun firstTime(key: String): Boolean {
         var added = false
-        seen.update { if (key in it) it else { added = true; it + key } }
+        // update re-runs the block when another thread got in first, so the answer is set on every run, not only raised
+        seen.update { added = key !in it; if (added) it + key else it }
         return added
     }
 }
