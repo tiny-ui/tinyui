@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
@@ -996,6 +997,9 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
                 ) {
                     Text(
                         label.second,
+                        // at its own size, centred over the circle: a line taller than the circle (the host's line
+                        // height is its own business) would otherwise be cut to it from the top, and sit low
+                        modifier = Modifier.wrapContentSize(unbounded = true),
                         style = labelStyle,
                         color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
