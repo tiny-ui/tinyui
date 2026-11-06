@@ -46,21 +46,21 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
     /** J2 whitelist (docs/native-api.md §2); anything else answers null. */
     fun query(name: String, argsJson: String): String {
         val a = args(argsJson)
-        return when (name) {
-            "device.info" -> JsonObject(platformInfo().mapValues { JsonPrimitive(it.value) }).toString()
-            "store.get" -> a.str("key")?.let(host.store::getJson) ?: "null"
-            "storage.get" -> a.str("key")?.let { storage?.get(it) } ?: "null"
-            "storage.set" -> {
+        return when (J2.of(name)) {
+            J2.DeviceInfo -> JsonObject(platformInfo().mapValues { JsonPrimitive(it.value) }).toString()
+            J2.StoreGet -> a.str("key")?.let(host.store::getJson) ?: "null"
+            J2.StorageGet -> a.str("key")?.let { storage?.get(it) } ?: "null"
+            J2.StorageSet -> {
                 val key = a.str("key") ?: return JsonPrimitive("E_INVALID").toString()
                 val target = storage ?: return JsonPrimitive("E_UNSUPPORTED").toString()
                 target.set(key, a.str("value") ?: "null")?.let { JsonPrimitive(it).toString() } ?: "null"
             }
-            "i18n.t" -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
-            "i18n.locale" -> JsonPrimitive(host.currentLocale()).toString()
-            "i18n.timeZone" -> JsonPrimitive(host.currentTimeZone()).toString()
-            "i18n.zoneOffset" -> JsonPrimitive(zoneOffset(a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0)).toString()
-            "session.get" -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
-            else -> "null"
+            J2.I18nT -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
+            J2.I18nLocale -> JsonPrimitive(host.currentLocale()).toString()
+            J2.I18nTimeZone -> JsonPrimitive(host.currentTimeZone()).toString()
+            J2.I18nZoneOffset -> JsonPrimitive(zoneOffset(a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0)).toString()
+            J2.SessionGet -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
+            null -> "null"
         }
     }
 
@@ -81,15 +81,16 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
     /** J3 (docs/native-api.md §6–§13); results come back through [resolve] / [reject] as one transaction each. */
     fun call(name: String, cbId: Int, argsJson: String) {
         val a = args(argsJson)
-        when (name) {
-            "timer.schedule" -> schedule(cbId, a)
-            "http.request" -> settle(cbId) { http(a) }
-            "session.signIn" -> settle(cbId) {
+        val known = J3.of(name)
+        when (known) {
+            J3.TimerSchedule -> schedule(cbId, a)
+            J3.HttpRequest -> settle(cbId) { http(a) }
+            J3.SessionSignIn -> settle(cbId) {
                 val session = host.session ?: throw HostException("E_UNSUPPORTED", "the host provides no session")
                 withContext(Dispatchers.Main) { session.signIn(a.str("source") ?: "") }
                 ""
             }
-            "ui.toast" -> settle(cbId) {
+            J3.UiToast -> settle(cbId) {
                 val message = a.str("message") ?: throw HostException("E_INVALID", "ui.toast needs a message")
                 val long = a.str("duration") == "long"
                 val result = withContext(Dispatchers.Main) {
@@ -97,35 +98,35 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
                 }
                 JsonPrimitive(if (result == SnackbarResult.ActionPerformed) "action" else "dismissed").toString()
             }
-            "ui.alert", "ui.confirm" -> settle(cbId) {
+            J3.UiAlert, J3.UiConfirm -> settle(cbId) {
                 val texts = DialogTexts.of(host.currentLocale())
                 val confirmed = ui.ask(
                     DialogRequest(
                         title = a.str("title"),
                         message = a.str("message") ?: throw HostException("E_INVALID", "$name needs a message"),
                         confirm = a.str("confirm") ?: texts.ok,
-                        cancel = if (name == "ui.confirm") a.str("cancel") ?: texts.cancel else null,
+                        cancel = if (known == J3.UiConfirm) a.str("cancel") ?: texts.cancel else null,
                     ),
                 )
-                if (name == "ui.confirm") confirmed.toString() else ""
+                if (known == J3.UiConfirm) confirmed.toString() else ""
             }
-            "crypto.rsaEncrypt" -> settle(cbId) {
+            J3.CryptoRsaEncrypt -> settle(cbId) {
                 // strings only: a number would be encrypted as its decimal text, which is not what the page holds
                 val text = (a["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs text as a string")
                 val key = (a["publicKey"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs a publicKey string")
                 // off the engine's lane: RSA is cheap but not free on a slow phone
                 JsonPrimitive(withContext(Dispatchers.Default) { rsaEncrypt(text, key) }).toString()
             }
-            "clipboard.setText" -> settle(cbId) {
+            J3.ClipboardSetText -> settle(cbId) {
                 context.copy(a.str("text") ?: throw HostException("E_INVALID", "clipboard.setText needs text"))
                 ""
             }
-            "linking.openUrl" -> settle(cbId) {
+            J3.LinkingOpenUrl -> settle(cbId) {
                 val url = a.str("url")?.takeIf { URL_SCHEME.containsMatchIn(it) } ?: throw HostException("E_INVALID", "linking.openUrl needs an absolute URL")
                 withContext(Dispatchers.Main) { (host.links ?: LinkOpener.System).open(url, context) }
                 ""
             }
-            else -> when (val capability = host.capabilities[name]) {
+            null -> when (val capability = host.capabilities[name]) {
                 null -> scope.launch { pageHost.reject(cbId, "E_UNSUPPORTED", "$name is not available") }
                 else -> settle(cbId) { capability.call(argsJson, context) ?: "" }
             }
@@ -187,18 +188,18 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
     /** J4 (docs/native-api.md §3–§12). */
     fun send(name: String, argsJson: String) {
         val a = args(argsJson)
-        when (name) {
-            "timer.cancel" -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
-            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
-            "navigation.pop" -> host.navigator.pop(a["result"]?.toString(), context)
-            "store.set" -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
+        when (J4.of(name)) {
+            J4.TimerCancel -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
+            J4.NavigationPush -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
+            J4.NavigationPop -> host.navigator.pop(a["result"]?.toString(), context)
+            J4.StoreSet -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
             // one host listener per key / topic; JS fans out to its own handlers
-            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }
-            "storage.remove" -> storage?.remove(a.str("key") ?: return)
-            "storage.clear" -> storage?.clear()
-            "events.emit" -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
-            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> pageHost.emit(topic, json) } } }
-            "i18n.subscribe" -> {
+            J4.StoreSubscribe -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }
+            J4.StorageRemove -> storage?.remove(a.str("key") ?: return)
+            J4.StorageClear -> storage?.clear()
+            J4.EventsEmit -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
+            J4.EventsSubscribe -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> pageHost.emit(topic, json) } } }
+            J4.I18nSubscribe -> {
                 host.locale?.let { flow ->
                     subscriptions.getOrPut("i18n") { follow(flow) { pageHost.emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
                 }
@@ -209,11 +210,11 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
                     systemZoneSeen = host.systemZone()
                 }
             }
-            "session.subscribe" -> host.session?.let { source ->
+            J4.SessionSubscribe -> host.session?.let { source ->
                 subscriptions.getOrPut("session") { follow(source.state) { pageHost.emit("session", sessionJson(it)) } }
             }
-            "analytics.track" -> track(a)
-            else -> sink.log("unknown J4 $name")
+            J4.AnalyticsTrack -> track(a)
+            null -> sink.log("unknown J4 $name")
         }
     }
 
