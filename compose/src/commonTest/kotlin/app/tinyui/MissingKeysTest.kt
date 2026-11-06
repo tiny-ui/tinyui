@@ -20,10 +20,15 @@ class MissingKeysTest {
     fun aKeyIsNewToOneThreadOnlyWhenSeveralAskAtOnce() = runTest {
         val keys = MissingKeys()
         val names = List(5_000) { "key$it" }
-        // the workers wait at one line and leave it together: started one by one, the first could finish before the next begins
+        // started one by one, the first worker could finish before the next begins: each says when it is at the line,
+        // and they are let go once all of them are there
+        val atTheLine = List(8) { CompletableDeferred<Unit>() }
         val go = CompletableDeferred<Unit>()
         val firsts = withContext(Dispatchers.Default) {
-            List(8) { async { go.await(); names.count { keys.firstTime(it) } } }.also { go.complete(Unit) }.awaitAll().sum()
+            val workers = atTheLine.map { here -> async { here.complete(Unit); go.await(); names.count { keys.firstTime(it) } } }
+            atTheLine.awaitAll()
+            go.complete(Unit)
+            workers.awaitAll().sum()
         }
         assertEquals(names.size, firsts)
     }
