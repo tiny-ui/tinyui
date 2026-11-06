@@ -25,13 +25,49 @@ fun interface HostCapability {
     suspend fun call(argsJson: String, page: PageContext): String?
 }
 
-/** Names the framework dispatches itself (J2 / J3 / J4); a host capability may not take one. */
-internal val FrameworkNames = setOf(
-    "device.info", "store.get", "store.set", "store.subscribe", "storage.get", "storage.set", "storage.remove", "storage.clear",
-    "i18n.t", "i18n.locale", "i18n.timeZone", "i18n.zoneOffset", "i18n.subscribe", "session.get", "session.subscribe", "session.signIn",
-    "navigation.push", "navigation.pop", "events.emit", "events.subscribe", "http.request", "timer.schedule", "timer.cancel",
-    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "clipboard.setText", "analytics.track", "crypto.rsaEncrypt",
-)
+/*
+ * The names the framework answers itself, one enum per way a page reaches them (docs/native-api.md §2–§13). They are declared
+ * here and nowhere else: HostBridge's `when` over each enum has no `else`, so a name without a handler does not compile.
+ */
+
+/** J2: answered at once, inside the entry that asks. */
+internal enum class J2(val wire: String) {
+    DeviceInfo("device.info"), StoreGet("store.get"), StorageGet("storage.get"), StorageSet("storage.set"),
+    I18nT("i18n.t"), I18nLocale("i18n.locale"), I18nTimeZone("i18n.timeZone"), I18nZoneOffset("i18n.zoneOffset"), SessionGet("session.get");
+
+    companion object {
+        private val byWire = entries.associateBy { it.wire }
+        fun of(name: String): J2? = byWire[name]
+    }
+}
+
+/** J3: answered later, with a resolve or a reject. A name that is not here is looked up among the host's capabilities. */
+internal enum class J3(val wire: String) {
+    TimerSchedule("timer.schedule"), HttpRequest("http.request"), SessionSignIn("session.signIn"),
+    UiToast("ui.toast"), UiAlert("ui.alert"), UiConfirm("ui.confirm"),
+    CryptoRsaEncrypt("crypto.rsaEncrypt"), ClipboardSetText("clipboard.setText"), LinkingOpenUrl("linking.openUrl");
+
+    companion object {
+        private val byWire = entries.associateBy { it.wire }
+        fun of(name: String): J3? = byWire[name]
+    }
+}
+
+/** J4: not answered. */
+internal enum class J4(val wire: String) {
+    TimerCancel("timer.cancel"), NavigationPush("navigation.push"), NavigationPop("navigation.pop"),
+    StoreSet("store.set"), StoreSubscribe("store.subscribe"), StorageRemove("storage.remove"), StorageClear("storage.clear"),
+    EventsEmit("events.emit"), EventsSubscribe("events.subscribe"), I18nSubscribe("i18n.subscribe"), SessionSubscribe("session.subscribe"),
+    AnalyticsTrack("analytics.track");
+
+    companion object {
+        private val byWire = entries.associateBy { it.wire }
+        fun of(name: String): J4? = byWire[name]
+    }
+}
+
+/** Every name above; a host capability may not take one. */
+internal val FrameworkNames: Set<String> = (J2.entries.map { it.wire } + J3.entries.map { it.wire } + J4.entries.map { it.wire }).toSet()
 
 /** What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a session. */
-internal val FrameworkCapabilities: Set<String> = FrameworkNames - "session.signIn"
+internal val FrameworkCapabilities: Set<String> = FrameworkNames - J3.SessionSignIn.wire

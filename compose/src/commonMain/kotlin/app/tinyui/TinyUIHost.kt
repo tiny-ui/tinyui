@@ -34,7 +34,7 @@ class TinyUIHost(
     val events: EventBus = EventBus()
 
     /** Capability names pages may rely on beyond the framework's: the registered ones, and `session.signIn` with a [session]. */
-    val capabilityNames: Set<String> get() = capabilities.names + if (session != null) setOf(SESSION_SIGN_IN) else emptySet()
+    val capabilityNames: Set<String> get() = capabilities.names + if (session != null) setOf(J3.SessionSignIn.wire) else emptySet()
 
     internal val storages = Storages(dataDir, sink)
     internal val missingKeys = MissingKeys()
@@ -59,7 +59,6 @@ class TinyUIHost(
 
     internal companion object {
         const val DEFAULT_CHANNEL = "default"
-        const val SESSION_SIGN_IN = "session.signIn"
         val CHANNEL_NAME = Regex("[a-z][a-z0-9-]*")
     }
 }
