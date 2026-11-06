@@ -56,6 +56,8 @@ class PageFailure(val error: PageError) {
  * One page: its engine, coroutine scope and node tree (docs/adr-002 §3.4). Every K entry is
  * `entry` + `flush` under one [JsRuntime.withEngine] (docs/js-runtime.html §2). JS runs on a thread
  * owned by the page (docs/adr-002 §4), closed with the engine.
+ *
+ * [TinyUIPage] creates it and drives it. A host only gets it from `onHost`, to [emit] to the page and to read [failure].
  */
 @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class PageHost internal constructor(
@@ -69,7 +71,7 @@ class PageHost internal constructor(
     private val entryTimeoutMs: Long = 5_000,
     private val sourceMaps: SourceMaps = SourceMaps.EMPTY,
 ) {
-    constructor(
+    internal constructor(
         page: PageModule,
         host: TinyUIHost,
         propsJson: String = "{}",
@@ -82,7 +84,7 @@ class PageHost internal constructor(
     private val sink: PageSink get() = host.sink
     internal val context = PageContext(page.name, locals.associate { it.local to it.value })
     internal val ui = PageUI()
-    val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
+    internal val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set
 
@@ -107,7 +109,7 @@ class PageHost internal constructor(
         fun close() { fns.values.forEach { it.close() }; self.close() }
     }
 
-    fun start() {
+    internal fun start() {
         scope.launch {
             try {
                 // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6
@@ -141,15 +143,15 @@ class PageHost internal constructor(
         }
     }
 
-    fun dispatch(nodeId: Int, event: String, payload: String) = entry("dispatch", JsValue.Num(nodeId), JsValue.Str(event), JsValue.Str(payload))
-    fun visible(visible: Boolean) {
+    internal fun dispatch(nodeId: Int, event: String, payload: String) = entry("dispatch", JsValue.Num(nodeId), JsValue.Str(event), JsValue.Str(payload))
+    internal fun visible(visible: Boolean) {
         wantVisible = visible
         entry("visible", JsValue.Bool(visible))
         if (visible) bridge.systemZoneMoved()
     }
 
-    fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
-    fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
+    internal fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
+    internal fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
 
     internal fun reject(cbId: Int, code: String, message: String, details: JsonObject?) =
         entry("reject", JsValue.Num(cbId), JsValue.Str(JsonObject((details ?: JsonObject(emptyMap())) + mapOf("code" to JsonPrimitive(code), "message" to JsonPrimitive(message))).toString()))
@@ -184,7 +186,7 @@ class PageHost internal constructor(
         }
     }
 
-    fun close() {
+    internal fun close() {
         scope.cancel() // pending entries and timers are its children
         tree.clear()
         // not a child of `scope`: cancelling the page must not cancel its own teardown; the lock orders it after any running entry
@@ -253,7 +255,7 @@ class PageHost internal constructor(
         registry.Render(node.type, PageScope(this, node))
     }
 
-    companion object {
+    internal companion object {
         /** `import.meta.url` of a page module is `tinyui:<name>` (docs/adr-005-engine.md). */
         const val MODULE_SCHEME = "tinyui"
         private val ENTRY_NAMES = listOf("mount", "unmount", "visible", "dispatch", "resolve", "reject", "emit", "flush")

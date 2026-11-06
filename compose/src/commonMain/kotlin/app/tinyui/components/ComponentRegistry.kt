@@ -35,12 +35,12 @@ class ComponentRegistry {
     internal val schemas: List<ComponentSchema> get() = entries.values.map { it.schema }.filter { it.type != PLACEHOLDER }
 
     @Composable
-    fun Render(type: String, scope: NodeScope) {
+    internal fun Render(type: String, scope: NodeScope) {
         (entries[type] ?: entries.getValue(PLACEHOLDER)).component.Render(scope)
     }
 
     /** The manifest handed to JS at mount (`hostJson`, docs/runtime-api.md §9). */
-    fun manifest(capabilities: List<String>): String = buildJsonObject {
+    internal fun manifest(capabilities: List<String>): String = buildJsonObject {
         put("components", JsonObject(entries.filterKeys { it != PLACEHOLDER }.mapValues { (_, e) ->
             buildJsonObject {
                 put("props", JsonArray((e.schema.props.keys + if (e.schema.layout) LayoutProps.specs.keys else emptySet()).map(::JsonPrimitive)))
@@ -51,7 +51,7 @@ class ComponentRegistry {
         put("capabilities", JsonArray(capabilities.map(::JsonPrimitive)))
     }.toString()
 
-    companion object {
+    internal companion object {
         const val PLACEHOLDER = "Placeholder"
     }
 }
