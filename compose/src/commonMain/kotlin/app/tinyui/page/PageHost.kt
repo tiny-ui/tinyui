@@ -4,10 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import app.tinyui.FrameworkCapabilities
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
 import app.tinyui.components.ComponentRegistry
+import app.tinyui.host.FrameworkCapabilities
 import app.tinyui.host.PageContext
 import app.tinyui.host.PageLocalValue
 import app.tinyui.node.NodeTree
