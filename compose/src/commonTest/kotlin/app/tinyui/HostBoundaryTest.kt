@@ -2,7 +2,6 @@ package app.tinyui
 
 import app.tinyui.host.HttpRequest
 import app.tinyui.host.KtorChannel
-import app.tinyui.internal.PackageStorage
 import app.tinyui.page.PackageI18n
 import app.tinyui.page.PageError
 import app.tinyui.page.PageSink

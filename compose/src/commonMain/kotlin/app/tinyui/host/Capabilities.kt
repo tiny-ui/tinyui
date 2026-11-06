@@ -1,6 +1,6 @@
 package app.tinyui.host
 
-import app.tinyui.internal.FrameworkNames
+import app.tinyui.FrameworkNames
 
 /** App-level J3 `host.call` capabilities by name (docs/native-api.md §13). */
 class CapabilityRegistry {

@@ -2,7 +2,7 @@ package app.tinyui.host
 
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.UriHandler
-import app.tinyui.internal.plainTextClipEntry
+import app.tinyui.plainTextClipEntry
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

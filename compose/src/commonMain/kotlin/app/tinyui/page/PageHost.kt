@@ -4,16 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.tinyui.FrameworkCapabilities
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
 import app.tinyui.host.PageContext
 import app.tinyui.host.PageLocalValue
-import app.tinyui.internal.FrameworkCapabilities
 import app.tinyui.node.NodeTree
 import app.tinyui.node.UINode
-import app.tinyui.page.internal.HostBridge
-import app.tinyui.page.internal.PageScope
-import app.tinyui.page.internal.PageUI
 import app.tinyui.schema.ComponentRegistry
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CompletableDeferred
