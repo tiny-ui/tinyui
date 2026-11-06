@@ -967,10 +967,14 @@ private fun indexModel(bar: UINode, rows: List<UINode>): IndexModel {
     )
 }
 
+/** Where the strip left the list when it took it to the group of [label]: the first row in view and how far that is scrolled. */
+private class Arrival(val model: IndexModel, val label: Int, val index: Int, val offset: Int)
+
 /**
  * The IndexBar of the list with this [shape], over its end edge. Which cell the finger is on is tracked here and the list scrolled from
  * here: nothing crosses the bridge while it slides (docs/adr-004 §3.1). The highlight is the cell under the finger
- * while it is down, the group the list is at otherwise. Neither Compose nor M3 has this component: the sizes are the
+ * while it is down; after that the group the strip took the list to, until the list moves again; otherwise the group
+ * the list is at. Neither Compose nor M3 has this component: the sizes are the
  * framework's, the colours the theme's. Takes no room when its labels do not fit.
  */
 @Composable
@@ -978,11 +982,28 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
     val model by remember(bar, shape) { derivedStateOf { indexModel(bar, shape.value.rows) } }
     val current = rememberUpdatedState(model)
     var pressed by remember { mutableStateOf<Int?>(null) }
-    val at by remember(state) { derivedStateOf { current.value.labelAt(state.firstVisibleItemIndex) } }
+    // the group the strip last took the list to, and where that left the list. A group near the end cannot come to the
+    // top, and the row first in view is then of an earlier group: the strip keeps showing the one it went to for as
+    // long as the list has not moved since
+    var arrived by remember { mutableStateOf<Arrival?>(null) }
+    val at by remember(state) {
+        derivedStateOf {
+            val model = current.value
+            val there = arrived
+            if (there != null && there.model === model && there.index == state.firstVisibleItemIndex && there.offset == state.firstVisibleItemScrollOffset) there.label
+            else model.labelAt(state.firstVisibleItemIndex)
+        }
+    }
     val highlighted = pressed ?: at
     fun go(label: Int) {
-        val row = current.value.rowOf(label)
-        if (row >= 0) scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, row, animated = false) }
+        val model = current.value
+        val row = model.rowOf(label)
+        if (row < 0) return
+        scrolls.launch(start = CoroutineStart.UNDISPATCHED) {
+            state.showRow(shape, row, animated = false)
+            // the label of the group at that row: a label without a group of its own stood in for this one
+            arrived = Arrival(model, model.labelAt(row), state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset)
+        }
     }
     val labels = model.labels
     val name = bar.props["label"] as? String

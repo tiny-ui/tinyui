@@ -307,4 +307,24 @@ class LazyColumnSectionsTest {
         waitForIdle()
         assertEquals(0.dp, top("Group D"))
     }
+
+    /**
+     * A group near the end cannot come to the top of the list: the row first in view is of an earlier one. The strip
+     * still shows the group it was taken to, until the list moves again.
+     */
+    @Test
+    fun theGroupTheStripWentToStaysLitAtTheEndOfTheList() = list(bar("A", "B", "C", "D"), height = 400) {
+        touch(3, 4)
+        onNodeWithText("d6").assertIsDisplayed()
+        // D's header is on screen, not at the top
+        assertTrue(top("Group D") > 0.dp, "the list was expected to stop before D reached the top")
+        strip().assert(at("Label D"))
+        // C has no group of its own and goes to D: what is lit is the group, not the label that stood in for it
+        touch(0, 4)
+        touch(2, 4)
+        strip().assert(at("Label D"))
+        // once the list moves on its own account, the strip follows the list again
+        scrollTo(8)
+        strip().assert(at("Label B"))
+    }
 }
