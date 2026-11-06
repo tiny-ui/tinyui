@@ -204,11 +204,11 @@ class NodeTreeTest {
 
     @Test
     fun badOpsAreSkippedAndReported() {
-        tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"nope","x"],["p",1,"fontSize","big"],["p",1,"onTap",true],["p",99,"text","x"],["c",2,"pp.Unknown"],["i",0,2,7],["x",1,"focus",{}],["i",0,1,0]]""")
+        tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"nope","x"],["p",1,"fontSize","big"],["p",1,"onTap",true],["p",99,"text","x"],["c",2,"acme.Unknown"],["i",0,2,7],["x",1,"focus",{}],["i",0,1,0]]""")
         val expected = listOf("prop not in schema", "cannot convert", "event not in schema", "unknown node 99", "unknown component type", "index 7 out of", "command not in schema")
         assertEquals(expected.size, problems.size, problems.toString())
         for ((reason, prefix) in problems.map { it.reason }.zip(expected)) assertTrue(reason.startsWith(prefix), "$reason should start with $prefix")
-        assertEquals("pp.Unknown", tree.node(2)!!.type, "the requested type stays; rendering falls back to Placeholder")
+        assertEquals("acme.Unknown", tree.node(2)!!.type, "the requested type stays; rendering falls back to Placeholder")
         assertEquals(listOf(1, 2), ids(tree.root), "the clamped insert (7 → 0 on an empty root) still lands")
         tree.apply("not json")
         assertEquals("message is not a JSON array", problems.last().reason.substringBefore(" ("))

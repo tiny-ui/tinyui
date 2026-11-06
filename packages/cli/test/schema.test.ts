@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { color, defineComponent, enumOf, string, TEXT_STYLES } from "../src/schema/index.ts";
 import { generateKt, generateTs } from "../src/schema/generate.ts";
 
-const card = defineComponent("pp.Card", {
+const card = defineComponent("acme.Card", {
     props: { title: string({ required: true }), tint: color({ default: "primary" }), style: enumOf(TEXT_STYLES) },
     events: {},
 });
@@ -21,8 +21,8 @@ describe("schema generator", () => {
 
     it("groups host components under their prefix and augments the JSX namespace", () => {
         const host = generateTs([card]);
-        assert.match(host, /export const pp = \{ Card: "pp\.Card" \} as const;/);
-        assert.match(host, /declare module "tinyui-core\/jsx-runtime" \{\n    namespace JSX \{\n        interface IntrinsicElements \{\n            "pp\.Card": PpCardProps;/);
+        assert.match(host, /export const acme = \{ Card: "acme\.Card" \} as const;/);
+        assert.match(host, /declare module "tinyui-core\/jsx-runtime" \{\n    namespace JSX \{\n        interface IntrinsicElements \{\n            "acme\.Card": AcmeCardProps;/);
         assert.doesNotMatch(generateTs([card], "../node.ts"), /declare module/);
     });
 

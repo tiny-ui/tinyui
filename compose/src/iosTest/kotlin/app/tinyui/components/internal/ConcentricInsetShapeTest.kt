@@ -1,4 +1,4 @@
-package app.tinyui.components
+package app.tinyui.components.internal
 
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape

@@ -111,7 +111,7 @@ function h(type: string | Component, props: Props | null, ...children: Child[]):
 type Child = Node | Node[] | null | undefined | false
 ```
 
-`type` 为字符串时是内置 / 宿主组件（`"Text"`、`"pp.KycCard"`），为函数时是业务组件。
+`type` 为字符串时是内置 / 宿主组件（`"Text"`、`"acme.ProductCard"`），为函数时是业务组件。
 
 **内置节点**（`type` 为字符串）：分配 id，发 `c`；逐个 prop：
 

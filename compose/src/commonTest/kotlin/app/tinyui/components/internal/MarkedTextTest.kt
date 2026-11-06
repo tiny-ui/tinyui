@@ -1,4 +1,4 @@
-package app.tinyui.components
+package app.tinyui.components.internal
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.LinkAnnotation

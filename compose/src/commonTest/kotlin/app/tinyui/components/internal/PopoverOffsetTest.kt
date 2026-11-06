@@ -1,4 +1,4 @@
-package app.tinyui.components
+package app.tinyui.components.internal
 
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect

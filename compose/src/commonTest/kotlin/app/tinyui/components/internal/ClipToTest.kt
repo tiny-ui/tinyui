@@ -1,4 +1,4 @@
-package app.tinyui.components
+package app.tinyui.components.internal
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
