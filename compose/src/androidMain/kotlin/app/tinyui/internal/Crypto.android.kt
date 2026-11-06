@@ -1,5 +1,6 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.HostException
 import java.security.KeyFactory
 import java.security.spec.InvalidKeySpecException
 import java.security.spec.X509EncodedKeySpec

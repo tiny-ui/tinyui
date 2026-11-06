@@ -1,4 +1,4 @@
-package app.tinyui
+package app.tinyui.internal
 
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.ui.Modifier

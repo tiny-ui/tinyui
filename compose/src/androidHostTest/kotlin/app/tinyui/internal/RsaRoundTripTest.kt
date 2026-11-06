@@ -1,5 +1,6 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.RsaTestKeys
 import java.security.KeyFactory
 import java.security.spec.PKCS8EncodedKeySpec
 import javax.crypto.Cipher

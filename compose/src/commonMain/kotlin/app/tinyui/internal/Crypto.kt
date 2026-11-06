@@ -1,5 +1,6 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.HostException
 import kotlin.io.encoding.Base64
 
 /**
