@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.NodeRenderer
 import app.tinyui.components.NodeTree
 import app.tinyui.components.UINode
 import kotlin.concurrent.Volatile
@@ -87,6 +88,7 @@ class PageHost internal constructor(
     internal val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set
+    private val renderer = NodeRenderer(registry, ::dispatch) { node, reason -> report("E5", reason, op = "node ${node.id} (${node.type})") }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     // the engine lock is fair, but entries launched on a multi-threaded pool can reach it out of order: one lane keeps
@@ -252,7 +254,7 @@ class PageHost internal constructor(
 
     @Composable
     internal fun Render(node: UINode) {
-        registry.Render(node.type, PageScope(this, node))
+        renderer.Render(node)
     }
 
     internal companion object {
