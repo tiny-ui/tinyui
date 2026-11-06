@@ -1,7 +1,7 @@
 package app.tinyui.sample
 
-import app.tinyui.BuildManifest
-import app.tinyui.PackageCheck
+import app.tinyui.bundle.BuildManifest
+import app.tinyui.bundle.PackageCheck
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -10,8 +10,8 @@ import app.tinyui.PageSink
 import app.tinyui.Session
 import app.tinyui.SessionSource
 import app.tinyui.TinyUIHost
+import app.tinyui.components.ComponentRegistry
 import app.tinyui.components.registerBuiltins
-import app.tinyui.schema.ComponentRegistry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import okio.Path

@@ -1,5 +1,5 @@
 // Theme tokens a page may name instead of a literal value; Kotlin resolves them from MaterialTheme at composition
-// (docs/components.md §6). Names are Material 3's own; the Kotlin resolver in compose/.../schema/Theme.kt must cover every entry.
+// (docs/components.md §6). Names are Material 3's own; the Kotlin resolver in compose/.../components/Theme.kt must cover every entry.
 
 export const COLOR_TOKENS = [
     "primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary",

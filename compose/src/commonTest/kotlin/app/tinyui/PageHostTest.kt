@@ -1,8 +1,5 @@
 package app.tinyui
 
-import app.tinyui.internal.platformInfo
-import app.tinyui.internal.systemTimeZone
-import app.tinyui.internal.zoneOffsetMinutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -11,7 +8,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import wang.harlon.quickjs.JsBytecode
 import app.tinyui.components.registerBuiltins
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

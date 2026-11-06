@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
-import app.tinyui.TextFieldStyle
-import app.tinyui.TinyUIDefaults
-import app.tinyui.LocalTinyUIDefaults
+import app.tinyui.components.TextFieldStyle
+import app.tinyui.components.TinyUIDefaults
+import app.tinyui.components.LocalTinyUIDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -29,7 +29,7 @@ import androidx.compose.runtime.retain.retainRetainedValuesStoreRegistry
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.tinyui.Bundle
+import app.tinyui.bundle.Bundle
 import app.tinyui.TinyUI
 import app.tinyui.sample.res.Res
 import app.tinyui.updates.Updates

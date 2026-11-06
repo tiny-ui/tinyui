@@ -4,13 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import app.tinyui.internal.FrameworkCapabilities
-import app.tinyui.internal.HostBridge
-import app.tinyui.internal.PageScope
-import app.tinyui.internal.PageUI
-import app.tinyui.node.NodeTree
-import app.tinyui.node.UINode
-import app.tinyui.schema.ComponentRegistry
+import app.tinyui.components.ComponentRegistry
+import app.tinyui.components.NodeTree
+import app.tinyui.components.UINode
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope

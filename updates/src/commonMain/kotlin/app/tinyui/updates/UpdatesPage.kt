@@ -9,7 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import app.tinyui.PageLocalValue
-import app.tinyui.LoadedPage
+import app.tinyui.bundle.LoadedPage
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import app.tinyui.PageFailureScreen

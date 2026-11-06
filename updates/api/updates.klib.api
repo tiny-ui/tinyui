@@ -73,12 +73,12 @@ final enum class app.tinyui.updates/Source : kotlin/Enum<app.tinyui.updates/Sour
 }
 
 final class app.tinyui.updates/Updates { // app.tinyui.updates/Updates|null[0]
-    constructor <init>(kotlin.collections/List<app.tinyui/Bundle>, kotlin/String, okio/Path, kotlin/String, kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray>, kotlin/Function1<app.tinyui.updates/UpdateEvent, kotlin/Unit> = ...) // app.tinyui.updates/Updates.<init>|<init>(kotlin.collections.List<app.tinyui.Bundle>;kotlin.String;okio.Path;kotlin.String;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.ByteArray>;kotlin.Function1<app.tinyui.updates.UpdateEvent,kotlin.Unit>){}[0]
+    constructor <init>(kotlin.collections/List<app.tinyui.bundle/Bundle>, kotlin/String, okio/Path, kotlin/String, kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray>, kotlin/Function1<app.tinyui.updates/UpdateEvent, kotlin/Unit> = ...) // app.tinyui.updates/Updates.<init>|<init>(kotlin.collections.List<app.tinyui.bundle.Bundle>;kotlin.String;okio.Path;kotlin.String;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.ByteArray>;kotlin.Function1<app.tinyui.updates.UpdateEvent,kotlin.Unit>){}[0]
 
     final val hostVersion // app.tinyui.updates/Updates.hostVersion|{}hostVersion[0]
         final fun <get-hostVersion>(): kotlin/String // app.tinyui.updates/Updates.hostVersion.<get-hostVersion>|<get-hostVersion>(){}[0]
 
-    final fun current(kotlin/String): app.tinyui/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
+    final fun current(kotlin/String): app.tinyui.bundle/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
     final suspend fun check(app.tinyui.updates/CheckTrigger = ...): kotlin.collections/Map<kotlin/String, app.tinyui.updates/CheckResult> // app.tinyui.updates/Updates.check|check(app.tinyui.updates.CheckTrigger){}[0]
     final suspend fun check(kotlin/String, app.tinyui.updates/CheckTrigger = ...): app.tinyui.updates/CheckResult // app.tinyui.updates/Updates.check|check(kotlin.String;app.tinyui.updates.CheckTrigger){}[0]
 }

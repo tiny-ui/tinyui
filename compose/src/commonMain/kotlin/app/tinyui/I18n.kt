@@ -1,5 +1,8 @@
 package app.tinyui
 
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.update
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -26,5 +29,17 @@ class PackageI18n(val defaultLocale: String, private val dictionaries: Map<Strin
         /** [files] maps each locale to its JSON text; flat string values only. */
         fun parse(defaultLocale: String, files: Map<String, String>): PackageI18n =
             PackageI18n(defaultLocale, files.mapValues { (_, json) -> Json.parseToJsonElement(json).jsonObject.mapValues { it.value.jsonPrimitive.content } })
+    }
+}
+
+/** Each missing key is reported once per host. */
+@OptIn(ExperimentalAtomicApi::class)
+internal class MissingKeys {
+    private val seen = AtomicReference<Set<String>>(emptySet())
+
+    fun firstTime(key: String): Boolean {
+        var added = false
+        seen.update { if (key in it) it else { added = true; it + key } }
+        return added
     }
 }

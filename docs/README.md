@@ -99,6 +99,22 @@ tinyui/
 
 约定：顶层只放这八个目录；新 npm 包进 `packages/`；Kotlin 侧只有独立发 artifact 的库才占顶层目录（`updates/`，ADR-006 §2.4），其他 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 
+### `compose/` 的 Kotlin 包
+
+公开声明按「读它的人在做哪件事」分三个包，每件事对应一份文档（2026-11-06 定）：
+
+```
+app.tinyui              接入页面（native-api.md）：TinyUI、TinyUIHost、TinyUIPage，宿主接口，页面的运行与错误
+app.tinyui.components   写组件（components.md）：schema、注册表、NodeScope、节点表、主题 token、TinyUIDefaults；
+                        内置组件的入口 registerBuiltins()，实现在 components/impl
+app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及兼容性检查 PackageCheck、HostSnapshot
+```
+
+- 放置规则只有一条：一个声明是哪件事要用的，就进哪个包；两件事都用的，进靠下的那个。依赖方向是 `components` ← `app.tinyui` ← `bundle`（`bundle` 也用 `components`），不成环。
+- 「宿主实现的」和「跑页面的」不再分包。试过 `host` / `page` 两个包（#83 的前半段），撤回了：宿主接口的签名带着 `PageContext`，`PageSink` 的参数是 `PageError`，这条线从同一个读者的同一批签名中间穿过，分开之后每个类型都要单独讨论归属。同理，`schema` 与 `node` 并入了 `components`：读者是同一个人。
+- 不设 `internal` 子包：内部实现和它服务的公开类型放在同一个包里，靠 `internal` 修饰符区分。唯一的例外是 `components/impl`，二十几个内置组件的实现放在一起会把组件的公开契约淹掉；里面的顶层声明全是 `internal` 或 `private`。
+- 包只管归类，不解决耦合：一个类型身兼两职、一个类拿了整个对象却只用其中一个函数，这类问题搬文件解决不了，要改代码。
+
 ## 实现期文档
 
 不需要 ADR 但实现前必须定的方案，一项一个文件：

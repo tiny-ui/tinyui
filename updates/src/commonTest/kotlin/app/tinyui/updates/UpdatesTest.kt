@@ -1,7 +1,7 @@
 package app.tinyui.updates
 
-import app.tinyui.BuildManifest
-import app.tinyui.Bundle
+import app.tinyui.bundle.BuildManifest
+import app.tinyui.bundle.Bundle
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
