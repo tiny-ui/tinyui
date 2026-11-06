@@ -1,7 +1,6 @@
 package app.tinyui
 
 import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.text.input.PlatformImeOptions
 import io.ktor.client.HttpClient
 
 internal expect fun platformInfo(): Map<String, String>
@@ -16,12 +15,6 @@ internal expect fun systemTimeZone(): String
 internal expect fun zoneOffsetMinutes(zone: String, epochMs: Long): Int?
 
 internal expect fun plainTextClipEntry(text: String): ClipEntry
-
-/**
- * iOS reads the text content type only from here, never from semantics, and otherwise derives it from the keyboard:
- * NumberPassword would make a code field a password field. Null where the platform has nothing to say (Android).
- */
-internal expect fun oneTimeCodeImeOptions(oneTimeCode: Boolean): PlatformImeOptions?
 
 /** The engine each platform ships; the `default` channel adds nothing to it. */
 internal expect fun defaultHttpClient(): HttpClient

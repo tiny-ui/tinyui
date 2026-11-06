@@ -1,8 +1,8 @@
 package app.tinyui.bundle
 
-import app.tinyui.page.PackageI18n
-import app.tinyui.page.PageModule
-import app.tinyui.page.SourceMaps
+import app.tinyui.PackageI18n
+import app.tinyui.PageModule
+import app.tinyui.SourceMaps
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

@@ -8,12 +8,12 @@ import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import app.tinyui.host.PageLocalValue
+import app.tinyui.PageLocalValue
 import app.tinyui.bundle.LoadedPage
-import app.tinyui.page.PageError
-import app.tinyui.page.PageFailure
-import app.tinyui.page.PageFailureScreen
-import app.tinyui.page.PageHost
+import app.tinyui.PageError
+import app.tinyui.PageFailure
+import app.tinyui.PageFailureScreen
+import app.tinyui.PageHost
 import app.tinyui.TinyUIHost
 import app.tinyui.TinyUIPage
 import kotlinx.coroutines.CancellationException

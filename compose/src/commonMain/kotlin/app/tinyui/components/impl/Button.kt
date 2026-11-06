@@ -6,7 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import app.tinyui.components.NodeScope
-import app.tinyui.host.buttonStyle
+import app.tinyui.components.buttonStyle
 
 @Composable
 internal fun ButtonComponent(scope: NodeScope) {

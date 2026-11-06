@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import app.tinyui.components.NodeScope
-import app.tinyui.node.UINode
+import app.tinyui.components.UINode
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart

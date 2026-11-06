@@ -18,12 +18,6 @@ import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.dp
-import app.tinyui.host.LocalTinyUIDefaults
-import app.tinyui.host.TextFieldStyle
-import app.tinyui.host.TinyUIDefaults
-import app.tinyui.node.NodeTree
-import app.tinyui.node.PatchProblem
-import app.tinyui.node.UINode
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertTrue

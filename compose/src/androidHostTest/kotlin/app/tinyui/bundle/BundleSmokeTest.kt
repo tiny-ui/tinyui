@@ -2,11 +2,11 @@ package app.tinyui.bundle
 
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
-import app.tinyui.host.HttpChannel
-import app.tinyui.host.HttpResponse
-import app.tinyui.page.PageError
-import app.tinyui.page.PageHost
-import app.tinyui.page.PageSink
+import app.tinyui.HttpChannel
+import app.tinyui.HttpResponse
+import app.tinyui.PageError
+import app.tinyui.PageHost
+import app.tinyui.PageSink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking

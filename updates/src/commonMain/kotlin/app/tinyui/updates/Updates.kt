@@ -1,9 +1,9 @@
 package app.tinyui.updates
 
+import app.tinyui.PageFailure
 import app.tinyui.TinyUI
 import app.tinyui.bundle.BuildManifest
 import app.tinyui.bundle.Bundle
-import app.tinyui.page.PageFailure
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable

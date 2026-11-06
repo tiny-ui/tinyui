@@ -101,22 +101,19 @@ tinyui/
 
 ### `compose/` 的 Kotlin 包
 
-根包 `app.tinyui` 只放每个宿主都会碰的入口，其余公开类型按主题进子包（2026-11-06 定）：
+公开声明按「读它的人在做哪件事」分三个包，每件事对应一份文档（2026-11-06 定）：
 
 ```
-app.tinyui              入口：TinyUI、TinyUIHost、TinyUIPage
-├── host                页面会调到的宿主服务：Navigator / Store / HttpChannel / Session / … 、能力注册、PageContext、TinyUIDefaults
-├── page                跑一个页面：PageHost、PageModule，以及它的错误（PageError、PageSink、SourceMaps）
-├── bundle              包：Bundle、BuildManifest，以及兼容性检查 PackageCheck、HostSnapshot
-├── node                节点表
-└── components          组件：schema、注册表、NodeScope、主题 token；内置组件的入口 registerBuiltins()，实现在 components/impl
+app.tinyui              接入页面（native-api.md）：TinyUI、TinyUIHost、TinyUIPage，宿主接口，页面的运行与错误
+app.tinyui.components   写组件（components.md）：schema、注册表、NodeScope、节点表、主题 token、TinyUIDefaults；
+                        内置组件的入口 registerBuiltins()，实现在 components/impl
+app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及兼容性检查 PackageCheck、HostSnapshot
 ```
 
-- 依赖方向是 `host` ← `page` ← `bundle`，三者之间不成环；根包是把它们接在一起的入口，所以它和 `page` 互相引用。
-- 为了不成环，有几个类型不按字面归类：`PageContext` / `PageLocal` 在 `host`（宿主接口的签名带着它们），`PageSink` 在 `page`（它的参数是 `PageError`），`PageModule` / `PackageI18n` 在 `page`（`bundle` 产出它们，反过来不行）。
-- 组件的声明（`ComponentSchema`）、注册（`ComponentRegistry`）、渲染（`NodeScope`、`Theme`）原来在 `schema` 包，名字只盖住了声明那一半，现在都在 `components`。
+- 放置规则只有一条：一个声明是哪件事要用的，就进哪个包；两件事都用的，进靠下的那个。依赖方向是 `components` ← `app.tinyui` ← `bundle`（`bundle` 也用 `components`），不成环。
+- 「宿主实现的」和「跑页面的」不再分包。试过 `host` / `page` 两个包（#83 的前半段），撤回了：宿主接口的签名带着 `PageContext`，`PageSink` 的参数是 `PageError`，这条线从同一个读者的同一批签名中间穿过，分开之后每个类型都要单独讨论归属。同理，`schema` 与 `node` 并入了 `components`：读者是同一个人。
 - 不设 `internal` 子包：内部实现和它服务的公开类型放在同一个包里，靠 `internal` 修饰符区分。唯一的例外是 `components/impl`，二十几个内置组件的实现放在一起会把组件的公开契约淹掉；里面的顶层声明全是 `internal` 或 `private`。
-- 子包名 `host` 指宿主 App 提供的东西，与 `TinyUIHost`、`HostCapability` 是同一个意思；上文否掉的是把 `host` 用作 npm 包名和顶层目录名。
+- 包只管归类，不解决耦合：一个类型身兼两职、一个类拿了整个对象却只用其中一个函数，这类问题搬文件解决不了，要改代码。
 
 ## 实现期文档
 

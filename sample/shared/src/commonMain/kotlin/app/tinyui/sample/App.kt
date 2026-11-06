@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
-import app.tinyui.host.TextFieldStyle
-import app.tinyui.host.TinyUIDefaults
-import app.tinyui.host.LocalTinyUIDefaults
+import app.tinyui.components.TextFieldStyle
+import app.tinyui.components.TinyUIDefaults
+import app.tinyui.components.LocalTinyUIDefaults
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface

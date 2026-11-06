@@ -7,8 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import app.tinyui.node.Command
-import app.tinyui.node.UINode
 
 /** What a component sees of its node: typed props, registered events, children (docs/adr-003 §3.3). */
 interface NodeScope {

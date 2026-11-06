@@ -1,6 +1,6 @@
 package app.tinyui.bundle
 
-import app.tinyui.page.SourceMaps
+import app.tinyui.SourceMaps
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

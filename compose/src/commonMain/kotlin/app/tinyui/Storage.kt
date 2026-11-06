@@ -1,6 +1,5 @@
 package app.tinyui
 
-import app.tinyui.page.PageSink
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update

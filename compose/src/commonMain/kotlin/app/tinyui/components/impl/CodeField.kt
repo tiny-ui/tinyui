@@ -39,8 +39,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import app.tinyui.components.Commands
 import app.tinyui.components.NodeScope
-import app.tinyui.host.textFieldStyle
-import app.tinyui.oneTimeCodeImeOptions
+import app.tinyui.components.textFieldStyle
 
 /**
  * Digit cells drawn over one invisible input, so focus and the IME never hop between fields across the bridge

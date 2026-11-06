@@ -1,7 +1,6 @@
 package app.tinyui
 
 import app.tinyui.generated.RuntimeBytecode
-import app.tinyui.page.RuntimeBundle
 import kotlin.io.encoding.Base64
 import wang.harlon.quickjs.QuickJs
 

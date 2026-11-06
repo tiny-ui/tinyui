@@ -3,9 +3,9 @@ package app.tinyui.bundle
 import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
 import app.tinyui.components.registerBuiltins
-import app.tinyui.host.CapabilityRegistry
-import app.tinyui.page.PageError
-import app.tinyui.page.PageSink
+import app.tinyui.CapabilityRegistry
+import app.tinyui.PageError
+import app.tinyui.PageSink
 import app.tinyui.components.ComponentRegistry
 import app.tinyui.components.ComponentSchema
 import wang.harlon.quickjs.QuickJs

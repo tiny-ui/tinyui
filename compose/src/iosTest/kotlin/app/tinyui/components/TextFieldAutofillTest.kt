@@ -12,9 +12,6 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.v2.runComposeUiTest
-import app.tinyui.node.NodeTree
-import app.tinyui.node.PatchProblem
-import app.tinyui.node.UINode
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
