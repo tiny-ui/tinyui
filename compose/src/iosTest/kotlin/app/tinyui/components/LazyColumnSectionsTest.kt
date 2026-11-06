@@ -106,8 +106,8 @@ class LazyColumnSectionsTest {
         assertTrue(problems.isEmpty(), problems.toString())
     }
 
-    private fun ComposeUiTest.jumpTo(index: Int) {
-        tree.apply("""[["x",1,"jumpTo",{"index":$index}]]""")
+    private fun ComposeUiTest.scrollTo(index: Int) {
+        tree.apply("""[["x",1,"scrollTo",{"index":$index}]]""")
         waitForIdle()
     }
 
@@ -123,15 +123,15 @@ class LazyColumnSectionsTest {
         waitForIdle()
     }
 
-    /** A header stays at the top while its rows scroll under it, and a row the page jumps to is not left under it. */
+    /** A header stays at the top while its rows scroll under it, and a row the page scrolls to is not left under it. */
     @Test
-    fun aHeaderIsPinnedAndDoesNotCoverTheRowJumpedTo() = list {
-        jumpTo(4)
+    fun aHeaderIsPinnedAndDoesNotCoverTheRowScrolledTo() = list {
+        scrollTo(4)
         assertEquals(0.dp, top("Group A"))
         onNodeWithText("a4").assertIsDisplayed()
         assertEquals(under("Group A"), top("a4"))
         // the next group's header takes over
-        jumpTo(9)
+        scrollTo(9)
         assertEquals(0.dp, top("Group B"))
         onNodeWithText("Group A").assertDoesNotExist()
         assertEquals(under("Group B"), top("b2"))
@@ -142,7 +142,7 @@ class LazyColumnSectionsTest {
     fun aHeaderThatIsNotStickyScrollsAway() = list {
         tree.apply("""[["p",100,"sticky",false]]""")
         waitForIdle()
-        jumpTo(4)
+        scrollTo(4)
         onNodeWithText("Group A").assertDoesNotExist()
         assertEquals(0.dp, top("a4"))
     }
@@ -151,9 +151,9 @@ class LazyColumnSectionsTest {
     @Test
     fun theIndexBarIsNotARow() = list(bar("A", "B", "C", "D")) {
         strip().assertIsDisplayed()
-        jumpTo(7)
+        scrollTo(7)
         assertEquals(0.dp, top("Group B"))
-        jumpTo(20)
+        scrollTo(20)
         onNodeWithText("d6").assertIsDisplayed()
         strip().assertIsDisplayed()
     }
@@ -179,9 +179,9 @@ class LazyColumnSectionsTest {
     /** The highlight is the group the list is at, however it got there. */
     @Test
     fun theHighlightFollowsTheList() = list(bar("A", "B", "C", "D")) {
-        jumpTo(9)
+        scrollTo(9)
         strip().assert(at("Label B"))
-        jumpTo(2)
+        scrollTo(2)
         strip().assert(at("Label A"))
     }
 
@@ -261,9 +261,9 @@ class LazyColumnSectionsTest {
     fun aGroupWithoutAnIndexHighlightsNothing() = list(bar("A", "B", "C", "D")) {
         tree.apply("""[["p",200,"index",null]]""")
         waitForIdle()
-        jumpTo(9)
+        scrollTo(9)
         strip().assert(at(""))
-        jumpTo(16)
+        scrollTo(16)
         strip().assert(at("Label D"))
     }
 
@@ -276,7 +276,7 @@ class LazyColumnSectionsTest {
         assertEquals(1, reported.size, reported.toString())
         assertTrue("IndexBar" in reported[0], reported[0])
         // still not rows: the second header is row 7
-        jumpTo(7)
+        scrollTo(7)
         assertEquals(0.dp, top("Group B"))
     }
 }

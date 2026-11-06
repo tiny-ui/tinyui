@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）与 `jumpTo`
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -89,7 +89,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu`、`Tabs` 与 `IndexBar` 读它 | | | |
-| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}`（带动画）、`jumpTo{index}`（一步到位） | 是，通常是一个 `<For>`；`SectionHeader` 是吸顶的行，`IndexBar` 不是行 |
+| `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>`；`SectionHeader` 是吸顶的行，`IndexBar` 不是行 |
 | `SectionHeader` | `index`（这一组在 `IndexBar` 上的标签值，不设就不进索引）、`sticky`（默认 true）、`align`（同 `Box`） | `onClick` | | 是：标题的内容 |
 | `IndexBar` | `label`（读屏念的名字）；不接受布局 prop；只在 `LazyColumn` 的直接 children 里起作用 | | | 是：`Option`，不写就取各 `SectionHeader` 的 `index` |
 | `Spacer` | （只有布局 prop） | | | |
@@ -211,11 +211,11 @@ const [method, setMethod] = signal("phone");
 
 - **`SectionHeader`** 是一组行的标题：在 `LazyColumn` 里它是吸顶的行（Compose 的 `stickyHeader`），这一组的行从它下面滚过，下一组的标题把它顶走；放在别处、或 `sticky={false}` 时就是一个 `Box`（`align` 与公共布局 prop 都认）。吸顶时行在它底下，页面要给它不透明的 `background`。children 仍是扁平的：标题与行是兄弟，不是标题包住行——`For` 的增删改、命令与事件里的下标都不用换算，页面本来也是把分组摊平成一个行数组（Compose `stickyHeader`、Vant 的 `IndexAnchor` 同此；SwiftUI / UIKit 是分组包住行）。
 - **`IndexBar`** 是列表旁的索引条。它是独立组件而不是 `LazyColumn` 的 prop：Compose 与 M3 的列表都没有它，它有自己的外观、标签与读屏行为，做成 prop 会让一个通用列表永久背上一组只有少数页面用的属性。绑定靠位置，与 `Popover` / `Menu`「放进它依附的节点里」同一个习惯：**写成 `LazyColumn` 的直接子节点，它就是这个列表的索引条**，浮在列表末端一侧、垂直居中；放在别处不渲染并按 E5 上报；一个列表只认一个，多写的不渲染、同样上报。标签是 `Option` children（`value` 对应 `SectionHeader` 的 `index`），不写就按各标题的 `index` 依次生成；显隐用 `Show`。
-- **`IndexBar` 不是行**：它不随内容滚动、不被虚拟化、不占 `gap`，`scrollTo` / `jumpTo` / `onScrollEnd` 的下标与 `onReachEnd` 的行数都不计它——页面行数组的第 i 项就是列表的第 i 行。其他不占版面的子节点（`BottomSheet` 等）在 `LazyColumn` 里仍按行算，与此前相同。
+- **`IndexBar` 不是行**：它不随内容滚动、不被虚拟化、不占 `gap`，`scrollTo` / `onScrollEnd` 的下标与 `onReachEnd` 的行数都不计它——页面行数组的第 i 项就是列表的第 i 行。其他不占版面的子节点（`BottomSheet` 等）在 `LazyColumn` 里仍按行算，与此前相同。
 
 索引条的行为全在 Kotlin 里（ADR-004 §3.1 的「连续」类，一次桥都不过）：手指按下或滑到一个标签，列表当场跳到 `index` 等于它的那个标题；没有对应分组的标签落到标签表里排在它后面、最近的有分组的标签，后面没有就落到最后一组。亮着的标签是手指下面那个，手指抬起后是列表当前所在的分组，随滚动实时更新；所在分组的标题没有 `index`、或它的 `index` 不在标签表里时不亮。Compose 与 M3 都没有对应组件，它和 `CodeField` 一样是框架自绘的：标签 16dp 圆、`bodySmall` 字、`onSurfaceVariant` 色，高亮 `primary` 圆底 `onPrimary` 字，每标签 20dp 一格，触摸条宽 40dp；条上的触摸全部消费，放在 `BottomSheet` 里滑动不会拖动弹层。放不下时（每格不足标签自身的 16dp，比如键盘弹起）整条不显示，不把标签挤到看不清。读屏把整条当一个可调节的元素（念 `label` 与当前分组，上下调节换组），不是二十几个按钮。不做：按压时的放大气泡、触感反馈、横向索引、分组变化的事件。
 
-`scrollTo` / `jumpTo` 到一行、索引条跳到一个不吸顶的标题时，目标都紧贴在吸顶标题的下沿：不被它盖住，也不留空。索引条出现过的列表外面多一层放它的容器，之后隐藏再显示（搜索时）不会重建行；从没有过索引条的列表与此前逐节点相同。
+`scrollTo` 到一行、索引条跳到一个不吸顶的标题时，目标都紧贴在吸顶标题的下沿：不被它盖住，也不留空。索引条出现过的列表外面多一层放它的容器，之后隐藏再显示（搜索时）不会重建行；从没有过索引条的列表与此前逐节点相同。
 
 ```tsx
 <LazyColumn width="fill" weight={1}>
@@ -242,7 +242,7 @@ const [method, setMethod] = signal("phone");
 
 ## 4. 命令怎么消费
 
-命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。滚动命令不排队等前一个的动画：后到的接手，最后一条说了算（`scrollTo` 的动画还在跑时来了 `jumpTo`，当场跳过去）。
+命令进节点的 `commands` 队列（不是 props），组件用 `scope.Commands { command -> … }` 在组合后按到达顺序消费，一次性。`LazyColumn` 的 `scrollTo` 与新增行同一 flush 到达时，行先进 children，命令随后执行，index 已经有效。滚动命令不排队等前一个的动画：后到的接手，最后一条说了算。
 
 **处理器要在执行时读 props**：命令在它那批 flush 提交后送达，但早于这批引起的重组。处理器若用组合期捕获的值（`val maxLength = scope.get(...)` 再闭包进去），同一批里改 prop 又发命令时就用了旧值。`TextField.setText` 裁剪、`CodeField.setText` 取位数都在处理器里现读 `scope.get`，自定义组件照此办。
 

@@ -101,36 +101,7 @@ class LazyColumnRowsTest {
         onNodeWithText("row 99").assertIsDisplayed()
     }
 
-    /** The same for `jumpTo`, which has no animation frames in which a later recomposition could still bring the row in. */
-    @Test
-    fun aRowAppendedAndJumpedToInOneFlushIsReached() = runComposeUiTest {
-        val rows = (2..31).joinToString("") { id -> """["c",$id,"Text"],["p",$id,"text","row $id"],["i",1,$id,${id - 2}],""" }
-        tree.apply("""[["c",1,"LazyColumn"],["p",1,"width",360],["p",1,"height",200],$rows["i",0,1,0]]""")
-        setContent { MaterialTheme { Box { registry.Render(tree.node(1)!!.type, scopeOf(tree.node(1)!!)) } } }
-        waitForIdle()
-        tree.apply("""[["c",99,"Text"],["p",99,"text","row 99"],["i",1,99,30],["x",1,"jumpTo",{"index":30}]]""")
-        waitForIdle()
-        assertTrue(problems.isEmpty(), problems.toString())
-        onNodeWithText("row 99").assertIsDisplayed()
-        onNodeWithText("row 2").assertDoesNotExist()
-    }
-
     private fun sixtyRows() = (2..61).joinToString("") { id -> """["c",$id,"Text"],["p",$id,"text","row $id"],["i",1,$id,${id - 2}],""" }
-
-    /** `jumpTo` brings a far row into view at once: within a frame, where an animated scroll would still be on its way. */
-    @Test
-    fun jumpToShowsAFarRow() = runComposeUiTest {
-        tree.apply("""[["c",1,"LazyColumn"],["p",1,"width",360],["p",1,"height",200],${sixtyRows()}["i",0,1,0]]""")
-        setContent { MaterialTheme { Box { registry.Render(tree.node(1)!!.type, scopeOf(tree.node(1)!!)) } } }
-        waitForIdle()
-        onNodeWithText("row 50").assertDoesNotExist()
-        mainClock.autoAdvance = false
-        tree.apply("""[["x",1,"jumpTo",{"index":48}]]""")
-        repeat(2) { mainClock.advanceTimeByFrame() }
-        assertTrue(problems.isEmpty(), problems.toString())
-        onNodeWithText("row 50").assertIsDisplayed()
-        onNodeWithText("row 2").assertDoesNotExist()
-    }
 
     /** A command does not wait for the animation of the one before it: the later one takes over, the earlier target is dropped, and commands keep coming. */
     @Test
@@ -141,16 +112,14 @@ class LazyColumnRowsTest {
         mainClock.autoAdvance = false
         tree.apply("""[["x",1,"scrollTo",{"index":55}]]""")
         repeat(2) { mainClock.advanceTimeByFrame() }
-        tree.apply("""[["x",1,"jumpTo",{"index":10}]]""")
-        repeat(2) { mainClock.advanceTimeByFrame() }
-        onNodeWithText("row 12").assertIsDisplayed()
+        tree.apply("""[["x",1,"scrollTo",{"index":10}]]""")
         mainClock.autoAdvance = true
         waitForIdle()
         assertTrue(problems.isEmpty(), problems.toString())
         onNodeWithText("row 12").assertIsDisplayed()
         onNodeWithText("row 57").assertDoesNotExist()
         // the interrupted scroll ended with a cancellation: that was its own, the list still takes commands
-        tree.apply("""[["x",1,"jumpTo",{"index":40}]]""")
+        tree.apply("""[["x",1,"scrollTo",{"index":40}]]""")
         waitForIdle()
         onNodeWithText("row 42").assertIsDisplayed()
     }

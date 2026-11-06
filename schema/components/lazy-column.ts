@@ -10,8 +10,7 @@ export default defineComponent("LazyColumn", {
         onScrollEnd: { index: field.number("first visible child") },
     },
     commands: {
-        scrollTo: { index: field.number("child to bring to the top, animated") },
-        jumpTo: { index: field.number("child to bring to the top at once, without animation") },
+        scrollTo: { index: field.number() },
     },
     children: true,
     // a lazy list is a SubcomposeLayout, which cannot answer intrinsic measurements

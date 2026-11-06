@@ -192,18 +192,11 @@ export interface LazyColumnScrollEndPayload {
 }
 
 export interface LazyColumnScrollToArgs {
-    /** child to bring to the top, animated */
-    index: number;
-}
-
-export interface LazyColumnJumpToArgs {
-    /** child to bring to the top at once, without animation */
     index: number;
 }
 
 export type LazyColumnCommands = {
     scrollTo: LazyColumnScrollToArgs;
-    jumpTo: LazyColumnJumpToArgs;
 };
 
 /** Virtualised vertical list; children are usually a <For>. */

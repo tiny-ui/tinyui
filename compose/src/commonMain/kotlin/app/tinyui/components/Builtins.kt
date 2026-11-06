@@ -785,10 +785,7 @@ private fun LazyColumnComponent(scope: NodeScope) {
     val shape = remember(node) { derivedStateOf { shapeOf(node) } }
     scope.Commands { command ->
         val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, shape.value.rows.size - 1))
-        when (command.name) {
-            "scrollTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = true) }
-            "jumpTo" -> scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = false) }
-        }
+        if (command.name == "scrollTo") scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = true) }
     }
     // with the scroll position: a list coming back still at its end has already reported that length
     val reachedEnd = retain { ReachedEnd() }
