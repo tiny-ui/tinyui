@@ -138,6 +138,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -907,6 +908,18 @@ private val IndexLabelPitch = 20.dp
 private val IndexStripWidth = 40.dp
 
 /**
+ * This style at the size it has under the default system font size, whatever that setting is now. The index strip's
+ * cells are fixed in dp and there are twenty-odd of them in one column: labels that grew with the font size would be
+ * cut by their cells, or would not fit the strip at all. A screen reader does not go by the letters (the strip is one
+ * adjustable element), and the list beside it scrolls and searches without the strip.
+ */
+internal fun TextStyle.unscaled(density: Density): TextStyle = with(density) {
+    // sp is dp times the font scale: the dp of the same number, turned back into sp, is the size at scale 1
+    val size = if (fontSize.isSp) fontSize.value else 12f
+    copy(fontSize = size.dp.toSp(), lineHeight = if (lineHeight.isSp) lineHeight.value.dp.toSp() else lineHeight)
+}
+
+/**
  * What an IndexBar knows of its list: the labels it shows, the row each one takes the list to, and which label a row
  * belongs under. The groups are the list's SectionHeaders; one that carries an `index` answers to the label of that
  * value, one without is in no label's group. A label without a group of its own goes to the next label down that has
@@ -972,6 +985,7 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
     }
     val labels = model.labels
     val name = bar.props["label"] as? String
+    val labelStyle = MaterialTheme.typography.bodySmall.unscaled(LocalDensity.current)
     Layout(
         content = {
             for ((index, label) in labels.withIndex()) {
@@ -982,7 +996,7 @@ private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListS
                 ) {
                     Text(
                         label.second,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = labelStyle,
                         color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         softWrap = false,
