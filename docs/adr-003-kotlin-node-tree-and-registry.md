@@ -86,9 +86,9 @@ interface NodeScope {
 }
 ```
 
-**注册作用域：App 级、启动时定、之后不可变。** 页面之间组件集不同没有真实需求，却会让 JS 包与宿主的兼容关系变成二维。宿主 App 初始化时一次性 `register("pp.KycCard", schema) { ... }`，页面作用域只读。
+**注册作用域：App 级、启动时定、之后不可变。** 页面之间组件集不同没有真实需求，却会让 JS 包与宿主的兼容关系变成二维。宿主 App 初始化时一次性 `register("acme.ProductCard", schema) { ... }`，页面作用域只读。
 
-**命名空间 + 清单下发。** 内置类型裸名（`Text`、`Column`），宿主扩展带前缀（`pp.KycCard`），避免内置新增撞名。`__mount` 时把注册表的类型清单（含各自的 prop / event 名）与 J2 / J3 能力名清单作为 props 的一部分交给 JS：让"JS 包比宿主新"从只能占位（E5）变成 JS 可主动降级（`host.has("pp.KycCard")`），与 ADR-002 E3"能力不存在给固定 code"同一思路的前置版。清单是几十个字符串，成本可忽略。
+**命名空间 + 清单下发。** 内置类型裸名（`Text`、`Column`），宿主扩展带前缀（`acme.ProductCard`），避免内置新增撞名。`__mount` 时把注册表的类型清单（含各自的 prop / event 名）与 J2 / J3 能力名清单作为 props 的一部分交给 JS：让"JS 包比宿主新"从只能占位（E5）变成 JS 可主动降级（`host.has("acme.ProductCard")`），与 ADR-002 E3"能力不存在给固定 code"同一思路的前置版。清单是几十个字符串，成本可忽略。
 
 未知类型：渲染可配置的 `Placeholder` 组件（默认空 `Box`，dev 构建画红框 + 类型名），走 E5 上报。
 

@@ -10,7 +10,7 @@ import kotlinx.serialization.json.put
 
 /**
  * App-level, immutable once handed to a page (docs/adr-003 §3.3). Built-in types use bare names,
- * host extensions a prefix such as `pp.KycCard`; both are declared in a schema DSL and generated.
+ * host extensions a prefix such as `acme.ProductCard`; both are declared in a schema DSL and generated.
  */
 class ComponentRegistry {
     private class Entry(val schema: ComponentSchema, val component: Component)
