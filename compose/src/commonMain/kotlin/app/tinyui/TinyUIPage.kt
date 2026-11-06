@@ -1,12 +1,6 @@
 package app.tinyui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -20,8 +14,12 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
+import app.tinyui.host.PageLocalValue
+import app.tinyui.page.PageFailure
+import app.tinyui.page.PageFailureScreen
+import app.tinyui.page.PageHost
+import app.tinyui.page.PageModule
+import app.tinyui.page.SourceMaps
 
 /**
  * Renders one TinyUI page; the host owns navigation and passes the page's bytecode (docs/app-model.md).
@@ -110,16 +108,4 @@ private class RetainedPage(val host: PageHost) : RetainObserver {
     override fun onExitedComposition() {}
     override fun onRetired() = host.close()
     override fun onUnused() = host.close()
-}
-
-/** The default failure screen: kind and message, plus the stack when [TinyUI.debug] is on. */
-@Composable
-fun PageFailureScreen(failure: PageFailure) {
-    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-        Text("TinyUI page failed (${failure.kind})", style = MaterialTheme.typography.titleMedium)
-        Text(failure.message, style = MaterialTheme.typography.bodyMedium)
-        if (TinyUI.debug) {
-            for (frame in failure.error.frames) Text(frame.toString(), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-        }
-    }
 }

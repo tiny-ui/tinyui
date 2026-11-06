@@ -99,6 +99,26 @@ tinyui/
 
 约定：顶层只放这八个目录；新 npm 包进 `packages/`；Kotlin 侧只有独立发 artifact 的库才占顶层目录（`updates/`，ADR-006 §2.4），其他 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 
+### `compose/` 的 Kotlin 包
+
+根包 `app.tinyui` 只放每个宿主都会碰的入口，其余公开类型按主题进子包（2026-11-06 定）：
+
+```
+app.tinyui              入口：TinyUI、TinyUIHost、TinyUIPage
+├── host                页面会调到的宿主服务：Navigator / Store / HttpChannel / Session / … 、能力注册、PageContext、TinyUIDefaults
+├── page                跑一个页面：PageHost、PageModule，以及它的错误（PageError、PageSink、SourceMaps）
+├── bundle              包：Bundle、BuildManifest，以及兼容性检查 PackageCheck、HostSnapshot
+├── node                节点表
+├── schema              组件 schema、注册表、NodeScope
+├── components          内置组件，公开入口只有 registerBuiltins()
+└── internal            不是公开 API；page/、components/ 下各有自己的 internal
+```
+
+- 依赖方向是 `host` ← `page` ← `bundle`，三者之间不成环；根包是把它们接在一起的入口，所以它和 `page` 互相引用。
+- 为了不成环，有几个类型不按字面归类：`PageContext` / `PageLocal` 在 `host`（宿主接口的签名带着它们），`PageSink` 在 `page`（它的参数是 `PageError`），`PageModule` / `PackageI18n` 在 `page`（`bundle` 产出它们，反过来不行）。
+- `internal` 子包里的顶层声明全是 `internal` 或 `private`，放在它服务的公开类型所在的包下面；紧挨着某个公开类型的小工具留在那个类型的文件里，不必进 `internal`。
+- 子包名 `host` 指宿主 App 提供的东西，与 `TinyUIHost`、`HostCapability` 是同一个意思；上文否掉的是把 `host` 用作 npm 包名和顶层目录名。
+
 ## 实现期文档
 
 不需要 ADR 但实现前必须定的方案，一项一个文件：

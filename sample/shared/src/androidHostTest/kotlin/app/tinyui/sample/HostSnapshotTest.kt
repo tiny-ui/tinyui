@@ -1,6 +1,6 @@
 package app.tinyui.sample
 
-import app.tinyui.HostSnapshot
+import app.tinyui.bundle.HostSnapshot
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals

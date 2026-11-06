@@ -5,7 +5,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import app.tinyui.buttonStyle
+import app.tinyui.host.buttonStyle
 import app.tinyui.schema.NodeScope
 
 @Composable

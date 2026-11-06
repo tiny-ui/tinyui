@@ -2,7 +2,7 @@ package app.tinyui.components.internal
 
 import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
-import app.tinyui.checkboxStyle
+import app.tinyui.host.checkboxStyle
 import app.tinyui.schema.NodeScope
 
 @Composable
