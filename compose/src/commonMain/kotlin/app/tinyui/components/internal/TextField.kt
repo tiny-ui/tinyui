@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import app.tinyui.oneTimeCodeImeOptions
+import app.tinyui.internal.oneTimeCodeImeOptions
 import app.tinyui.schema.Commands
 import app.tinyui.schema.IconValue
 import app.tinyui.schema.NodeScope

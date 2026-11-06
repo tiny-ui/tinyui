@@ -1,5 +1,6 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.HostException
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UByteVar

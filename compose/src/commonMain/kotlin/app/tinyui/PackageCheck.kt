@@ -1,5 +1,6 @@
 package app.tinyui
 
+import app.tinyui.internal.FrameworkCapabilities
 import wang.harlon.quickjs.QuickJs
 
 /** Whether a package can run on a host (docs/updates.md §4.1): for a host's test over its embedded packages. */

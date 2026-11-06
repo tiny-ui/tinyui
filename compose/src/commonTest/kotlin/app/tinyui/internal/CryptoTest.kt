@@ -1,5 +1,7 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.HostException
+import app.tinyui.RsaTestKeys
 import kotlin.io.encoding.Base64
 import kotlin.test.Test
 import kotlin.test.assertEquals

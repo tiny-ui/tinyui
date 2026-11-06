@@ -1,5 +1,6 @@
 package app.tinyui
 
+import app.tinyui.internal.PackageStorage
 import app.tinyui.schema.parseIcon
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine

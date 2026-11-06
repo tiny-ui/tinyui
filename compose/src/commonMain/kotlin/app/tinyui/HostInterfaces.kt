@@ -1,7 +1,5 @@
 package app.tinyui
 
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.text.input.PlatformImeOptions
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update
@@ -129,17 +127,6 @@ class EventBus {
     fun subscribe(topic: String, listener: (String) -> Unit): AutoCloseable = listeners.add(topic, listener)
 }
 
-/** Names the framework dispatches itself (J2 / J3 / J4); a host capability may not take one. */
-internal val FrameworkNames = setOf(
-    "device.info", "store.get", "store.set", "store.subscribe", "storage.get", "storage.set", "storage.remove", "storage.clear",
-    "i18n.t", "i18n.locale", "i18n.timeZone", "i18n.zoneOffset", "i18n.subscribe", "session.get", "session.subscribe", "session.signIn",
-    "navigation.push", "navigation.pop", "events.emit", "events.subscribe", "http.request", "timer.schedule", "timer.cancel",
-    "ui.toast", "ui.alert", "ui.confirm", "linking.openUrl", "clipboard.setText", "analytics.track", "crypto.rsaEncrypt",
-)
-
-/** What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a session. */
-internal val FrameworkCapabilities: Set<String> = FrameworkNames - "session.signIn"
-
 @OptIn(ExperimentalAtomicApi::class)
 internal class Listeners<T> {
     private val byKey = AtomicReference<Map<String, List<(T) -> Unit>>>(emptyMap())
@@ -153,22 +140,3 @@ internal class Listeners<T> {
         byKey.load()[key]?.forEach { it(value) }
     }
 }
-
-internal expect fun platformInfo(): Map<String, String>
-
-/** BCP 47, e.g. `zh-Hans-CN`. */
-internal expect fun systemLocale(): String
-
-/** IANA id, e.g. `Asia/Shanghai`; read fresh each time (iOS caches it otherwise), so a zone changed in system settings shows up. */
-internal expect fun systemTimeZone(): String
-
-/** Minutes [zone] is ahead of UTC at [epochMs] (daylight saving included); null when the platform does not know [zone]. */
-internal expect fun zoneOffsetMinutes(zone: String, epochMs: Long): Int?
-
-internal expect fun plainTextClipEntry(text: String): ClipEntry
-
-/**
- * iOS reads the text content type only from here, never from semantics, and otherwise derives it from the keyboard:
- * NumberPassword would make a code field a password field. Null where the platform has nothing to say (Android).
- */
-internal expect fun oneTimeCodeImeOptions(oneTimeCode: Boolean): PlatformImeOptions?

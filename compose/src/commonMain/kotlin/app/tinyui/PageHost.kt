@@ -1,61 +1,34 @@
 package app.tinyui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import app.tinyui.internal.FrameworkCapabilities
+import app.tinyui.internal.HostBridge
+import app.tinyui.internal.PageScope
+import app.tinyui.internal.PageUI
+import app.tinyui.node.NodeTree
+import app.tinyui.node.UINode
+import app.tinyui.schema.ComponentRegistry
 import kotlin.concurrent.Volatile
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
-import kotlinx.serialization.json.put
 import wang.harlon.quickjs.JsEngine
 import wang.harlon.quickjs.JsEngineConfig
 import wang.harlon.quickjs.JsException
@@ -63,13 +36,6 @@ import wang.harlon.quickjs.JsRef
 import wang.harlon.quickjs.JsRuntime
 import wang.harlon.quickjs.JsValue
 import wang.harlon.quickjs.ObjectTransport
-import app.tinyui.node.NodeTree
-import app.tinyui.node.UINode
-import androidx.compose.ui.graphics.RectangleShape
-import app.tinyui.schema.ComponentRegistry
-import app.tinyui.schema.LocalChildModifier
-import app.tinyui.schema.NodeScope
-import app.tinyui.schema.SizeValue
 
 /** Bytecode of the runtime modules every page imports; [TinyUI.runtime] outside of tests. */
 internal class RuntimeBundle(val core: ByteArray, val native: ByteArray)
@@ -119,7 +85,6 @@ class PageHost internal constructor(
     private val registry: ComponentRegistry get() = host.components
     private val sink: PageSink get() = host.sink
     internal val context = PageContext(page.name, locals.associate { it.local to it.value })
-    private val storage by lazy { host.storages.of(page.pkg) }
     internal val ui = PageUI()
     val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
@@ -129,11 +94,7 @@ class PageHost internal constructor(
     // the engine lock is fair, but entries launched on a multi-threaded pool can reach it out of order: one lane keeps
     // them in call order up to the lock (onChange before onComplete, onFocusChange before onCommit)
     private val entryLane = Dispatchers.Default.limitedParallelism(1)
-    private val timers = HashMap<Int, Job>()
-    private val subscriptions = HashMap<String, AutoCloseable>()
-    private val storeVersions = HashMap<String, Long>()
-    /** The system zone the page last got, once it subscribed without a host zone; under the runtime lock like [timers]. */
-    private var systemZoneSeen: String? = null
+    private val bridge = HostBridge(this, page, scope)
     private val jsThread = newSingleThreadContext("tinyui-page")
     private val runtime = JsRuntime(
         JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log, onUnhandledRejection = { report("E7", it.message ?: "unhandled rejection", stack = it.jsStack) }),
@@ -154,7 +115,7 @@ class PageHost internal constructor(
         scope.launch {
             try {
                 // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6
-                storage // the package's file is read before the first J2 can ask for it
+                bridge.storage // the package's file is read before the first J2 can ask for it
                 withTimeout(entryTimeoutMs) { runtime.withEngine {
                     registerHost(this)
                     step("registering tinyui-core") { registerModule(runtimeBundle.core) }
@@ -188,25 +149,13 @@ class PageHost internal constructor(
     fun visible(visible: Boolean) {
         wantVisible = visible
         entry("visible", JsValue.Bool(visible))
-        if (visible) systemZoneMoved()
+        if (visible) bridge.systemZoneMoved()
     }
 
-    /**
-     * Without a host zone the page follows the system's, which has no change callback in common code: coming back on screen
-     * (the user may have just been in Settings) is when it is checked again.
-     */
-    private fun systemZoneMoved() {
-        if (host.timeZone != null) return
-        val zone = host.systemZone()
-        var same = false
-        entry("emit", JsValue.Str("i18n.timeZone"), JsValue.Str(buildJsonObject { put("timeZone", zone) }.toString()), before = {
-            if (systemZoneSeen == null || systemZoneSeen == zone) same = true else systemZoneSeen = zone
-        }, skipWhen = { same })
-    }
     fun resolve(cbId: Int, resultJson: String) = entry("resolve", JsValue.Num(cbId), JsValue.Str(resultJson))
     fun reject(cbId: Int, code: String, message: String) = reject(cbId, code, message, null)
 
-    private fun reject(cbId: Int, code: String, message: String, details: JsonObject?) =
+    internal fun reject(cbId: Int, code: String, message: String, details: JsonObject?) =
         entry("reject", JsValue.Num(cbId), JsValue.Str(JsonObject((details ?: JsonObject(emptyMap())) + mapOf("code" to JsonPrimitive(code), "message" to JsonPrimitive(message))).toString()))
     /**
      * K5. The host calls this for `navigation.result`; bus topics arrive through the page's own subscriptions.
@@ -214,7 +163,7 @@ class PageHost internal constructor(
      */
     fun emit(topic: String, payloadJson: String) = entry("emit", JsValue.Str(topic), JsValue.Str(payloadJson))
 
-    private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}, skipWhen: () -> Boolean = { false }) {
+    internal fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}, skipWhen: () -> Boolean = { false }) {
         if (failure != null) return
         scope.launch(entryLane) {
             // a host emit (navigation.result to a page being remounted) can beat the mount to the engine lock
@@ -246,8 +195,7 @@ class PageHost internal constructor(
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 runtime.withEngine {
-                    subscriptions.values.forEach { runCatching { it.close() } }
-                    subscriptions.clear()
+                    bridge.close()
                     entries?.let { e -> runCatching { e.call("unmount") }; e.close() }
                     entries = null
                 }
@@ -266,7 +214,7 @@ class PageHost internal constructor(
         failure = PageFailure(error)
     }
 
-    private fun report(kind: String, message: String, entry: String? = null, stack: String? = null, op: String? = null): PageError {
+    internal fun report(kind: String, message: String, entry: String? = null, stack: String? = null, op: String? = null): PageError {
         val error = PageError(kind, page.name, page.buildId, message, entry, stack, sourceMaps.frames(stack), op)
         sink.error(error)
         return error
@@ -293,305 +241,25 @@ class PageHost internal constructor(
             }
             JsValue.Undefined
         }
-        engine.registerFunction("__host_query") { args -> JsValue.Str(query((args[0] as JsValue.Str).value, (args[1] as JsValue.Str).value)) }
+        engine.registerFunction("__host_query") { args -> JsValue.Str(bridge.query((args[0] as JsValue.Str).value, (args[1] as JsValue.Str).value)) }
         engine.registerFunction("__host_call") { args ->
-            call((args[0] as JsValue.Str).value, (args[1] as JsValue.Num).value.toInt(), (args[2] as JsValue.Str).value)
+            bridge.call((args[0] as JsValue.Str).value, (args[1] as JsValue.Num).value.toInt(), (args[2] as JsValue.Str).value)
             JsValue.Undefined
         }
         engine.registerFunction("__host_send") { args ->
-            send((args[0] as JsValue.Str).value, (args[1] as JsValue.Str).value)
+            bridge.send((args[0] as JsValue.Str).value, (args[1] as JsValue.Str).value)
             JsValue.Undefined
-        }
-    }
-
-    /** J2 whitelist (docs/native-api.md §2); anything else answers null. */
-    private fun query(name: String, argsJson: String): String {
-        val a = args(argsJson)
-        return when (name) {
-            "device.info" -> JsonObject(platformInfo().mapValues { JsonPrimitive(it.value) }).toString()
-            "store.get" -> a.str("key")?.let(host.store::getJson) ?: "null"
-            "storage.get" -> a.str("key")?.let { storage?.get(it) } ?: "null"
-            "storage.set" -> {
-                val key = a.str("key") ?: return JsonPrimitive("E_INVALID").toString()
-                val target = storage ?: return JsonPrimitive("E_UNSUPPORTED").toString()
-                target.set(key, a.str("value") ?: "null")?.let { JsonPrimitive(it).toString() } ?: "null"
-            }
-            "i18n.t" -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
-            "i18n.locale" -> JsonPrimitive(host.currentLocale()).toString()
-            "i18n.timeZone" -> JsonPrimitive(host.currentTimeZone()).toString()
-            "i18n.zoneOffset" -> JsonPrimitive(zoneOffset(a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0)).toString()
-            "session.get" -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
-            else -> "null"
-        }
-    }
-
-    private fun translate(key: String): String =
-        page.i18n.lookup(key, host.currentLocale()) ?: key.also { if (host.missingKeys.firstTime("${page.pkg}:$it")) sink.log("i18n: ${page.pkg} has no \"$it\" in any language") }
-
-    /** A zone the platform does not know is reported once per host and shown in the system zone instead. */
-    private fun zoneOffset(epochMs: Double): Int {
-        val zone = host.currentTimeZone()
-        return zoneOffsetMinutes(zone, epochMs.toLong()) ?: run {
-            if (host.missingKeys.firstTime("timeZone:$zone")) sink.log("i18n: unknown time zone \"$zone\", using the system zone")
-            zoneOffsetMinutes(host.systemZone(), epochMs.toLong()) ?: 0
-        }
-    }
-
-    private fun sessionJson(s: Session): String = buildJsonObject { put("loggedIn", s.loggedIn); put("userId", s.userId) }.toString()
-
-    /** J3 (docs/native-api.md §6–§13); results come back through [resolve] / [reject] as one transaction each. */
-    private fun call(name: String, cbId: Int, argsJson: String) {
-        val a = args(argsJson)
-        when (name) {
-            "timer.schedule" -> schedule(cbId, a)
-            "http.request" -> settle(cbId) { http(a) }
-            "session.signIn" -> settle(cbId) {
-                val session = host.session ?: throw HostException("E_UNSUPPORTED", "the host provides no session")
-                withContext(Dispatchers.Main) { session.signIn(a.str("source") ?: "") }
-                ""
-            }
-            "ui.toast" -> settle(cbId) {
-                val message = a.str("message") ?: throw HostException("E_INVALID", "ui.toast needs a message")
-                val long = a.str("duration") == "long"
-                val result = withContext(Dispatchers.Main) {
-                    ui.snackbar.showSnackbar(message, a.str("action"), duration = if (long) SnackbarDuration.Long else SnackbarDuration.Short)
-                }
-                JsonPrimitive(if (result == SnackbarResult.ActionPerformed) "action" else "dismissed").toString()
-            }
-            "ui.alert", "ui.confirm" -> settle(cbId) {
-                val texts = DialogTexts.of(host.currentLocale())
-                val confirmed = ui.ask(
-                    DialogRequest(
-                        title = a.str("title"),
-                        message = a.str("message") ?: throw HostException("E_INVALID", "$name needs a message"),
-                        confirm = a.str("confirm") ?: texts.ok,
-                        cancel = if (name == "ui.confirm") a.str("cancel") ?: texts.cancel else null,
-                    ),
-                )
-                if (name == "ui.confirm") confirmed.toString() else ""
-            }
-            "crypto.rsaEncrypt" -> settle(cbId) {
-                // strings only: a number would be encrypted as its decimal text, which is not what the page holds
-                val text = (a["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs text as a string")
-                val key = (a["publicKey"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "crypto.rsaEncrypt needs a publicKey string")
-                // off the engine's lane: RSA is cheap but not free on a slow phone
-                JsonPrimitive(withContext(Dispatchers.Default) { rsaEncrypt(text, key) }).toString()
-            }
-            "clipboard.setText" -> settle(cbId) {
-                context.copy(a.str("text") ?: throw HostException("E_INVALID", "clipboard.setText needs text"))
-                ""
-            }
-            "linking.openUrl" -> settle(cbId) {
-                val url = a.str("url")?.takeIf { URL_SCHEME.containsMatchIn(it) } ?: throw HostException("E_INVALID", "linking.openUrl needs an absolute URL")
-                withContext(Dispatchers.Main) { (host.links ?: LinkOpener.System).open(url, context) }
-                ""
-            }
-            else -> when (val capability = host.capabilities[name]) {
-                null -> scope.launch { reject(cbId, "E_UNSUPPORTED", "$name is not available") }
-                else -> settle(cbId) { capability.call(argsJson, context) ?: "" }
-            }
-        }
-    }
-
-    /** docs/native-api.md §6: any response comes back from the channel; non-2xx rejects E_HTTP with status, headers and body. */
-    private suspend fun http(a: JsonObject): String {
-        val channelName = a.str("channel") ?: TinyUIHost.DEFAULT_CHANNEL
-        val channel = host.channel(channelName) ?: throw HostException("E_UNSUPPORTED", "the host has no http channel \"$channelName\"")
-        val headers = (a["headers"] as? JsonObject)?.mapValues { it.value.jsonPrimitive.content }.orEmpty().toMutableMap()
-        val body = when (val b = a["body"]) {
-            null, JsonNull -> null
-            is JsonPrimitive if b.isString -> b.content
-            else -> {
-                if (headers.keys.none { it.equals("content-type", ignoreCase = true) }) headers["Content-Type"] = "application/json"
-                b.toString()
-            }
-        }
-        val request = HttpRequest(
-            method = a.str("method") ?: "GET",
-            url = a.str("url") ?: throw HostException("E_INVALID", "http.request needs url"),
-            headers = headers,
-            body = body,
-            timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
-            tags = when (val t = a["tags"]) {
-                null, JsonNull -> emptyMap()
-                is JsonObject -> t.mapValues { (k, v) -> (v as? JsonPrimitive)?.takeIf { it.isString }?.content ?: throw HostException("E_INVALID", "http tag \"$k\" must be a string") }
-                else -> throw HostException("E_INVALID", "http tags must be an object of strings")
-            },
-        )
-        val response = request.timeoutMs?.let { ms ->
-            withTimeoutOrNull(ms) { channel.request(request) } ?: throw HostException("E_TIMEOUT", "${request.method} ${request.url} took longer than $ms ms")
-        } ?: channel.request(request)
-        val fields = mapOf(
-            "status" to JsonPrimitive(response.status),
-            "headers" to JsonObject(response.headers.mapValues { JsonPrimitive(it.value) }),
-            "body" to (runCatching { Json.parseToJsonElement(response.body) }.getOrNull() ?: JsonPrimitive(response.body)),
-        )
-        if (response.status !in 200..299) throw HttpStatusException(response.status, JsonObject(fields))
-        return JsonObject(fields).toString()
-    }
-
-    private class HttpStatusException(val status: Int, val details: JsonObject) : Exception("HTTP $status")
-
-    /** Runs one J3 on the page scope and answers with K3: the JSON [block] returns, or its E3 code. */
-    private fun settle(cbId: Int, block: suspend () -> String) = scope.launch {
-        try {
-            resolve(cbId, block())
-        } catch (e: HttpStatusException) {
-            reject(cbId, "E_HTTP", e.message ?: "", e.details)
-        } catch (e: HostException) {
-            reject(cbId, e.code, e.message ?: "")
-        } catch (e: Exception) {
-            reject(cbId, "E_NET", e.message ?: e.toString())
-        }
-    }
-
-    /** J4 (docs/native-api.md §3–§12). */
-    private fun send(name: String, argsJson: String) {
-        val a = args(argsJson)
-        when (name) {
-            "timer.cancel" -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
-            "navigation.push" -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
-            "navigation.pop" -> host.navigator.pop(a["result"]?.toString(), context)
-            "store.set" -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
-            // one host listener per key / topic; JS fans out to its own handlers
-            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }
-            "storage.remove" -> storage?.remove(a.str("key") ?: return)
-            "storage.clear" -> storage?.clear()
-            "events.emit" -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
-            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> emit(topic, json) } } }
-            "i18n.subscribe" -> {
-                host.locale?.let { flow ->
-                    subscriptions.getOrPut("i18n") { follow(flow) { emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
-                }
-                val zone = host.timeZone
-                if (zone != null) {
-                    subscriptions.getOrPut("i18n.timeZone") { follow(zone) { emit("i18n.timeZone", buildJsonObject { put("timeZone", it) }.toString()) } }
-                } else if (systemZoneSeen == null) {
-                    systemZoneSeen = host.systemZone()
-                }
-            }
-            "session.subscribe" -> host.session?.let { source ->
-                subscriptions.getOrPut("session") { follow(source.state) { emit("session", sessionJson(it)) } }
-            }
-            "analytics.track" -> track(a)
-            else -> sink.log("unknown J4 $name")
-        }
-    }
-
-    /** K5 for every value of [flow], the current one included; stops with the page. */
-    private fun <T> follow(flow: StateFlow<T>, push: (T) -> Unit): AutoCloseable {
-        val job = scope.launch { flow.collect(push) }
-        return AutoCloseable { job.cancel() }
-    }
-
-    private fun track(a: JsonObject) {
-        val name = a.str("name") ?: return
-        val props = (a["props"] as? JsonObject).orEmpty().mapValues { (_, v) ->
-            val p = v as? JsonPrimitive
-            when {
-                p == null || p is JsonNull -> null
-                p.isString -> p.content
-                else -> p.booleanOrNull ?: p.longOrNull ?: p.doubleOrNull
-            }
-        }
-        val sink = host.analytics
-        if (sink == null) { if (TinyUI.debug) this.sink.log("analytics: no sink, dropped $name") } else sink.track(name, props, context)
-    }
-
-    /** Notifications may arrive out of order across threads; the version decides, applied inside the entry (under the lock). */
-    private fun storeChanged(key: String, value: StoreValue) {
-        var stale = false
-        entry("emit", JsValue.Str("store:$key"), JsValue.Str("""{"value":${value.json}}"""), before = {
-            val last = storeVersions[key] ?: -1
-            if (value.version <= last) stale = true else storeVersions[key] = value.version
-        }, skipWhen = { stale })
-    }
-
-    /**
-     * The host side of `setTimeout` (J3 `timer.schedule` → K3 `resolve`); dies with the page.
-     * [timers] is only touched while holding the runtime lock: here and in `timer.cancel` (host functions
-     * run inside the calling entry) and in the `before` step of the firing entry.
-     */
-    private fun schedule(cbId: Int, a: JsonObject) {
-        val ms = a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-        timers[cbId] = scope.launch {
-            delay(ms.toLong().coerceAtLeast(0))
-            entry("resolve", JsValue.Num(cbId), JsValue.Str(""), before = { timers.remove(cbId) })
-        }
-    }
-
-    private fun args(json: String): JsonObject = runCatching { Json.parseToJsonElement(json).jsonObject }.getOrDefault(JsonObject(emptyMap()))
-    private fun JsonObject.str(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
-
-    /** The scope a component renders through. */
-    internal inner class Scope(override val node: UINode) : NodeScope {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T> get(key: String): T? = (node.props[key] ?: registry.schema(node.type)?.prop(key)?.default) as T?
-        override fun has(event: String): Boolean = node.events[event] == true
-        override fun dispatch(event: String, payload: String) = this@PageHost.dispatch(node.id, event, payload)
-
-        /** docs/components.md §2: parent-scoped (weight) → size → clip → background → border → gesture → padding. */
-        @Composable
-        override fun modifier(clickable: Boolean): Modifier {
-            var m: Modifier = LocalChildModifier.current
-            when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
-            when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
-            // outside clip / background / border so those vanish too; the gesture below is skipped as well
-            val invisible = get<Boolean>("invisible") == true
-            if (invisible) m = m.invisible()
-            val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
-            if (shape != RectangleShape) m = m.clip(shape)
-            color("background")?.let { m = m.background(it) }
-            // 0.dp is Compose's hairline (one pixel), not "no border"
-            get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
-            if (clickable && !invisible && has("onClick")) {
-                val role = roleOf(get<String>("role"))
-                val selected = get<Boolean>("selected")
-                m = if (selected != null) m.selectable(selected, role = role) { dispatch("onClick") } else m.clickable(role = role) { dispatch("onClick") }
-            }
-            val all = get<Dp>("padding")
-            val h = get<Dp>("paddingHorizontal") ?: all
-            val v = get<Dp>("paddingVertical") ?: all
-            if (h != null || v != null) m = m.padding(start = h ?: 0.dp, top = v ?: 0.dp, end = h ?: 0.dp, bottom = v ?: 0.dp)
-            return m
-        }
-
-        @Composable
-        override fun Children() = Children { Modifier }
-
-        @Composable
-        override fun Children(childModifier: (UINode) -> Modifier) {
-            for (child in node.children) key(child.id) {
-                CompositionLocalProvider(LocalChildModifier provides childModifier(child)) { Render(child) }
-            }
-        }
-
-        @Composable
-        override fun RenderChild(child: UINode) = CompositionLocalProvider(LocalChildModifier provides Modifier) { Render(child) }
-
-        override fun reportProblem(reason: String) {
-            report("E5", reason, op = "node ${node.id} (${node.type})")
         }
     }
 
     @Composable
     internal fun Render(node: UINode) {
-        registry.Render(node.type, Scope(node))
+        registry.Render(node.type, PageScope(this, node))
     }
 
     companion object {
         /** `import.meta.url` of a page module is `tinyui:<name>` (docs/adr-005-engine.md). */
         const val MODULE_SCHEME = "tinyui"
-        private val URL_SCHEME = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
-
-        private fun roleOf(name: String?): Role? = when (name) {
-            "button" -> Role.Button
-            "checkbox" -> Role.Checkbox
-            "switch" -> Role.Switch
-            "radio" -> Role.RadioButton
-            "tab" -> Role.Tab
-            else -> null
-        }
         private val ENTRY_NAMES = listOf("mount", "unmount", "visible", "dispatch", "resolve", "reject", "emit", "flush")
     }
 }

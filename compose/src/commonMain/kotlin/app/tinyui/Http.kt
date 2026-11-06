@@ -35,6 +35,3 @@ class KtorChannel(private val client: HttpClient) : HttpChannel {
         body = bodyAsText(),
     )
 }
-
-/** The engine each platform ships; the `default` channel adds nothing to it. */
-internal expect fun defaultHttpClient(): HttpClient

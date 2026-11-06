@@ -1,4 +1,4 @@
-package app.tinyui
+package app.tinyui.internal
 
 import android.content.ClipData
 import android.os.Build

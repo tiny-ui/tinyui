@@ -1,4 +1,4 @@
-package app.tinyui
+package app.tinyui.internal
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry

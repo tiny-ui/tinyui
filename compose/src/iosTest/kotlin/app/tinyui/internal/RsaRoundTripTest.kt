@@ -1,5 +1,6 @@
-package app.tinyui
+package app.tinyui.internal
 
+import app.tinyui.RsaTestKeys
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
