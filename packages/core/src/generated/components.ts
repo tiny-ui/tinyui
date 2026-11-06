@@ -315,7 +315,7 @@ export interface SelectProps extends LayoutProps {
     children?: Node | Node[];
 }
 
-/** One choice of its parent Select, Menu or Tabs, which reads these props; renders nothing anywhere else. */
+/** One choice of its parent Select, Menu, Tabs or IndexBar, which reads these props; renders nothing anywhere else. */
 export interface OptionProps {
     value: string;
     text: string;
@@ -383,6 +383,27 @@ export interface TabsProps extends LayoutProps {
     children?: Node | Node[];
 }
 
+export interface SectionHeaderClickPayload {
+}
+
+/** The heading of a group of rows in a LazyColumn: a Box the list keeps at its top while the group scrolls under it. Anywhere else, or with `sticky` off, it is a plain Box. */
+export interface SectionHeaderProps extends LayoutProps {
+    /** this group's label on the list's IndexBar: the value of one of its Options. Unset keeps the group out of the index */
+    index?: string;
+    /** stays at the top of the list while its rows scroll under it; give it an opaque background */
+    sticky?: boolean;
+    align?: "topStart" | "topCenter" | "topEnd" | "centerStart" | "center" | "centerEnd" | "bottomStart" | "bottomCenter" | "bottomEnd";
+    onClick?: (e: SectionHeaderClickPayload) => void;
+    children?: Node | Node[];
+}
+
+/** The strip of short labels beside a long list (the A–Z of a contact list). Put it in a LazyColumn, as a direct child: it floats over the list's end edge and is not one of its rows. A tap or a slide over it takes the list to the SectionHeader whose `index` is that label; the highlighted label is the group the list is at. The labels are its `Option` children; without any, the `index` of each SectionHeader in order. */
+export interface IndexBarProps {
+    /** what a screen reader calls it */
+    label?: string;
+    children?: Node | Node[];
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -406,6 +427,8 @@ export interface IntrinsicElements {
     BackHandler: BackHandlerProps;
     Menu: MenuProps;
     Tabs: TabsProps;
+    SectionHeader: SectionHeaderProps;
+    IndexBar: IndexBarProps;
 }
 
 export const Column = "Column";
@@ -430,3 +453,5 @@ export const TopAppBar = "TopAppBar";
 export const BackHandler = "BackHandler";
 export const Menu = "Menu";
 export const Tabs = "Tabs";
+export const SectionHeader = "SectionHeader";
+export const IndexBar = "IndexBar";

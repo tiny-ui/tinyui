@@ -5,6 +5,23 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import kotlinx.coroutines.CoroutineScope
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -24,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
@@ -82,7 +100,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.retain.retain
 import androidx.compose.runtime.setValue
@@ -119,6 +139,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -138,6 +159,8 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -252,7 +275,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
     register(BuiltinSchemas.CodeField) { scope -> CodeFieldComponent(scope) }
     register(BuiltinSchemas.Select) { scope -> SelectComponent(scope) }
-    // data for its Select / Menu / Tabs, never drawn
+    // data for its Select / Menu / Tabs / IndexBar, never drawn
     register(BuiltinSchemas.Option) { }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
@@ -267,6 +290,14 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.BackHandler) { scope -> BackHandlerComponent(scope) }
     register(BuiltinSchemas.Menu) { scope -> MenuComponent(scope) }
     register(BuiltinSchemas.Tabs) { scope -> TabsComponent(scope) }
+    // in a LazyColumn the list pins it (see LazyColumnComponent); on its own it is a Box
+    register(BuiltinSchemas.SectionHeader) { scope ->
+        Box(modifier = scope.modifier(), contentAlignment = boxAlignment(scope["align"])) { scope.Children() }
+    }
+    // drawn by the LazyColumn it is a direct child of, never through here: anywhere else it has no list to index
+    register(BuiltinSchemas.IndexBar) { scope ->
+        LaunchedEffect(Unit) { scope.reportProblem("IndexBar only works as a direct child of LazyColumn") }
+    }
     register(BuiltinSchemas.Divider) { scope ->
         HorizontalDivider(
             modifier = scope.modifier(),
@@ -693,20 +724,78 @@ internal fun markedText(text: String, linkStyles: TextLinkStyles, onLink: ((Stri
     append(text.substring(at))
 }
 
-/** Rows are the node's children; virtualisation only in composition (docs/adr-003 §3.6). */
+private const val INDEX_BAR = "IndexBar"
+private const val SECTION_HEADER = "SectionHeader"
+
+/**
+ * What a list makes of its children (docs/components.md §3): the [rows], which are the children but for an IndexBar;
+ * that [bar], which floats over them (the first, when the page wrote more than one: [bars]); and which rows are
+ * [headers] the list pins. The children themselves are the rows when there is no bar, so a plain list allocates
+ * nothing here.
+ */
+private class ListShape(val rows: List<UINode>, val bar: UINode?, val bars: Int, val headers: IntArray) {
+    /** The header pinned over row [index] once it is at the top: the last one before it. -1 for a header, or with none before. */
+    fun headerOver(index: Int): Int {
+        var over = -1
+        for (header in headers) if (header < index) over = header else return if (header == index) -1 else over
+        return over
+    }
+}
+
+private val NoHeaders = IntArray(0)
+
+/** One pass over the children; everything the list needs to know of them comes from here, once per change. */
+private fun shapeOf(node: UINode): ListShape {
+    // the persistent list under the state list: iterating the state list itself reads snapshot state at every step
+    val children = node.children.toList()
+    var bar: UINode? = null
+    var bars = 0
+    // only once a bar is met: the children before it, then every row after
+    var rows: ArrayList<UINode>? = null
+    var headers: ArrayList<Int>? = null
+    var row = 0
+    for (child in children) {
+        val type = child.type
+        if (type == INDEX_BAR) {
+            if (bar == null) bar = child
+            if (rows == null) rows = ArrayList<UINode>(children.size).also { it.addAll(children.subList(0, row)) }
+            bars++
+            continue
+        }
+        // `sticky` is on unless the page turned it off
+        if (type == SECTION_HEADER && child.props["sticky"] != false) (headers ?: ArrayList<Int>().also { headers = it }).add(row)
+        rows?.add(child)
+        row++
+    }
+    return ListShape(rows = rows ?: children, bar = bar, bars = bars, headers = headers?.toIntArray() ?: NoHeaders)
+}
+
+/**
+ * Rows are the node's children; virtualisation only in composition (docs/adr-003 §3.6). A sticky SectionHeader among
+ * them is pinned by the list; an IndexBar child is not a row but a strip over the list's end edge, drawn and driven here.
+ */
 @Composable
 private fun LazyColumnComponent(scope: NodeScope) {
     val state = retain { LazyListState() }
     val node = scope.node
+    // each scroll in a job of its own, started where the command is taken so they begin in order. A command must not
+    // wait for the animation of the one before it: the list's scroll mutex hands over to the later one, the last
+    // command wins. And a scroll that is interrupted (by that later command, by the user's finger) ends with a
+    // cancellation, which must end that scroll only, not the loop that takes commands
+    val scrolls = rememberCoroutineScope()
+    // worked out once each time the children change; the item provider, the commands, the end detection and the
+    // index strip all read this one
+    val shape = remember(node) { derivedStateOf { shapeOf(node) } }
     scope.Commands { command ->
-        if (command.name == "scrollTo") state.animateScrollToItem(((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1)))
+        val index = ((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, shape.value.rows.size - 1))
+        if (command.name == "scrollTo") scrolls.launch(start = CoroutineStart.UNDISPATCHED) { state.showRow(shape, index, animated = true) }
     }
     // with the scroll position: a list coming back still at its end has already reported that length
     val reachedEnd = retain { ReachedEnd() }
     if (scope.has("onReachEnd")) {
         // fires on each arrival at the last row and when the list grows while there; re-arms once the user scrolls away
         LaunchedEffect(state, node) {
-            snapshotFlow { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to node.children.size }
+            snapshotFlow { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to shape.value.rows.size }
                 .distinctUntilChanged()
                 .collect { (last, size) ->
                     val atEnd = size > 0 && last >= size - 1
@@ -725,14 +814,283 @@ private fun LazyColumnComponent(scope: NodeScope) {
         }
     }
     val gap = scope.get<Dp>("gap") ?: 0.dp
-    LazyColumn(state = state, modifier = scope.modifier(), verticalArrangement = if (gap > 0.dp) Arrangement.spacedBy(gap) else Arrangement.Top) {
-        // one immutable copy of the rows per item provider, not the live list: a measure pass takes its provider once,
-        // then asks it for the count and for each row by index, outside any snapshot, while the engine thread may apply
-        // the next patch in between. Taken in here rather than in the composition: this block is the provider's derived
-        // state, recomputed at the next measure after the rows change, so a command of the same flush (which runs
-        // before the recomposition that flush causes) already finds the new rows
-        val rows = node.children.toList()
-        items(rows, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
+    val list = @Composable { modifier: Modifier ->
+        LazyColumn(state = state, modifier = modifier, verticalArrangement = if (gap > 0.dp) Arrangement.spacedBy(gap) else Arrangement.Top) {
+            // one immutable copy of the rows per item provider, not the live list: a measure pass takes its provider
+            // once, then asks it for the count and for each row by index, outside any snapshot, while the engine
+            // thread may apply the next patch in between. Taken in here rather than in the composition: this block is
+            // the provider's derived state, recomputed at the next measure after the rows change, so a command of the
+            // same flush (which runs before the recomposition that flush causes) already finds the new rows
+            val now = shape.value
+            val rows = now.rows
+            // a list without headers is the single run of items it always was
+            if (now.headers.isEmpty()) items(rows, key = { it.id }) { child -> key(child.id) { scope.RenderChild(child) } }
+            else {
+                // a pinned header is an item of its own kind; the rows between two of them are one run
+                var from = 0
+                for (at in now.headers) {
+                    if (at > from) rowRun(rows, from, at, scope)
+                    val header = rows[at]
+                    stickyHeader(key = header.id, contentType = SECTION_HEADER) { key(header.id) { scope.RenderChild(header) } }
+                    from = at + 1
+                }
+                if (from < rows.size) rowRun(rows, from, rows.size, scope)
+            }
+        }
+    }
+    // read through a derived state: the list is recomposed when a bar comes or goes, not each time a row does
+    val bar by remember(node) { derivedStateOf { shape.value.bar } }
+    val bars by remember(node) { derivedStateOf { shape.value.bars } }
+    if (bars > 1) LaunchedEffect(Unit) { scope.reportProblem("a LazyColumn takes one IndexBar; it has $bars, the first one is used") }
+    // the strip needs a box around the list. Kept once there has been a bar, so that showing and hiding it (while
+    // searching, say) does not move the list in the composition and rebuild its rows; a list that never has one is
+    // composed exactly as before
+    val boxed = remember(node) { booleanArrayOf(false) }
+    if (bar != null) boxed[0] = true
+    if (!boxed[0]) {
+        list(scope.modifier())
+        return
+    }
+    Layout(
+        content = {
+            list(Modifier)
+            bar?.let { IndexBarStrip(it, shape, state, scrolls) }
+        },
+        modifier = scope.modifier(),
+    ) { measurables, constraints ->
+        // the list takes the constraints it would have had on its own; the strip floats over its end edge
+        val listPlaceable = measurables[0].measure(constraints)
+        val strip = measurables.getOrNull(1)?.measure(Constraints(maxWidth = listPlaceable.width, maxHeight = listPlaceable.height))
+        layout(listPlaceable.width, listPlaceable.height) {
+            listPlaceable.place(0, 0)
+            strip?.placeRelative(listPlaceable.width - strip.width, (listPlaceable.height - strip.height) / 2)
+        }
+    }
+}
+
+/** The rows `[from, to)` as one run of items. */
+private fun LazyListScope.rowRun(rows: List<UINode>, from: Int, to: Int, scope: NodeScope) {
+    items(to - from, key = { rows[from + it].id }) { offset ->
+        val child = rows[from + offset]
+        key(child.id) { scope.RenderChild(child) }
+    }
+}
+
+/** The height of a header pinned or on screen right now: the room to leave above a row that will have one over it. */
+private fun LazyListState.pinnedHeaderSize(shape: ListShape): Int =
+    layoutInfo.visibleItemsInfo.firstOrNull { item -> shape.headers.any { it == item.index } }?.size ?: 0
+
+/**
+ * Brings row [index] to the top of the list, and out from under the header pinned over it there: the row a page (or the
+ * index strip) scrolled to is the row the user sees first.
+ */
+private suspend fun LazyListState.showRow(shape: State<ListShape>, index: Int, animated: Boolean) {
+    if (animated) {
+        // the header over the row is not laid out until the list gets there: aim with the one pinned now, settle after
+        val room = if (shape.value.headerOver(index) < 0) 0 else pinnedHeaderSize(shape.value)
+        animateScrollToItem(index, -room)
+    } else {
+        scrollToItem(index)
+    }
+    // read again: rows may have come or gone while it animated
+    val header = shape.value.headerOver(index)
+    if (header < 0) return
+    val visible = layoutInfo.visibleItemsInfo
+    val pinned = visible.firstOrNull { it.index == header } ?: return
+    val target = visible.firstOrNull { it.index == index } ?: return
+    // under the header by this much, or (aimed with a taller header than its own) short of it by as much
+    val off = pinned.offset + pinned.size - target.offset
+    if (off != 0) scrollBy(-off.toFloat())
+}
+
+/** An index label's circle, the height of the cell it sits in when the strip has all the room it wants, and the strip's width. */
+private val IndexLabelSize = 16.dp
+private val IndexLabelPitch = 20.dp
+private val IndexStripWidth = 40.dp
+
+/**
+ * This style at the size it has under the default system font size, whatever that setting is now. The index strip's
+ * cells are fixed in dp and there are twenty-odd of them in one column: labels that grew with the font size would be
+ * cut by their cells, or would not fit the strip at all. A screen reader does not go by the letters (the strip is one
+ * adjustable element), and the list beside it scrolls and searches without the strip.
+ */
+internal fun TextStyle.unscaled(density: Density): TextStyle = with(density) {
+    // sp is dp times the font scale: the dp of the same number, turned back into sp, is the size at scale 1
+    val size = if (fontSize.isSp) fontSize.value else 12f
+    copy(fontSize = size.dp.toSp(), lineHeight = if (lineHeight.isSp) lineHeight.value.dp.toSp() else lineHeight)
+}
+
+/**
+ * What an IndexBar knows of its list: the labels it shows, the row each one takes the list to, and which label a row
+ * belongs under. The groups are the list's SectionHeaders; one that carries an `index` answers to the label of that
+ * value, one without is in no label's group. A label without a group of its own goes to the next label down that has
+ * one, the last such group when none follows.
+ */
+private class IndexModel(
+    val labels: List<Pair<String, String>>,
+    private val own: IntArray,
+    private val targets: IntArray,
+    private val groupRows: IntArray,
+    private val groupLabels: IntArray,
+) {
+    /** The row label [label] takes the list to; -1 when the list has no group at all. */
+    fun rowOf(label: Int): Int = targets.getOrElse(label) { -1 }
+
+    /** Whether [label] has a group of its own, rather than standing in for the next one down. */
+    fun hasGroup(label: Int): Boolean = own.getOrElse(label) { -1 } >= 0
+
+    /** The label of the group row [row] is in; -1 above the first group, or when that group has no label of its own. */
+    fun labelAt(row: Int): Int {
+        var group = -1
+        for (i in groupRows.indices) if (groupRows[i] <= row) group = i else break
+        return if (group < 0) -1 else groupLabels[group]
+    }
+}
+
+private fun indexModel(bar: UINode, rows: List<UINode>): IndexModel {
+    val groups = ArrayList<Pair<String?, Int>>()
+    for (at in rows.indices) {
+        val row = rows[at]
+        if (row.type == SECTION_HEADER) groups += (row.props["index"] as? String) to at
+    }
+    val options = bar.children.filter { it.type == "Option" }.map { (it.props["value"] as? String ?: "") to (it.props["text"] as? String ?: "") }
+    val labels = options.ifEmpty { groups.mapNotNull { it.first }.distinct().map { it to it } }
+    val own = IntArray(labels.size) { label -> groups.firstOrNull { it.first == labels[label].first }?.second ?: -1 }
+    val last = groups.lastOrNull { it.first != null }?.second ?: -1
+    val targets = IntArray(labels.size) { label -> (label until labels.size).firstOrNull { own[it] >= 0 }?.let { own[it] } ?: last }
+    return IndexModel(
+        labels = labels,
+        own = own,
+        targets = targets,
+        groupRows = IntArray(groups.size) { groups[it].second },
+        groupLabels = IntArray(groups.size) { group -> groups[group].first?.let { index -> labels.indexOfFirst { it.first == index } } ?: -1 },
+    )
+}
+
+/** Where the strip left the list when it took it to the group of [label]: the first row in view and how far that is scrolled. */
+private class Arrival(val model: IndexModel, val label: Int, val index: Int, val offset: Int)
+
+/**
+ * The IndexBar of the list with this [shape], over its end edge. Which cell the finger is on is tracked here and the list scrolled from
+ * here: nothing crosses the bridge while it slides (docs/adr-004 §3.1). The highlight is the cell under the finger
+ * while it is down; after that the group the strip took the list to, until the list moves again; otherwise the group
+ * the list is at. Neither Compose nor M3 has this component: the sizes are the
+ * framework's, the colours the theme's. Takes no room when its labels do not fit.
+ */
+@Composable
+private fun IndexBarStrip(bar: UINode, shape: State<ListShape>, state: LazyListState, scrolls: CoroutineScope) {
+    val model by remember(bar, shape) { derivedStateOf { indexModel(bar, shape.value.rows) } }
+    val current = rememberUpdatedState(model)
+    var pressed by remember { mutableStateOf<Int?>(null) }
+    // the group the strip last took the list to, and where that left the list. A group near the end cannot come to the
+    // top, and the row first in view is then of an earlier group: the strip keeps showing the one it went to for as
+    // long as the list has not moved since
+    var arrived by remember { mutableStateOf<Arrival?>(null) }
+    val at by remember(state) {
+        derivedStateOf {
+            val model = current.value
+            val there = arrived
+            if (there != null && there.model === model && there.index == state.firstVisibleItemIndex && there.offset == state.firstVisibleItemScrollOffset) there.label
+            else model.labelAt(state.firstVisibleItemIndex)
+        }
+    }
+    // forgotten the first time the list is anywhere else: coming back to the very same place later (the end of the
+    // list, scrolled away from and back to) is the list's own doing
+    LaunchedEffect(state) {
+        snapshotFlow { state.firstVisibleItemIndex to state.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            val there = arrived
+            if (there != null && (there.index != index || there.offset != offset)) arrived = null
+        }
+    }
+    val highlighted = pressed ?: at
+    fun go(label: Int) {
+        val model = current.value
+        val row = model.rowOf(label)
+        if (row < 0) return
+        scrolls.launch(start = CoroutineStart.UNDISPATCHED) {
+            state.showRow(shape, row, animated = false)
+            // the label of the group at that row: a label without a group of its own stood in for this one
+            arrived = Arrival(model, model.labelAt(row), state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset)
+        }
+    }
+    val labels = model.labels
+    val name = bar.props["label"] as? String
+    val labelStyle = MaterialTheme.typography.bodySmall.unscaled(LocalDensity.current)
+    Layout(
+        content = {
+            for ((index, label) in labels.withIndex()) {
+                val on = index == highlighted
+                Box(
+                    Modifier.size(IndexLabelSize).then(if (on) Modifier.background(MaterialTheme.colorScheme.primary, CircleShape) else Modifier),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label.second,
+                        // at its own size, centred over the circle: a line taller than the circle (the host's line
+                        // height is its own business) would otherwise be cut to it from the top, and sit low
+                        modifier = Modifier.wrapContentSize(unbounded = true),
+                        style = labelStyle,
+                        color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
+        },
+        modifier = Modifier
+            // one adjustable element to a screen reader, not a button per label: it says the group the list is at
+            // and steps through them
+            .clearAndSetSemantics {
+                if (name != null) contentDescription = name
+                stateDescription = labels.getOrNull(highlighted)?.second ?: ""
+                if (labels.size > 1) {
+                    val from = highlighted.coerceAtLeast(0)
+                    progressBarRangeInfo = ProgressBarRangeInfo(from.toFloat(), 0f..(labels.size - 1).toFloat(), labels.size - 2)
+                    setProgress { value ->
+                        // a step lands on a group, not on a label standing in for the next one: stepping back onto
+                        // such a label would come straight back to where it started and never get past it
+                        val to = value.roundToInt().coerceIn(0, labels.size - 1)
+                        val step = if (to < from) -1 else 1
+                        var label = to
+                        while (label in labels.indices && !current.value.hasGroup(label)) label += step
+                        if (label in labels.indices) go(label)
+                        true
+                    }
+                } else if (labels.size == 1) {
+                    // nothing to step between; the one label can still be activated
+                    onClick { go(0); true }
+                }
+            }
+            // everything is consumed: inside a sheet or a pager a slide along the strip must not drag the container
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    fun reach(y: Float) {
+                        val count = current.value.labels.size
+                        if (count == 0 || size.height == 0) return
+                        val label = (y / size.height * count).toInt().coerceIn(0, count - 1)
+                        if (label != pressed) { pressed = label; go(label) }
+                    }
+                    val down = awaitFirstDown()
+                    down.consume()
+                    try {
+                        reach(down.position.y)
+                        drag(down.id) { change -> change.consume(); reach(change.position.y) }
+                    } finally {
+                        pressed = null
+                    }
+                }
+            },
+    ) { measurables, constraints ->
+        val label = IndexLabelSize.roundToPx()
+        // labels squeezed into less than their own size cannot be read or hit: no strip then (a keyboard is up, say)
+        if (measurables.isEmpty() || constraints.maxHeight < label * measurables.size || constraints.maxWidth < label) return@Layout layout(0, 0) {}
+        val placeables = measurables.map { it.measure(Constraints.fixed(label, label)) }
+        val width = IndexStripWidth.roundToPx().coerceAtMost(constraints.maxWidth)
+        val height = (IndexLabelPitch.roundToPx() * placeables.size).coerceAtMost(constraints.maxHeight)
+        val cell = height.toFloat() / placeables.size
+        layout(width, height) {
+            placeables.forEachIndexed { index, placeable -> placeable.place((width - label) / 2, (index * cell + (cell - label) / 2).toInt()) }
+        }
     }
 }
 
