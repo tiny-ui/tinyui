@@ -13,7 +13,7 @@
 | `packages/core/src/generated/components.ts` | `XxxProps`（JSX 属性类型）、`XxxYyyPayload`（事件 payload）、`XxxCommands`（命令参数表，配 `ref<XxxCommands>()`）、`IntrinsicElements`、组件名常量 | 业务的类型检查 |
 | `compose/.../components/generated/BuiltinSchemas.kt` | 每个组件一个 `ComponentSchema`，prop 的类型 / 默认值 / `required` / `initial`，事件与命令的字段表 | Kotlin 注册表：写入时转换、E5 校验、清单下发 |
 
-Kotlin 侧的 composable 仍手写，与 schema 一样一个组件一个文件。`compose/.../components/` 的包根是组件的公开契约（`ComponentSchema`、`ComponentRegistry`、`NodeScope`、`UINode`、`Theme`、`TinyUIDefaults`）和内置组件的入口 `Builtins.kt`：后者是注册表，一行一个 `register(BuiltinSchemas.Text) { scope -> TextComponent(scope) }`，不放实现。实现在子包 `components/impl/`，里面的声明全是 `internal`：`<组件名>.kt` 里是 `XxxComponent(scope)` 和只为它服务的辅助代码，几个组件共用的进独立文件（`RowColumn.kt`：`Row` / `Column` 的 `gap`、`weight`、`stretch`；`Payload.kt`：事件 payload）。宿主扩展组件（`acme.ProductCard`）用同一套 DSL（`import … from "tinyui-cli/schema"`）生成到宿主自己的包里，本仓不含。
+Kotlin 侧的 composable 仍手写，与 schema 一样一个组件一个文件。`compose/.../components/` 的包根是组件的公开契约（`ComponentSchema`、`ComponentRegistry`、`NodeScope`、`UINode`、`Theme`、`TinyUIDefaults`）和内置组件的入口 `Builtins.kt`：后者是注册表，一行一个 `register(BuiltinSchemas.Text) { scope -> TextComponent(scope) }`，不放实现。`NodeScope` 只有一个实现，在 `NodeRenderer.kt`：它只认注册表和两个出口（节点的事件、组件绕过去的页面错误），不认页面，所以组件测试直接用它渲染节点，和线上走同一套 props 默认值、布局 modifier 与子节点渲染。实现在子包 `components/impl/`，里面的声明全是 `internal`：`<组件名>.kt` 里是 `XxxComponent(scope)` 和只为它服务的辅助代码，几个组件共用的进独立文件（`RowColumn.kt`：`Row` / `Column` 的 `gap`、`weight`、`stretch`；`Payload.kt`：事件 payload）。宿主扩展组件（`acme.ProductCard`）用同一套 DSL（`import … from "tinyui-cli/schema"`）生成到宿主自己的包里，本仓不含。
 
 DSL：
 
