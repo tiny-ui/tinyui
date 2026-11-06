@@ -1,11 +1,35 @@
 package app.tinyui.components
 
 import app.tinyui.components.generated.BuiltinSchemas
+import app.tinyui.components.internal.BackHandlerComponent
+import app.tinyui.components.internal.BottomSheetComponent
+import app.tinyui.components.internal.BoxComponent
+import app.tinyui.components.internal.ButtonComponent
+import app.tinyui.components.internal.CheckboxComponent
+import app.tinyui.components.internal.CodeFieldComponent
+import app.tinyui.components.internal.ColumnComponent
+import app.tinyui.components.internal.DividerComponent
+import app.tinyui.components.internal.IconComponent
+import app.tinyui.components.internal.IndexBarComponent
+import app.tinyui.components.internal.LazyColumnComponent
+import app.tinyui.components.internal.LoadingComponent
+import app.tinyui.components.internal.MenuComponent
+import app.tinyui.components.internal.OptionComponent
+import app.tinyui.components.internal.PopoverComponent
+import app.tinyui.components.internal.RadioButtonComponent
+import app.tinyui.components.internal.RowComponent
+import app.tinyui.components.internal.SectionHeaderComponent
+import app.tinyui.components.internal.SelectComponent
+import app.tinyui.components.internal.SpacerComponent
+import app.tinyui.components.internal.TabsComponent
+import app.tinyui.components.internal.TextComponent
+import app.tinyui.components.internal.TextFieldComponent
+import app.tinyui.components.internal.TopAppBarComponent
 import app.tinyui.schema.ComponentRegistry
 
 /**
- * The built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. Each component is a file of
- * its own in this package, named after it.
+ * The built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. This file is the whole public
+ * side of them: each component is a file of its own in `internal`, named after it.
  */
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Column) { scope -> ColumnComponent(scope) }
