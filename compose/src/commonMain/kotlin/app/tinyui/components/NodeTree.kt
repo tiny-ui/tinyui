@@ -13,10 +13,10 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
-const val ROOT_ID = 0
+internal const val ROOT_ID = 0
 
 /** Reported for every op the tree could not apply (E5). The page keeps running. */
-class PatchProblem(val op: String, val reason: String) {
+internal class PatchProblem(val op: String, val reason: String) {
     override fun toString(): String = "$reason: $op"
 }
 
@@ -24,7 +24,7 @@ class PatchProblem(val op: String, val reason: String) {
  * The page's node table. Only the JS thread writes it, inside [apply]; the main thread only recomposes
  * (docs/adr-003-kotlin-node-tree-and-registry.md §3.2). Op semantics: docs/patch-protocol.md.
  */
-class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
+internal class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
     val root = UINode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
     val size: Int get() = nodes.size

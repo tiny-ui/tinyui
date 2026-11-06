@@ -113,6 +113,7 @@ app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及
 - 放置规则只有一条：一个声明是哪件事要用的，就进哪个包；两件事都用的，进靠下的那个。依赖方向是 `components` ← `app.tinyui` ← `bundle`（`bundle` 也用 `components`），不成环。
 - 「宿主实现的」和「跑页面的」不再分包。试过 `host` / `page` 两个包（#83 的前半段），撤回了：宿主接口的签名带着 `PageContext`，`PageSink` 的参数是 `PageError`，这条线从同一个读者的同一批签名中间穿过，分开之后每个类型都要单独讨论归属。同理，`schema` 与 `node` 并入了 `components`：读者是同一个人。
 - 不设 `internal` 子包：内部实现和它服务的公开类型放在同一个包里，靠 `internal` 修饰符区分。唯一的例外是 `components/impl`，二十几个内置组件的实现放在一起会把组件的公开契约淹掉；里面的顶层声明全是 `internal` 或 `private`。
+- 公开的只有文档里交给读者用的入口。框架自己驱动页面用的那些是 `internal`：`PageHost` 的构造、生命周期与 K 入口（宿主只从 `TinyUIPage` 的 `onHost` 拿到它，用 `emit` 和 `failure`）、节点表 `NodeTree`、`ComponentRegistry` 的 `Render` 与 `manifest`。宿主自己填进去的数据仍然能读，如 `ComponentRegistry.schema(type)`。
 - 包只管归类，不解决耦合：一个类型身兼两职、一个类拿了整个对象却只用其中一个函数，这类问题搬文件解决不了，要改代码。
 
 ## 实现期文档

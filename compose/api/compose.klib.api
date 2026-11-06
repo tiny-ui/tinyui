@@ -282,15 +282,8 @@ final class app.tinyui.components/Command { // app.tinyui.components/Command|nul
 final class app.tinyui.components/ComponentRegistry { // app.tinyui.components/ComponentRegistry|null[0]
     constructor <init>() // app.tinyui.components/ComponentRegistry.<init>|<init>(){}[0]
 
-    final fun Render(kotlin/String, app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/ComponentRegistry.Render|Render(kotlin.String;app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
-    final fun manifest(kotlin.collections/List<kotlin/String>): kotlin/String // app.tinyui.components/ComponentRegistry.manifest|manifest(kotlin.collections.List<kotlin.String>){}[0]
     final fun register(app.tinyui.components/ComponentSchema, app.tinyui.components/Component) // app.tinyui.components/ComponentRegistry.register|register(app.tinyui.components.ComponentSchema;app.tinyui.components.Component){}[0]
     final fun schema(kotlin/String): app.tinyui.components/ComponentSchema? // app.tinyui.components/ComponentRegistry.schema|schema(kotlin.String){}[0]
-
-    final object Companion { // app.tinyui.components/ComponentRegistry.Companion|null[0]
-        final const val PLACEHOLDER // app.tinyui.components/ComponentRegistry.Companion.PLACEHOLDER|{}PLACEHOLDER[0]
-            final fun <get-PLACEHOLDER>(): kotlin/String // app.tinyui.components/ComponentRegistry.Companion.PLACEHOLDER.<get-PLACEHOLDER>|<get-PLACEHOLDER>(){}[0]
-    }
 }
 
 final class app.tinyui.components/ComponentSchema { // app.tinyui.components/ComponentSchema|null[0]
@@ -317,30 +310,6 @@ final class app.tinyui.components/ComponentSchema { // app.tinyui.components/Com
 final class app.tinyui.components/IconValue { // app.tinyui.components/IconValue|null[0]
     final val vector // app.tinyui.components/IconValue.vector|{}vector[0]
         final fun <get-vector>(): androidx.compose.ui.graphics.vector/ImageVector // app.tinyui.components/IconValue.vector.<get-vector>|<get-vector>(){}[0]
-}
-
-final class app.tinyui.components/NodeTree { // app.tinyui.components/NodeTree|null[0]
-    constructor <init>(app.tinyui.components/ComponentRegistry, kotlin/Function1<app.tinyui.components/PatchProblem, kotlin/Unit>) // app.tinyui.components/NodeTree.<init>|<init>(app.tinyui.components.ComponentRegistry;kotlin.Function1<app.tinyui.components.PatchProblem,kotlin.Unit>){}[0]
-
-    final val root // app.tinyui.components/NodeTree.root|{}root[0]
-        final fun <get-root>(): app.tinyui.components/UINode // app.tinyui.components/NodeTree.root.<get-root>|<get-root>(){}[0]
-    final val size // app.tinyui.components/NodeTree.size|{}size[0]
-        final fun <get-size>(): kotlin/Int // app.tinyui.components/NodeTree.size.<get-size>|<get-size>(){}[0]
-
-    final fun apply(kotlin/String) // app.tinyui.components/NodeTree.apply|apply(kotlin.String){}[0]
-    final fun clear() // app.tinyui.components/NodeTree.clear|clear(){}[0]
-    final fun node(kotlin/Int): app.tinyui.components/UINode? // app.tinyui.components/NodeTree.node|node(kotlin.Int){}[0]
-}
-
-final class app.tinyui.components/PatchProblem { // app.tinyui.components/PatchProblem|null[0]
-    constructor <init>(kotlin/String, kotlin/String) // app.tinyui.components/PatchProblem.<init>|<init>(kotlin.String;kotlin.String){}[0]
-
-    final val op // app.tinyui.components/PatchProblem.op|{}op[0]
-        final fun <get-op>(): kotlin/String // app.tinyui.components/PatchProblem.op.<get-op>|<get-op>(){}[0]
-    final val reason // app.tinyui.components/PatchProblem.reason|{}reason[0]
-        final fun <get-reason>(): kotlin/String // app.tinyui.components/PatchProblem.reason.<get-reason>|<get-reason>(){}[0]
-
-    final fun toString(): kotlin/String // app.tinyui.components/PatchProblem.toString|toString(){}[0]
 }
 
 final class app.tinyui.components/TextFieldStyle { // app.tinyui.components/TextFieldStyle|null[0]
@@ -499,28 +468,13 @@ final class app.tinyui/PageFailure { // app.tinyui/PageFailure|null[0]
 }
 
 final class app.tinyui/PageHost { // app.tinyui/PageHost|null[0]
-    constructor <init>(app.tinyui/PageModule, app.tinyui/TinyUIHost, kotlin/String = ..., kotlin.collections/List<app.tinyui/PageLocalValue<*>> = ..., kotlin/Long = ..., app.tinyui/SourceMaps = ...) // app.tinyui/PageHost.<init>|<init>(app.tinyui.PageModule;app.tinyui.TinyUIHost;kotlin.String;kotlin.collections.List<app.tinyui.PageLocalValue<*>>;kotlin.Long;app.tinyui.SourceMaps){}[0]
-
     final val host // app.tinyui/PageHost.host|{}host[0]
         final fun <get-host>(): app.tinyui/TinyUIHost // app.tinyui/PageHost.host.<get-host>|<get-host>(){}[0]
-    final val tree // app.tinyui/PageHost.tree|{}tree[0]
-        final fun <get-tree>(): app.tinyui.components/NodeTree // app.tinyui/PageHost.tree.<get-tree>|<get-tree>(){}[0]
 
     final var failure // app.tinyui/PageHost.failure|{}failure[0]
         final fun <get-failure>(): app.tinyui/PageFailure? // app.tinyui/PageHost.failure.<get-failure>|<get-failure>(){}[0]
 
-    final fun close() // app.tinyui/PageHost.close|close(){}[0]
-    final fun dispatch(kotlin/Int, kotlin/String, kotlin/String) // app.tinyui/PageHost.dispatch|dispatch(kotlin.Int;kotlin.String;kotlin.String){}[0]
     final fun emit(kotlin/String, kotlin/String) // app.tinyui/PageHost.emit|emit(kotlin.String;kotlin.String){}[0]
-    final fun reject(kotlin/Int, kotlin/String, kotlin/String) // app.tinyui/PageHost.reject|reject(kotlin.Int;kotlin.String;kotlin.String){}[0]
-    final fun resolve(kotlin/Int, kotlin/String) // app.tinyui/PageHost.resolve|resolve(kotlin.Int;kotlin.String){}[0]
-    final fun start() // app.tinyui/PageHost.start|start(){}[0]
-    final fun visible(kotlin/Boolean) // app.tinyui/PageHost.visible|visible(kotlin.Boolean){}[0]
-
-    final object Companion { // app.tinyui/PageHost.Companion|null[0]
-        final const val MODULE_SCHEME // app.tinyui/PageHost.Companion.MODULE_SCHEME|{}MODULE_SCHEME[0]
-            final fun <get-MODULE_SCHEME>(): kotlin/String // app.tinyui/PageHost.Companion.MODULE_SCHEME.<get-MODULE_SCHEME>|<get-MODULE_SCHEME>(){}[0]
-    }
 }
 
 final class app.tinyui/PageModule { // app.tinyui/PageModule|null[0]
@@ -827,9 +781,6 @@ final object app.tinyui/TinyUI { // app.tinyui/TinyUI|null[0]
     final fun isCompatible(kotlin/String, kotlin/String): kotlin/Boolean // app.tinyui/TinyUI.isCompatible|isCompatible(kotlin.String;kotlin.String){}[0]
 }
 
-final const val app.tinyui.components/ROOT_ID // app.tinyui.components/ROOT_ID|{}ROOT_ID[0]
-    final fun <get-ROOT_ID>(): kotlin/Int // app.tinyui.components/ROOT_ID.<get-ROOT_ID>|<get-ROOT_ID>(){}[0]
-
 final val app.tinyui.bundle/app_tinyui_bundle_BuildManifest$stableprop // app.tinyui.bundle/app_tinyui_bundle_BuildManifest$stableprop|#static{}app_tinyui_bundle_BuildManifest$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_Bundle$stableprop // app.tinyui.bundle/app_tinyui_bundle_Bundle$stableprop|#static{}app_tinyui_bundle_Bundle$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_HostSnapshot$stableprop // app.tinyui.bundle/app_tinyui_bundle_HostSnapshot$stableprop|#static{}app_tinyui_bundle_HostSnapshot$stableprop[0]
@@ -849,8 +800,6 @@ final val app.tinyui.components/app_tinyui_components_ComponentRegistry$stablepr
 final val app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop // app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop|#static{}app_tinyui_components_ComponentSchema$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_IconValue$stableprop // app.tinyui.components/app_tinyui_components_IconValue$stableprop|#static{}app_tinyui_components_IconValue$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_LayoutProps$stableprop // app.tinyui.components/app_tinyui_components_LayoutProps$stableprop|#static{}app_tinyui_components_LayoutProps$stableprop[0]
-final val app.tinyui.components/app_tinyui_components_NodeTree$stableprop // app.tinyui.components/app_tinyui_components_NodeTree$stableprop|#static{}app_tinyui_components_NodeTree$stableprop[0]
-final val app.tinyui.components/app_tinyui_components_PatchProblem$stableprop // app.tinyui.components/app_tinyui_components_PatchProblem$stableprop|#static{}app_tinyui_components_PatchProblem$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_PropSpec$stableprop // app.tinyui.components/app_tinyui_components_PropSpec$stableprop|#static{}app_tinyui_components_PropSpec$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop|#static{}app_tinyui_components_PropSpec_Bool$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop // app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop|#static{}app_tinyui_components_PropSpec_ColorSpec$stableprop[0]
@@ -912,8 +861,6 @@ final fun app.tinyui.components/app_tinyui_components_ComponentRegistry$stablepr
 final fun app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ComponentSchema$stableprop_getter|app_tinyui_components_ComponentSchema$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_IconValue$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_IconValue$stableprop_getter|app_tinyui_components_IconValue$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_LayoutProps$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_LayoutProps$stableprop_getter|app_tinyui_components_LayoutProps$stableprop_getter(){}[0]
-final fun app.tinyui.components/app_tinyui_components_NodeTree$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_NodeTree$stableprop_getter|app_tinyui_components_NodeTree$stableprop_getter(){}[0]
-final fun app.tinyui.components/app_tinyui_components_PatchProblem$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PatchProblem$stableprop_getter|app_tinyui_components_PatchProblem$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_PropSpec$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec$stableprop_getter|app_tinyui_components_PropSpec$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_Bool$stableprop_getter|app_tinyui_components_PropSpec_Bool$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_PropSpec_ColorSpec$stableprop_getter|app_tinyui_components_PropSpec_ColorSpec$stableprop_getter(){}[0]
