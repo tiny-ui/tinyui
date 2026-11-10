@@ -81,7 +81,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|---|
 | `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` / `IndexBar` 不计）、`align`（交叉轴 start / center / end / stretch）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
-| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick`、`onLinkClick{id}`（给了它，`text` 里的 `[文案](id)` 渲染成链接；`**文案**` 渲染成粗体，不需要事件） | | |
+| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align`、`markup`（设了才读 `text` 里的行内标记：`**文案**` 粗体、`[文案](id)` 链接；缺省照原样显示） | `onClick`、`onLinkClick{id}`（点了 `[文案](id)` 链接；链接只在设了 `markup` 时才有） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
@@ -107,7 +107,9 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 `RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`onChange` 报的是文本的每一次变化，不问是谁改的——用户敲的、`setText` 设的、`maxLength` 调低裁掉的都报，同样的文本再设一次不报（2026-11-03 改；此前 `setText` 无条件报一次，`CodeField.setText` 仍是无条件）。顺序有保证：`onCommit` 之前一定先报完 `onChange`，`setText` 当场报；用户连续敲的字经 state 观察送达，同一次调度里的多次变化只报最后一次——`onChange` 说的是「现在是什么」，不是每一次按键。`LazyColumn` 的行就是它的 children（`IndexBar` 除外，见下），虚拟化只在组合层（ADR-003 §3.6）。列表每次测量拿一份不可变的行，不读活的 children：惰性列表一次测量先取行数、再按下标逐行要，测量不在快照里，引擎线程此时应用下一批 patch（搜索框一边输入一边筛掉大半行）会让下标越界。这一份在行变了之后的下一次测量就换新，不等重组——同一 flush 里「加行并滚过去」的命令早于重组执行（§4），那时列表已经认得新行。
 
-`Text` 的行内标记（2026-11-03 加 `**粗体**`，注册流程触发：协议句里的链接半粗、激活提示里的邮箱与分钟数加粗）：`[文案](id)` 链接与 `**文案**` 粗体，就是 SwiftUI `Text` 读的那个 Markdown 子集，扁平、不嵌套，落单的标记按字面显示。选字符串内标记而不是拆成多个节点，是为了翻译：译者拿整句，加粗位置随语序走。渲染走 Compose 的 `AnnotatedString`：粗体是 `SpanStyle(fontWeight)`，链接是 `LinkAnnotation` + `TextLinkStyles`。链接长什么样归宿主（§6 `TinyUIDefaults.textLinks`），页面只写语义；文案里字面量 `**` 目前不支持转义，需要时再加。
+`Text` 的行内标记（2026-11-03 加 `**粗体**`，注册流程触发：协议句里的链接半粗、激活提示里的邮箱与分钟数加粗）：设了 `markup` 的 `Text` 读 `[文案](id)` 链接与 `**文案**` 粗体，就是 SwiftUI `Text` 读的那个 Markdown 子集，扁平、不嵌套，落单的标记按字面显示。选字符串内标记而不是拆成多个节点，是为了翻译：译者拿整句，加粗位置随语序走。渲染走 Compose 的 `AnnotatedString`：粗体是 `SpanStyle(fontWeight)`，链接是 `LinkAnnotation` + `TextLinkStyles`。链接长什么样归宿主（§6 `TinyUIDefaults.textLinks`），页面只写语义；文案里字面量 `**` 目前不支持转义，需要时再加。
+
+`markup` 缺省是关的（2026-11-10 改，登录流程触发：脱敏邮箱 `ab********cd@x.io` 里成对的星号被读成粗体标记，显示时少了一半）：页面上大部分文字是**数据**（姓名、脱敏的邮箱或手机号、用户输入过的内容），里面的 `**` 与 `[…](…)` 是内容；带标记的**文案**只是少数几句，由它们声明。缺省读标记的话，漏掉声明是静默的，只在数据恰好带成对星号时才错；缺省不读，漏掉声明是文案里露出 `**`，开发时就看得到。读不读只由 `markup` 决定，不看绑了哪些事件：只给 `onLinkClick` 不设 `markup`，方括号按字面显示、事件不会来；设了 `markup` 没给 `onLinkClick`，链接照样渲染，点了没有反应，同没绑 `onClick` 的按钮。此前粗体不用声明、链接看有没有 `onLinkClick`，两种标记两套规则，也都没有随正式版本发布过。它是整个 `Text` 的开关，不是转义：一句带标记的文案里插进数据（`**{email}**`）时，数据里的标记仍会被读。
 
 `Checkbox` 与 `RadioButton` 同一模式（2026-10-28 加）：只报点击，勾没勾是页面状态。勾选框的颜色与边线粗细归宿主（§6 `TinyUIDefaults.checkbox`），尺寸是 M3 定的。勾选框带一句文案时，把两者包进 `<Row role="checkbox" selected={…} onClick={…}>`，整行一个读屏节点，`Checkbox` 本身不给 `onClick`。
 
@@ -124,7 +126,7 @@ const pin = ref<CodeFieldCommands>();
 
 `Select` 是 M3 `ExposedDropdownMenuBox`（2026-10-28 加）。选项不能做成数组 prop（prop 只过标量，patch-protocol.md §4），所以是 `Option` children：`Select` 像 `Row` 读 child 的 `weight` 一样读 `Option` 的 `value` / `text`，`Option` 自己什么都不画。选中值叫 `value` 而不是 `selected`，因为后者是公共布局 prop（可选中容器）。选中态归页面：`onSelect` 报选了哪个，页面把它写回 `value`。
 
-`Text` 内联链接（2026-10-28 加）：给了 `onLinkClick`，`text` 里的 `[文案](id)` 渲染成 primary 色链接，点击报 `{id}`；没给时按字面显示。协议句"我同意 [隐私政策](privacy) 及 [服务协议](terms)"要行内折行，`Row` 拼几个 `Text` 做不到；markdown 链接子集是最小够用的标记，i18n 文案里直接写。只认 `[` `]` `(` `)` 紧挨、id 不含空白的形式，其余方括号原样显示；不支持嵌套与转义。
+`Text` 内联链接（2026-10-28 加）：设了 `markup`，`text` 里的 `[文案](id)` 渲染成 primary 色链接，点击报 `onLinkClick{id}`。协议句"我同意 [隐私政策](privacy) 及 [服务协议](terms)"要行内折行，`Row` 拼几个 `Text` 做不到；markdown 链接子集是最小够用的标记，i18n 文案里直接写。只认 `[` `]` `(` `)` 紧挨、id 不含空白的形式，其余方括号原样显示；不支持嵌套与转义。
 
 `Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角），加粗图标 `"<viewBox>|<d>|+<线宽>"`（先填充再用同一颜色沿轮廓描一道，形状每边长出半个线宽；设计系统把一份几何按描边分「常规 / 加粗」两档时用它，线宽是 viewBox 单位的常数，与渲染尺寸无关，2026-11-02 加）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
 

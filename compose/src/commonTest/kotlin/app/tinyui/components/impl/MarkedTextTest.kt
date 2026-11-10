@@ -8,13 +8,13 @@ import androidx.compose.ui.text.font.FontWeight
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** `**bold**` and `[label](id)` in a `Text` (docs/components.md §3): flat, stray marks literal, links only with a handler. */
+/** `**bold**` and `[label](id)` in a `Text` with `markup` (docs/components.md §3): flat, stray marks literal; without `markup` nothing is read. */
 class MarkedTextTest {
     private val blue = TextLinkStyles(SpanStyle(color = Color.Blue))
     private fun links(text: String) = markedText(text, blue) {}.let { s ->
         s.getLinkAnnotations(0, s.length).map { s.text.substring(it.start, it.end) to (it.item as LinkAnnotation.Clickable).tag }
     }
-    private fun bolds(text: String) = markedText(text, blue, null).let { s ->
+    private fun bolds(text: String) = markedText(text, blue) {}.let { s ->
         s.spanStyles.filter { it.item.fontWeight == FontWeight.Bold }.map { s.text.substring(it.start, it.end) }
     }
 
@@ -39,22 +39,15 @@ class MarkedTextTest {
     }
 
     @Test
-    fun withoutAHandlerBracketsStayText() {
-        val s = markedText("[a](x) and **b**", blue, null)
-        assertEquals("[a](x) and b", s.text)
-        assertEquals(listOf("b"), bolds("[a](x) and **b**"))
-    }
-
-    @Test
     fun doubleStarsBecomeBoldAndGo() {
-        val s = markedText("code sent to **me@x.io**, valid **30** minutes", blue, null)
+        val s = markedText("code sent to **me@x.io**, valid **30** minutes", blue) {}
         assertEquals("code sent to me@x.io, valid 30 minutes", s.text)
         assertEquals(listOf("me@x.io", "30"), bolds("code sent to **me@x.io**, valid **30** minutes"))
     }
 
     @Test
     fun strayStarsStayLiteral() {
-        assertEquals("a * b ** c", markedText("a * b ** c", blue, null).text)
+        assertEquals("a * b ** c", markedText("a * b ** c", blue) {}.text)
         assertEquals(emptyList(), bolds("a * b ** c"))
     }
 
@@ -72,5 +65,23 @@ class MarkedTextTest {
         val s = markedText("[重新输入](edit)", blue) { tapped = it }
         (s.getLinkAnnotations(0, s.length).single().item as LinkAnnotation.Clickable).linkInteractionListener!!.onClick(s.getLinkAnnotations(0, s.length).single().item)
         assertEquals("edit", tapped)
+    }
+
+    /** Text is data unless the page says it is copy: a run of stars read as marks loses half of itself. */
+    @Test
+    fun withoutMarkupEveryCharacterStays() {
+        assertEquals("ab****cd@x.io", markedText("ab********cd@x.io", blue) {}.text)
+        val masked = "ab********cd@x.io [x](y) **z**"
+        val s = shownText(masked, markup = false, blue) {}
+        assertEquals(masked, s.text)
+        assertEquals(emptyList(), s.spanStyles)
+        assertEquals(emptyList(), s.getLinkAnnotations(0, s.length))
+    }
+
+    @Test
+    fun withMarkupMarksAreRead() {
+        val s = shownText("**b** [a](x)", markup = true, blue) {}
+        assertEquals("b a", s.text)
+        assertEquals(1, s.getLinkAnnotations(0, s.length).size)
     }
 }
