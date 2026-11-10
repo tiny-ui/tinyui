@@ -11,10 +11,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.tinyui.components.NodeScope
+import app.tinyui.components.bottomSheetStyle
 
 /**
  * `open` is the page's; going false animates the sheet out before it leaves composition. A user dismissal (swipe, scrim,
- * back) has already hidden it when `onDismiss` fires: it stays down until `open` goes false and true again.
+ * back) has already hidden it when `onDismiss` fires: it stays down until `open` goes false and true again. Its colours
+ * are the host's where set (`TinyUIDefaults.bottomSheet`), else M3's.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,9 +34,12 @@ internal fun BottomSheetComponent(scope: NodeScope) {
         }
     }
     if (showing) {
+        val style = bottomSheetStyle()
         ModalBottomSheet(
             onDismissRequest = { showing = false; if (scope.has("onDismiss")) scope.dispatch("onDismiss") },
             sheetState = state,
+            containerColor = style.containerColor,
+            contentColor = style.contentColor,
         ) { scope.Children() }
     }
 }

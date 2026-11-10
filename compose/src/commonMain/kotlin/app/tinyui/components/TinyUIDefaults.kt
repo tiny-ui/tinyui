@@ -2,6 +2,7 @@ package app.tinyui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CheckboxColors
@@ -9,8 +10,10 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -41,6 +44,20 @@ class TinyUIDefaults(
      * writing the mark.
      */
     val textLinks: TextLinkStyles? = null,
+    /** The look of `BottomSheet`: the colour of its container and of the content on it. */
+    val bottomSheet: BottomSheetStyle? = null,
+)
+
+/**
+ * What a host may set on a `BottomSheet`, in M3's own types — the parameters of M3's `ModalBottomSheet` that a design
+ * system may assign differently from M3. M3 fills a sheet with `surfaceContainerLow`; a design system whose sheets sit
+ * on another role says so here rather than changing what that role means everywhere else. Null keeps M3's default for
+ * that piece; [contentColor] null is M3's content colour for the container in use, so setting [containerColor] to a
+ * scheme role is usually enough.
+ */
+class BottomSheetStyle(
+    val containerColor: Color? = null,
+    val contentColor: Color? = null,
 )
 
 /**
@@ -136,3 +153,14 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
     shape = this?.shape ?: shape,
     contentPadding = this?.contentPadding ?: contentPadding,
 )
+
+/** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
+internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun bottomSheetStyle(): ResolvedBottomSheetStyle {
+    val style = LocalTinyUIDefaults.current.bottomSheet
+    val container = style?.containerColor ?: BottomSheetDefaults.ContainerColor
+    return ResolvedBottomSheetStyle(containerColor = container, contentColor = style?.contentColor ?: contentColorFor(container))
+}

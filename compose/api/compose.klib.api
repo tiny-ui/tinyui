@@ -244,6 +244,15 @@ final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|n
         final fun <get-components>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.components.<get-components>|<get-components>(){}[0]
 }
 
+final class app.tinyui.components/BottomSheetStyle { // app.tinyui.components/BottomSheetStyle|null[0]
+    constructor <init>(androidx.compose.ui.graphics/Color? = ..., androidx.compose.ui.graphics/Color? = ...) // app.tinyui.components/BottomSheetStyle.<init>|<init>(androidx.compose.ui.graphics.Color?;androidx.compose.ui.graphics.Color?){}[0]
+
+    final val containerColor // app.tinyui.components/BottomSheetStyle.containerColor|{}containerColor[0]
+        final fun <get-containerColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.containerColor.<get-containerColor>|<get-containerColor>(){}[0]
+    final val contentColor // app.tinyui.components/BottomSheetStyle.contentColor|{}contentColor[0]
+        final fun <get-contentColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.contentColor.<get-contentColor>|<get-contentColor>(){}[0]
+}
+
 final class app.tinyui.components/ButtonStyle { // app.tinyui.components/ButtonStyle|null[0]
     constructor <init>(androidx.compose.material3/ButtonColors? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.ui.graphics/Shape? = ..., androidx.compose.foundation.layout/PaddingValues? = ...) // app.tinyui.components/ButtonStyle.<init>|<init>(androidx.compose.material3.ButtonColors?;androidx.compose.foundation.BorderStroke?;androidx.compose.foundation.BorderStroke?;androidx.compose.ui.graphics.Shape?;androidx.compose.foundation.layout.PaddingValues?){}[0]
 
@@ -324,8 +333,10 @@ final class app.tinyui.components/TextFieldStyle { // app.tinyui.components/Text
 }
 
 final class app.tinyui.components/TinyUIDefaults { // app.tinyui.components/TinyUIDefaults|null[0]
-    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?){}[0]
+    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ..., app.tinyui.components/BottomSheetStyle? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?;app.tinyui.components.BottomSheetStyle?){}[0]
 
+    final val bottomSheet // app.tinyui.components/TinyUIDefaults.bottomSheet|{}bottomSheet[0]
+        final fun <get-bottomSheet>(): app.tinyui.components/BottomSheetStyle? // app.tinyui.components/TinyUIDefaults.bottomSheet.<get-bottomSheet>|<get-bottomSheet>(){}[0]
     final val checkbox // app.tinyui.components/TinyUIDefaults.checkbox|{}checkbox[0]
         final fun <get-checkbox>(): app.tinyui.components/CheckboxStyle? // app.tinyui.components/TinyUIDefaults.checkbox.<get-checkbox>|<get-checkbox>(){}[0]
     final val filledButton // app.tinyui.components/TinyUIDefaults.filledButton|{}filledButton[0]
@@ -791,6 +802,7 @@ final val app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop // app.tin
 final val app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop|#static{}app_tinyui_components_generated_BuiltinSchemas$stableprop[0]
 final val app.tinyui.components/LocalTinyUIDefaults // app.tinyui.components/LocalTinyUIDefaults|{}LocalTinyUIDefaults[0]
     final fun <get-LocalTinyUIDefaults>(): androidx.compose.runtime/ProvidableCompositionLocal<app.tinyui.components/TinyUIDefaults> // app.tinyui.components/LocalTinyUIDefaults.<get-LocalTinyUIDefaults>|<get-LocalTinyUIDefaults>(){}[0]
+final val app.tinyui.components/app_tinyui_components_BottomSheetStyle$stableprop // app.tinyui.components/app_tinyui_components_BottomSheetStyle$stableprop|#static{}app_tinyui_components_BottomSheetStyle$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_ButtonStyle$stableprop // app.tinyui.components/app_tinyui_components_ButtonStyle$stableprop|#static{}app_tinyui_components_ButtonStyle$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_CheckboxStyle$stableprop // app.tinyui.components/app_tinyui_components_CheckboxStyle$stableprop|#static{}app_tinyui_components_CheckboxStyle$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop // app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop|#static{}app_tinyui_components_ColorValue_Literal$stableprop[0]
@@ -852,6 +864,7 @@ final fun app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop_getter(): ko
 final fun app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter|app_tinyui_bundle_PackageCheck$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter|app_tinyui_bundle_PageRequires$stableprop_getter(){}[0]
 final fun app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(): kotlin/Int // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter|app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_BottomSheetStyle$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_BottomSheetStyle$stableprop_getter|app_tinyui_components_BottomSheetStyle$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_ButtonStyle$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ButtonStyle$stableprop_getter|app_tinyui_components_ButtonStyle$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_CheckboxStyle$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_CheckboxStyle$stableprop_getter|app_tinyui_components_CheckboxStyle$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_ColorValue_Literal$stableprop_getter|app_tinyui_components_ColorValue_Literal$stableprop_getter(){}[0]
