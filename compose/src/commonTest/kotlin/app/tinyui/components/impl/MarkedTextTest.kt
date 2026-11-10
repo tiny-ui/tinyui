@@ -67,10 +67,26 @@ class MarkedTextTest {
         assertEquals("edit", tapped)
     }
 
-    /** Text is data unless the page says it is copy: a run of stars read as marks loses half of itself. */
+    /** A run of stars is content, not a pair of marks around one of its own stars. */
+    @Test
+    fun runsOfStarsStayLiteral() {
+        for (masked in listOf("ab***cd", "ab****cd", "ab*****cd", "ab********cd@x.io", "135 **** 4263", "***a***")) {
+            assertEquals(masked, markedText(masked, blue) {}.text)
+            assertEquals(emptyList(), bolds(masked))
+        }
+    }
+
+    /** Copy with a masked value in it: the marks are the two-star ones, the run inside is part of what is bold. */
+    @Test
+    fun boldHoldsARunOfStars() {
+        assertEquals("sent to 135 **** 4263 now", markedText("sent to **135 **** 4263** now", blue) {}.text)
+        assertEquals(listOf("135 **** 4263"), bolds("sent to **135 **** 4263** now"))
+        assertEquals(listOf("ab********cd@x.io", "30"), bolds("**ab********cd@x.io** valid **30** minutes"))
+    }
+
+    /** Text is data unless the page says it is copy. */
     @Test
     fun withoutMarkupEveryCharacterStays() {
-        assertEquals("ab****cd@x.io", markedText("ab********cd@x.io", blue) {}.text)
         val masked = "ab********cd@x.io [x](y) **z**"
         val s = shownText(masked, markup = false, blue) {}
         assertEquals(masked, s.text)

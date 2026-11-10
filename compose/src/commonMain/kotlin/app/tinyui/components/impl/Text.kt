@@ -52,11 +52,12 @@ internal fun TextComponent(scope: NodeScope) {
 internal fun shownText(text: String, markup: Boolean, linkStyles: TextLinkStyles, onLink: (String) -> Unit): AnnotatedString =
     if (markup) markedText(text, linkStyles, onLink) else AnnotatedString(text)
 
-private val MARK = Regex("""\*\*(.+?)\*\*|\[([^\]]+)]\(([^)\s]+)\)""")
+// a bold mark is exactly two stars: a longer run is content (a masked number), and must not pair up with itself
+private val MARK = Regex("""(?<!\*)\*\*(?!\*)(.+?)(?<!\*)\*\*(?!\*)|\[([^\]]+)]\(([^)\s]+)\)""")
 
 /**
  * The `**bold**` and `[label](id)` spans of [text] — the Markdown subset SwiftUI's `Text` reads, flat, no nesting; stray
- * marks stay literal. Bold is a weight on the span. A link takes [linkStyles] and reports its id through [onLink]
+ * marks stay literal, and so does any run of stars that is not exactly two. Bold is a weight on the span. A link takes [linkStyles] and reports its id through [onLink]
  * (docs/components.md §3).
  */
 internal fun markedText(text: String, linkStyles: TextLinkStyles, onLink: (String) -> Unit): AnnotatedString = buildAnnotatedString {
