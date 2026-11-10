@@ -93,7 +93,7 @@ export default function Form() {
                 <Button text="Encrypt password" variant="outlined" onClick={() => void encrypt()} />
                 <Row align="center" gap={4} role="checkbox" selected={agreed()} onClick={() => setAgreed(!agreed())}>
                     <Checkbox checked={agreed()} />
-                    <Text weight={1} text="I agree to the [Privacy Policy](privacy) and the [Terms of Service](terms)" onLinkClick={(e) => void ui.toast(`open ${e.id}`)} />
+                    <Text weight={1} markup text="I agree to the [Privacy Policy](privacy) and the [Terms of Service](terms)" onLinkClick={(e) => void ui.toast(`open ${e.id}`)} />
                 </Row>
                 <Select width="fill" label="Voice language" placeholder="Choose" value={voice()} onSelect={(e) => setVoice(e.value)}>
                     <Option value="en" text="English" />

@@ -61,6 +61,7 @@ object BuiltinSchemas {
         type = "Text",
         props = mapOf(
             "text" to PropSpec.Str(default = null, required = true, initial = false),
+            "markup" to PropSpec.Bool(default = false, required = false, initial = false),
             "style" to PropSpec.Enum(values = setOf("displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"), default = null, required = false, initial = false),
             "color" to PropSpec.ColorSpec(default = null, required = false, initial = false),
             "fontSize" to PropSpec.Sp(default = null, required = false, initial = false),

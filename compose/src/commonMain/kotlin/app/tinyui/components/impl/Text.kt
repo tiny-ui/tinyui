@@ -26,9 +26,11 @@ internal fun TextComponent(scope: NodeScope) {
     val raw = scope.get<String>("text") ?: ""
     // the host's link look, else M3's: the primary colour, the text's own weight
     val links = LocalTinyUIDefaults.current.textLinks ?: TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
-    // without a handler the brackets are just text: a page that never asked for links never gets them; bold needs no one
-    val linked = scope.has("onLinkClick")
-    val text = remember(raw, links, linked) { markedText(raw, links, if (linked) ({ id -> scope.dispatch("onLinkClick", payload("id", id)) }) else null) }
+    // whether the text is read for marks is the page's one declaration, never a side effect of which events it bound
+    val markup = scope.get<Boolean>("markup") == true
+    val text = remember(raw, links, markup) {
+        shownText(raw, markup, links) { id -> if (scope.has("onLinkClick")) scope.dispatch("onLinkClick", payload("id", id)) }
+    }
     Text(
         text = text,
         style = scope.get<String>("style")?.let { Theme.textStyle(MaterialTheme.typography, it) } ?: LocalTextStyle.current,
@@ -42,24 +44,31 @@ internal fun TextComponent(scope: NodeScope) {
     )
 }
 
+/**
+ * What a `Text` shows for [text]: every character as given, or, with [markup], its marks read ([markedText]). Off is the
+ * default because most text is data, not copy — a masked address is full of `*`, and none of it is a mark
+ * (docs/components.md §3).
+ */
+internal fun shownText(text: String, markup: Boolean, linkStyles: TextLinkStyles, onLink: (String) -> Unit): AnnotatedString =
+    if (markup) markedText(text, linkStyles, onLink) else AnnotatedString(text)
+
 private val MARK = Regex("""\*\*(.+?)\*\*|\[([^\]]+)]\(([^)\s]+)\)""")
 
 /**
  * The `**bold**` and `[label](id)` spans of [text] — the Markdown subset SwiftUI's `Text` reads, flat, no nesting; stray
- * marks stay literal. Bold is a weight on the span. A link takes [linkStyles] and reports its id through [onLink]; with
- * no handler the brackets stay text (docs/components.md §3).
+ * marks stay literal. Bold is a weight on the span. A link takes [linkStyles] and reports its id through [onLink]
+ * (docs/components.md §3).
  */
-internal fun markedText(text: String, linkStyles: TextLinkStyles, onLink: ((String) -> Unit)?): AnnotatedString = buildAnnotatedString {
+internal fun markedText(text: String, linkStyles: TextLinkStyles, onLink: (String) -> Unit): AnnotatedString = buildAnnotatedString {
     var at = 0
     for (m in MARK.findAll(text)) {
         val bold = m.groups[1]?.value
-        if (bold == null && onLink == null) continue
         append(text.substring(at, m.range.first))
         if (bold != null) {
             withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
         } else {
             val id = m.groupValues[3]
-            pushLink(LinkAnnotation.Clickable(tag = id, styles = linkStyles) { onLink?.invoke(id) })
+            pushLink(LinkAnnotation.Clickable(tag = id, styles = linkStyles) { onLink(id) })
             append(m.groupValues[2])
             pop()
         }

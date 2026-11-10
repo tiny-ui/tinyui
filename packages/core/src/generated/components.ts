@@ -69,13 +69,15 @@ export interface TextClickPayload {
 }
 
 export interface TextLinkClickPayload {
-    /** the `(id)` of the tapped link */
+    /** the `(id)` of the tapped link; links exist only with `markup` set */
     id: string;
 }
 
 export interface TextProps extends LayoutProps {
-    /** `**bold**` spans render bold; with onLinkClick set, `[label](id)` spans render as links. Flat, no nesting; stray marks stay literal */
+    /** shown exactly as given unless `markup` is set */
     text: string;
+    /** true reads the inline marks in `text`: `**bold**` spans render bold, `[label](id)` spans render as links that report onLinkClick. Flat, no nesting; stray marks stay literal. Leave it off for text that is data (a name, a masked address), where `**` is content */
+    markup?: boolean;
     /** Material 3 text style; fontSize / fontWeight override its fields */
     style?: "displayLarge" | "displayMedium" | "displaySmall" | "headlineLarge" | "headlineMedium" | "headlineSmall" | "titleLarge" | "titleMedium" | "titleSmall" | "bodyLarge" | "bodyMedium" | "bodySmall" | "labelLarge" | "labelMedium" | "labelSmall";
     color?: ColorValue;
