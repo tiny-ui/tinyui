@@ -5,9 +5,35 @@ on:
     branches: [main]
   pull_request:
 
+# 同一个 PR 连推几次只跑最新一次；main 上每个提交各跑各的，不互相取消
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # 只改文档的 PR 不跑 gradle。在 job 级跳过而不用 workflow 级 paths-ignore：被跳过的 job 仍算通过，
+  # 必需检查不会一直挂着。main 上的提交始终跑，PR 读的 Gradle 缓存由它写
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gradle: ${{ steps.filter.outputs.gradle }}
+    steps:
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          gradle=true
+          if [ -n "$PR" ]; then
+            files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename')
+            echo "$files" | grep -qvE '(\.md$|^docs/)' || gradle=false
+          fi
+          echo "gradle=$gradle" >> "$GITHUB_OUTPUT"
+
   # PR 门禁只跑 Android 与 host 测试 + klib ABI 检查；iOS 的 framework 链接与模拟器测试在 ios.yml（tag / 手动）
   gradle:
+    needs: changes
+    if: needs.changes.outputs.gradle == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
@@ -22,12 +48,20 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # host JNI 只随 quickjs-kmp 版本变，按版本号缓存，命中就不再克隆和构建
+      - id: quickjs
+        run: echo "version=$(sed -n 's/^quickjsKmp = "\(.*\)"/\1/p' gradle/libs.versions.toml)" >> "$GITHUB_OUTPUT"
+      - id: host-jni
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/quickjs-kmp/library/build/native/host-jni/lib
+          key: quickjs-host-jni-${{ runner.os }}-${{ runner.arch }}-${{ steps.quickjs.outputs.version }}
       - name: quickjs-kmp host JNI for Android host tests (qjsc-kmp comes from the npm package)
+        if: steps.host-jni.outputs.cache-hit != 'true'
         run: |
-          version=$(sed -n 's/^quickjsKmp = "\(.*\)"/\1/p' gradle/libs.versions.toml)
-          git clone --depth 1 --branch "$version" https://github.com/HarlonWang/quickjs-kmp.git "$RUNNER_TEMP/quickjs-kmp"
+          git clone --depth 1 --branch "${{ steps.quickjs.outputs.version }}" https://github.com/HarlonWang/quickjs-kmp.git "$RUNNER_TEMP/quickjs-kmp"
           (cd "$RUNNER_TEMP/quickjs-kmp" && ./gradlew :library:buildNativeHostJni --no-daemon)
-          echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
+      - run: echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
       - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:shared:testAndroidHostTest :sample:androidApp:assembleDebug --no-daemon
 
   pnpm:
