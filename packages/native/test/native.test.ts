@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { Column, h, Text, thunk } from "tinyui-core";
-import { analytics, cached, clipboard, crypto, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
+import { analytics, cached, clipboard, crypto, device, events, HostError, host, http, i18n, linking, navigation, session, storage, store, ui } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
 const tinyui = (): Entries => (globalThis as Record<string, unknown>)["__tinyui"] as Entries;
@@ -11,6 +11,11 @@ const drain = () => new Promise((r) => setTimeout(r, 0));
 afterEach(() => tinyui().unmount());
 
 describe("tinyui-native", () => {
+    it("device.info is the J2 device.info query", () => {
+        bridge.queries["device.info"] = { os: "ios", osVersion: "17.4", model: "iPhone" };
+        assert.deepEqual(device.info(), { os: "ios", osVersion: "17.4", model: "iPhone" });
+    });
+
     it("http.get is a J3 http.request that resolves through K3", async () => {
         const p = http.get<{ ok: boolean }>("/me", { timeout: 100 });
         const call = bridge.calls.at(-1)!;
