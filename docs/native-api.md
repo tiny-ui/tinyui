@@ -1,6 +1,6 @@
 # `tinyui-native` 与宿主接口
 
-- 状态：已定（2026-09-16）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16），同日 `Navigator` 带调用方 `from`、`pop` 定为关闭调用方（§3）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
+- 状态：已定（2026-09-16）；2026-11-11 加 `device.info` 的 JS 封装（§17）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16），同日 `Navigator` 带调用方 `from`、`pop` 定为关闭调用方（§3）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、会话、事件）、ADR-004 §3.1（连续事件阈值）、ADR-007（职责边界）
 - 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 侧宿主给页面的东西只有 App 级的 `TinyUIHost`（§1），启动时建一次，交给每个 `TinyUIPage`
 
@@ -34,7 +34,7 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 
 | 名字 | 返回 |
 |---|---|
-| `device.info` | 对象：`os`、`osVersion`、`model` |
+| `device.info` | 对象：`os`、`osVersion`、`model`（§17） |
 | `store.get` | 任意（§4） |
 | `storage.get` | 任意（§7） |
 | `storage.set` | `null`，或错误码 `"E_QUOTA"`；`tinyui-native` 收到错误码即抛 `HostError`（§7） |
@@ -338,3 +338,13 @@ await api.post("/api/v1/auth/register", { email, password: cipher })
 - 为什么是框架能力而不是 `host.call`：加密是通用原生能力，第二个宿主一样要；在 QuickJS 里跑 JS 的 RSA 库既慢，又把加密实现放进了可热下发的包里。公钥由页面经自己的通道取、页内缓存，换钥只改页面
 - 只做 RSA 公钥加密一项；OAEP、`sha256`、`hmac`、对称加密等第一个需要的页面出现时再加，参数对象为它们留了位置
 - 2026-10-28 加（注册流程触发：密码在第一步就转成密文，明文不离开那一页）
+
+## 17. `device`
+
+```ts
+const scene = device.info().os === "ios" ? SCENES.ios : SCENES.android
+```
+
+- J2 `device.info`（§2），同步返回 `{ os, osVersion, model }`：`os` 是 `"android"` 或 `"ios"`，另两项是系统报的原值。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
+- 只给「按平台取不同值」这类少数场合用：同一个配置在两个平台各有一套值，页面按 `os` 取。界面差异交给组件，不要按平台分支画界面
+- 2026-11-11 加（第一个需要的页面触发：人机验证的场景配置按平台各有一套）
