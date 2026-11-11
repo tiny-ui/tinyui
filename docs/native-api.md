@@ -345,6 +345,6 @@ await api.post("/api/v1/auth/register", { email, password: cipher })
 const scene = device.info().os === "ios" ? SCENES.ios : SCENES.android
 ```
 
-- J2 `device.info`（§2），同步返回 `{ os, osVersion, model }`：`os` 是 `"android"` 或 `"ios"`，另两项是系统报的原值。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装，老宿主也能用
+- J2 `device.info`（§2），同步返回 `{ os, osVersion, model }`：`os` 是 `"android"` 或 `"ios"`，另两项是系统报的原值。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
 - 只给「按平台取不同值」这类少数场合用：同一个配置在两个平台各有一套值，页面按 `os` 取。界面差异交给组件，不要按平台分支画界面
 - 2026-11-11 加（第一个需要的页面触发：人机验证的场景配置按平台各有一套）
