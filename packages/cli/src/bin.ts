@@ -3,11 +3,12 @@ import { parseArgs, type ParseArgsConfig } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
-import { build } from "./build.ts";
+import { build, discoverPages } from "./build.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
 import { i18nTypes, loadI18n } from "./i18n.ts";
+import { routesTypes } from "./routes.ts";
 import { generateKeyPair } from "./keys.ts";
 import { useEnvProxy } from "./proxy.ts";
 import { publish } from "./publish.ts";
@@ -19,6 +20,7 @@ import { loadSchema } from "./schema/load.ts";
 const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] [--js-only] [--version <v>]
        tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui i18n --ts <file> [--root <dir>] [--check]
+       tinyui routes --ts <file> [--root <dir>] [--check]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -51,6 +53,7 @@ bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersio
   --out              output root (default: <dist>/ota)
 
 i18n       type i18n.t from the package's strings (docs/build-chain.md §8); build checks them either way
+routes     type navigation.push / replace from the package's pages (docs/build-chain.md §10)
   --root     project root (default: cwd)
   --ts       write the tinyui-native I18nKeys augmentation here
   --check    exit 1 if --ts is not already up to date, write nothing
@@ -122,6 +125,28 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 ...(v["out"] !== undefined && { out: v["out"] as string }),
             });
             process.stdout.write(`${result.version} -> ${result.dir}\n`);
+            return 0;
+        },
+    },
+    routes: {
+        options: { root: { type: "string" }, ts: { type: "string" }, check: { type: "boolean", default: false } },
+        run: async (v) => {
+            const root = resolve((v["root"] as string | undefined) ?? process.cwd());
+            const ts = v["ts"] as string | undefined;
+            if (!ts) throw new Error("routes: --ts is required");
+            const out = resolve(ts);
+            const config = await loadConfig(root);
+            const pages = await discoverPages(config.name, join(root, config.pages));
+            if (pages.size === 0) throw new Error(`routes: no pages found under ${join(root, config.pages)}`);
+            const text = routesTypes(config.name, pages, out);
+            if (v["check"]) {
+                const current = await readFile(out, "utf8").catch(() => "");
+                if (current !== text) throw new Error(`${ts} is out of date; run tinyui routes --ts ${ts}`);
+                return 0;
+            }
+            await mkdir(dirname(out), { recursive: true });
+            await writeFile(out, text);
+            process.stdout.write(`${ts}\n`);
             return 0;
         },
     },

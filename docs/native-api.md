@@ -82,6 +82,7 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 ```
 
 - `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载（如被回收后按 props 重建）时结果会等它挂载完再送达，不会丢
+- 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；别的包的页面与原生路由照原样放行
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
 - `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方并经 `PageSink` 上报
 - `push` 从不在栈顶的页面发起时由宿主定，通常忽略并经 `PageSink` 上报：被盖住的页面不该把用户带去别处
