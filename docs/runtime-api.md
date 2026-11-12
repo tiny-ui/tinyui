@@ -20,6 +20,7 @@
 | | `thunk(fn)` | 编译器包动态 prop 用；业务一般不手写 |
 | 结构 | `For` | keyed 列表 |
 | | `Show` | 条件分支 |
+| | `Keyed` | 值一换就整块重建 |
 | | `BottomSheet` | 弹层：内容每次打开重建 |
 | 命令 | `ref()` → `Ref`，`ref.cmd(name, args?)` | 对节点发一次性动作 |
 | 异步 | `resource(fetcher)` | 同步期建 signal，异步期写 |
@@ -65,7 +66,7 @@ function effect(fn: () => void): void
 - 创建时**立即同步跑一次**（收集依赖）；此后每当任一依赖变化，在本事务的 flush 阶段重跑
 - 重跑前先解绑全部旧依赖、执行本 effect 登记的 `onCleanup`，再重新收集。条件分支切换后不残留过期订阅
 - 调度：待重跑的 effect 进 FIFO 队列，flush 按入队顺序跑；跑的过程中新入队的在同一次 flush 内继续跑；已被 dispose 的跳过。同一个 effect 在一次 flush 里被重跑超过 100 次视为更新环，抛 E2
-- **必须在同步渲染期内创建**：即在 `mount`、`For` 建行、`Show` 切分支、`BottomSheet` 建内容、或另一个 effect 的执行期间。此外（异步回调、handler、`.then`）调用直接抛错（ADR-001 §3.7）
+- **必须在同步渲染期内创建**：即在 `mount`、`For` 建行、`Show` 切分支、`Keyed` / `BottomSheet` 建内容、或另一个 effect 的执行期间。此外（异步回调、handler、`.then`）调用直接抛错（ADR-001 §3.7）
 - 归属：创建时登记到当前 owner（根 / 行 / 分支）；在另一个 effect 执行期间创建的 effect 归属同一个 owner，不归属外层 effect（effect 不拥有 effect）
 
 ### 2.4 `onCleanup`
@@ -125,7 +126,7 @@ type Child = Node | Node[] | null | undefined | false
 
 内置 / 宿主节点的 prop 类型集是封闭的，因为它们全部要变成 patch、函数不过桥；这个限制**只在这里**。
 
-children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序发 `i`。**children 在创建后不可变**：结构变化只经 `For` / `Show`，以及 `BottomSheet` 的内容（§4.3）。
+children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序发 `i`。**children 在创建后不可变**：结构变化只经 `For` / `Show` / `Keyed`，以及 `BottomSheet` 的内容（§4.4）。
 
 **业务组件**（`type` 为函数）：把 props 里 `thunk` 包过的项转成 getter 属性、其余原样复制（**任何值都合法，含函数、对象、数组**：render prop、格式化函数都是普通用法，它们不过桥）、children 放进 `props.children`，调用一次 `type(props)`，返回值原样作为本节点。组件函数：
 
@@ -163,7 +164,7 @@ interface ForProps<T> {
 ```
 
 - `For` 自己不是节点，没有 Kotlin 侧对应：它是父节点 children 里的一个**可变长槽位**，行节点直接插进父节点。运行时给每个内置节点维护槽位表（静态 child 长度 1，`For` 长度 = 行数，`Show` 长度 0 / 1），`i` / `m` 的 index = 前面槽位长度之和 + 槽内位置，所以 `For` / `Show` 可以和普通兄弟节点混排、一个父节点可以有多个
-- 因此 `For` / `Show` **只能直接写在内置节点的 children 里**：不能作为组件的返回值、行根、分支根或页面根（这些位置要求恰好一个节点）。需要时外面包一层 `Box` / `Column`；违反时 `h()` 抛 E2
+- 因此 `For` / `Show` / `Keyed` **只能直接写在内置节点的 children 里**：不能作为组件的返回值、行根、分支根或页面根（这些位置要求恰好一个节点）。需要时外面包一层 `Box` / `Column`；违反时 `h()` 抛 E2
 - 在一个 effect 里读 `each`，对新旧 key 序列做 keyed reconcile，只产出 `i` / `m` / `r`（算法与 bench `reconcileKeys` 一致）
 - 建行：新建行 owner，在其中调 `children(item, index)`，返回值必须是一个 `Node`，插到对应 index。行 owner 由 `For` 持有，不挂在 `For` 的 effect 之下
 - 删行：dispose 行 owner（解绑该行全部 effect、跑 cleanups、删 handler），发一条 `["r", 行id]`
@@ -174,14 +175,14 @@ interface ForProps<T> {
 
 ```tsx
 <Show when={user()} fallback={() => <Text text="loading" />}>
-    {() => <Text text={user()!.name} />}
+    {(u) => <Text text={u().name} />}
 </Show>
 ```
 
 ```ts
 interface ShowProps<T> {
     when: T                                       // 编译器包成 thunk
-    children: () => Node
+    children: (value: () => Truthy<T>) => Node    // Truthy<T>：T 去掉假值
     fallback?: () => Node
 }
 ```
@@ -190,8 +191,31 @@ interface ShowProps<T> {
 - 只在 `when` 的**真值性**变化时切分支：`user()` 从一个对象换成另一个对象不重建；从对象变 `null` 才切到 fallback
 - 切换 = dispose 旧分支 owner + 发 `r`，再在新分支 owner 里调分支函数 + 发 `i`。再显示是全新的一套节点与 effect，不复用
 - 没有 fallback 且条件为假时该位置为空
+- `children` 收到 `when` 的 accessor（2026-11-12 加），与 `For` 的 `item()` 同理：分支在的时候它跟着 `when` 走，读它的绑定随之重算；类型已去掉假值，不用在分支里再读一遍 signal 加 `!`。`when` 变假的那一刻分支被拆，accessor 停在最后一个真值上，分支里的绑定与 `onCleanup` 读不到假值。用不到值时照旧写 `() => …`
 
-### 4.3 `BottomSheet`
+### 4.3 `Keyed`
+
+```tsx
+<Keyed by={method()}>
+    {(m) => <CodeInput method={m} />}
+</Keyed>
+```
+
+```ts
+interface KeyedProps<T> {
+    by: T                                         // 编译器包成 thunk
+    children: (value: T) => Node
+}
+```
+
+- 同 `Show`，是父节点 children 里的一个槽位，长度恒为 1
+- `by` 与上一次 `!==` 就重建：dispose 旧 owner + 发 `r`，在新 owner 里调 `children(by)` + 发 `i`。**任何值都算一个值**，`0`、`""`、`false`、`null` 也照建——它不看真假，只看换没换
+- `children` 收到的是值本身，不是 accessor：这一份内容的寿命内它不会变
+- 用在「东西一直在，换了一个就要从头来」：切标签换一个空输入框、换一个用户换一份表单。里面的 `signal`、输入框里的字、滚动位置都随之重来，不用页面逐个清
+
+与 `Show` 的分工：`Show` 管有没有，值换了内容跟着更新、不重建；`Keyed` 管是不是同一个，不管有没有。两件事分开，是因为合在一起（按真假显示、又按值重建）时 key 恰好是假值就什么都不显示。业界同样分开的有 Svelte 的 `{#key}` 与 Compose 的 `key()`；React / Vue 的 `key` 属性靠整树比对，这里没有那一层。
+
+### 4.4 `BottomSheet`
 
 ```tsx
 <BottomSheet open={account()} onDismiss={() => setAccount(null)}>
@@ -203,7 +227,7 @@ interface ShowProps<T> {
 interface BottomSheetProps<T = boolean> {
     open: T                                       // 编译器包成 thunk；真值即打开
     onDismiss?: () => void
-    children: (value: Opened<T>) => Node          // Opened<T>：T 去掉假值
+    children: (value: Truthy<T>) => Node
 }
 ```
 
@@ -213,7 +237,7 @@ interface BottomSheetProps<T = boolean> {
 - 挂载时 `open` 为假就不调 `children`
 - `children` 不是函数时抛 E2
 
-这是 `For` / `Show` 之外第三处开作用域的地方（ADR-001「作用域只开在结构边界」）。放在运行时而不是让页面用 `Show` 拼：「条件为假时留着、下次为真时换新」不是 `Show` 的语义，而每个弹层都需要它。
+这是 `For` / `Show` / `Keyed` 之外又一处开作用域的地方（ADR-001「作用域只开在结构边界」）。放在运行时而不是让页面用 `Show` 拼：「条件为假时留着、下次为真时换新」不是 `Show` 的语义，而每个弹层都需要它。
 
 ## 5. `ref` + `cmd`
 

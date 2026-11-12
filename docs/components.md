@@ -166,7 +166,7 @@ const [account, setAccount] = signal<Account | null>(null);
 </BottomSheet>
 ```
 
-内容里不要再响应式地读 `account()`，读参数 `a`。过桥的 `open` 仍是布尔，Kotlin 侧不变；`BottomSheet` 在 `tinyui-core` 里是包着同名节点的一个组件（runtime-api.md §4.3）。
+内容里不要再响应式地读 `account()`，读参数 `a`。过桥的 `open` 仍是布尔，Kotlin 侧不变；`BottomSheet` 在 `tinyui-core` 里是包着同名节点的一个组件（runtime-api.md §4.4）。
 
 `Popover` 是锚在父节点上的浮动卡片（2026-10-29 加，注册流程触发：密码框聚焦时在它上方浮出规则清单，盖住上面的内容而不推开布局）。锚点就是父节点，不另设 ref：Compose `Popup` 本来就锚在调用处的父布局上，内置组件渲染 children 也不加包装。所以写法是用 `Box` 把锚元素和它包在一起；直接放进带 `gap` 的 `Column` 会锚到整列。它在组合里占一个零尺寸的位置，`Column` / `Row` 的 `gap` 不计它（2026-11-02 起；此前打开时会多出一份 `gap`，整行闪一下）。`placement` 是首选的一侧，那一侧放不下就翻到另一侧，两侧都放不下取空间大的一侧；水平方向与锚点起始边对齐，两个方向都不出窗口，页面滚动时跟着锚点走。`matchAnchorWidth` 让卡片与锚点同宽（输入框下的说明），不设就按内容宽（图标按钮旁的提示）。
 

@@ -1,10 +1,14 @@
-// For / Show / BottomSheet: docs/runtime-api.md §4; slot mechanics in node.ts.
+// For / Show / Keyed / BottomSheet: docs/runtime-api.md §4; slot mechanics in node.ts.
 import { disposeOwner, effect, onCleanup, signal, untrack, type Owner } from "./reactive.ts";
 import { CONTROL, h, renderInOwner, Slot, thunk, type Node } from "./node.ts";
 
+/** `T` without its falsy values: what a condition holds while it is true. */
+export type Truthy<T> = Exclude<T, false | null | undefined | 0 | "">;
+
 export interface ShowProps<T> {
     when: T;
-    children: () => Node;
+    /** Gets `when` as an accessor: it follows the value while the branch stays, and is never falsy in it. */
+    children: (value: () => Truthy<T>) => Node;
     fallback?: () => Node;
 }
 
@@ -14,17 +18,21 @@ export const Show: Control<<T>(props: ShowProps<T>) => Node> = Object.assign(fun
     const slot = new Slot();
     let current: { owner: Owner; node: number } | null = null;
     let shown: boolean | undefined;
+    // the last truthy `when`: what the branch reads, so it never sees the falsy value that is about to remove it
+    const [value, setValue] = signal<unknown>(undefined);
     effect(() => {
-        const truthy = !!props.when;
-        if (truthy === shown) return;
-        shown = truthy;
+        const when = props.when;
+        const truthy = !!when;
         untrack(() => {
+            if (truthy) setValue(() => when);
+            if (truthy === shown) return;
+            shown = truthy;
             if (current) {
                 disposeOwner(current.owner);
                 slot.remove(current.node);
                 current = null;
             }
-            const render = truthy ? props.children : props.fallback;
+            const render = truthy ? () => props.children(value as () => Truthy<T>) : props.fallback;
             if (render) {
                 current = renderInOwner(render, truthy ? "<Show> children" : "<Show> fallback");
                 slot.insert(current.node, 0);
@@ -93,8 +101,35 @@ export const For: Control<<T>(props: ForProps<T>) => Node> = Object.assign(funct
     return slot as unknown as Node;
 }, { [CONTROL]: true as const });
 
-/** What `open` can be while the sheet is open. */
-export type Opened<T> = Exclude<T, false | null | undefined | 0 | "">;
+export interface KeyedProps<T> {
+    /** Any value, falsy ones included; a different one (`!==`) rebuilds the content. */
+    by: T;
+    /** Builds the content with the value `by` had at that moment; it is fixed for the life of that content. */
+    children: (value: T) => Node;
+}
+
+/** One node that is rebuilt from scratch whenever `by` changes: what resets the state inside it. */
+export const Keyed: Control<<T>(props: KeyedProps<T>) => Node> = Object.assign(function Keyed<T>(props: KeyedProps<T>): Node {
+    const slot = new Slot();
+    let current: { owner: Owner; node: number } | null = null;
+    let last: unknown;
+    effect(() => {
+        const by = props.by;
+        if (current && by === last) return;
+        last = by;
+        untrack(() => {
+            if (current) {
+                disposeOwner(current.owner);
+                slot.remove(current.node);
+                current = null;
+            }
+            current = renderInOwner(() => props.children(by), "<Keyed> children");
+            slot.insert(current.node, 0);
+        });
+    });
+    onCleanup(() => { if (current) disposeOwner(current.owner); });
+    return slot as unknown as Node;
+}, { [CONTROL]: true as const });
 
 export interface BottomSheetProps<T = boolean> {
     /** Truthy slides the sheet in, falsy animates it out. Pass the data the sheet is about to get it as a snapshot in `children`. */
@@ -102,7 +137,7 @@ export interface BottomSheetProps<T = boolean> {
     /** Fires after the user swiped, tapped the scrim or pressed back; make `open` falsy in it. */
     onDismiss?: () => void;
     /** Builds the content, once per opening, with the value `open` had at that moment. */
-    children: (value: Opened<T>) => Node;
+    children: (value: Truthy<T>) => Node;
 }
 
 /**
@@ -127,7 +162,7 @@ export function BottomSheet<T>(props: BottomSheetProps<T>): Node {
                 slot.remove(current.node);
                 current = null;
             }
-            current = renderInOwner(() => render(value as Opened<T>), "<BottomSheet> children");
+            current = renderInOwner(() => render(value as Truthy<T>), "<BottomSheet> children");
             slot.insert(current.node, 0);
         });
     });
