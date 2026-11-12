@@ -1,4 +1,4 @@
-export const VERSION = "0.13.0";
+export const VERSION = "0.14.0-alpha01";
 export * as navigation from "./navigation.ts";
 export * as store from "./store.ts";
 export * as events from "./events.ts";
