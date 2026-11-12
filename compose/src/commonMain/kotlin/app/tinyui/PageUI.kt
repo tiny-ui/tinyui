@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import app.tinyui.components.ToastLayer
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -22,6 +23,9 @@ internal class DialogRequest(val title: String?, val message: String, val confir
 /** The page's own snackbar and dialog (docs/native-api.md `ui`), drawn by [TinyUIPage] over the page. */
 internal class PageUI {
     val snackbar = SnackbarHostState()
+
+    /** One snackbar state, drawn by the page or by the topmost surface over it (a bottom sheet). */
+    val toasts = ToastLayer { modifier -> SnackbarHost(snackbar, modifier) }
     var dialog: DialogRequest? by mutableStateOf(null)
         private set
 
@@ -39,7 +43,7 @@ internal class PageUI {
 
     @Composable
     fun Overlay(modifier: Modifier) {
-        SnackbarHost(snackbar, modifier)
+        if (!toasts.covered) SnackbarHost(snackbar, modifier)
         dialog?.let { d ->
             AlertDialog(
                 onDismissRequest = { d.result.complete(false) },

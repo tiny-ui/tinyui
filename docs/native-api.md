@@ -220,7 +220,7 @@ await ui.alert({ title?, message, confirm? })
 const ok = await ui.confirm({ title?, message, confirm?, cancel? })         // boolean
 ```
 
-- toast 由 `TinyUIPage` 自带的 SnackbarHost 显示为 M3 Snackbar，位于页面区域底部；对话框为 M3 AlertDialog，只有纯文本。样式经 `MaterialTheme` 跟随宿主主题
+- toast 由 `TinyUIPage` 自带的 SnackbarHost 显示为 M3 Snackbar，位于页面区域底部；`BottomSheet` 开着时改为浮在最上面那个弹层的上沿之外（2026-11-12 改：弹层是盖住整页的独立窗口，此前提示被压在它下面，页面只能在弹层里自己放一行错误文字），页面的写法不变；对话框为 M3 AlertDialog，只有纯文本。样式经 `MaterialTheme` 跟随宿主主题
 - 按钮文字缺省用框架内置的文案（随 §8 的当前语言，内置中英文，其余回退英文）
 - 页面关闭时未结束的 toast 与对话框随之消失，Promise 以 `E_CANCELLED` reject
 
