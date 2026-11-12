@@ -150,6 +150,8 @@ export type TextFieldCommands = {
 /** Text and cursor live on the Kotlin side; JS gets notified and issues commands (docs/adr-004 §3.3). */
 export interface TextFieldProps extends LayoutProps {
     initialText?: string;
+    /** takes focus once, when the field first appears, and brings the keyboard up; later focus changes go through the focus command */
+    autoFocus?: boolean;
     placeholder?: string;
     singleLine?: boolean;
     keyboard?: "text" | "number" | "email" | "phone" | "password";
@@ -290,6 +292,8 @@ export type CodeFieldCommands = {
 export interface CodeFieldProps extends LayoutProps {
     /** number of cells, 1 to 12; input stops there */
     length?: number;
+    /** takes focus once, when the field first appears, and brings the keyboard up; later focus changes go through the focus command */
+    autoFocus?: boolean;
     /** shows a dot instead of each digit */
     secure?: boolean;
     enabled?: boolean;

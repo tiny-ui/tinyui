@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）；2026-11-12 `BottomSheet` 的内容改为每次打开重建（破坏性：children 只收函数）
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）；2026-11-12 `BottomSheet` 的内容改为每次打开重建（破坏性：children 只收函数），`TextField` / `CodeField` 加 `autoFocus`
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -85,8 +85,8 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
-| `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`prefixIcon`（`icon` 类型）、`trailingIconSize`（dp，同 `prefixIconSize`）、`prefixIconSize`（dp，不设用图标自带的 24dp）、`prefixBackground`（颜色）、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限）、`autofill`（oneTimeCode；不设交给系统） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
-| `CodeField` | `length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
+| `TextField` | `initialText`、`autoFocus`（initial）、`placeholder`、`singleLine`、`keyboard`、`secure`（缺省跟 `keyboard="password"`）、`error`、`supportingText`、`prefixText`、`prefixIcon`（`icon` 类型）、`trailingIconSize`（dp，同 `prefixIconSize`）、`prefixIconSize`（dp，不设用图标自带的 24dp）、`prefixBackground`（颜色）、`trailingIcon`（`icon` 类型）、`imeAction`（done / next）、`maxLength`（0 = 不限）、`autofill`（oneTimeCode；不设交给系统） | `onChange{text}`、`onCommit{text}`（IME 动作或失焦）、`onFocusChange{focused}`、`onTrailingClick`、`onPrefixClick` | `setText{text}`、`focus`、`blur` | |
+| `CodeField` | `autoFocus`（只认创建时的值）、`length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled` | `onSelect{value}` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu`、`Tabs` 与 `IndexBar` 读它 | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>`；`SectionHeader` 是吸顶的行，`IndexBar` 不是行 |
@@ -165,6 +165,8 @@ const [account, setAccount] = signal<Account | null>(null);
     {(a) => <AccountDetail account={a} />}
 </BottomSheet>
 ```
+
+弹层一打开就要输入时，给输入框写 `autoFocus`（`TextField`、`CodeField` 都有，2026-11-12 加）：内容每次打开都是新建的，所以每次打开都会聚焦、拉起键盘，页面不用等弹层进场再发 `focus` 命令。它只认创建时的值，只在输入框第一次出现时生效一次——页面从返回栈回来不会再拉一次键盘；之后要挪焦点仍用 `focus` 命令。各家都是这两样并存：HTML `autofocus`、React Native `autoFocus`、Flutter `autofocus` 管「一出现就聚焦」，命令式的 `focus()` 管之后。
 
 内容里不要再响应式地读 `account()`，读参数 `a`。过桥的 `open` 仍是布尔，Kotlin 侧不变；`BottomSheet` 在 `tinyui-core` 里是包着同名节点的一个组件（runtime-api.md §4.4）。
 

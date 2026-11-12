@@ -52,6 +52,7 @@ internal fun CodeFieldComponent(scope: NodeScope) {
     var value by retain { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    AutoFocus(scope, focusRequester)
     var focused by remember { mutableStateOf(false) }
     // [force]: commands report onChange even when nothing changed (TextField.setText does not, since 2026-11-03)
     fun update(raw: String, force: Boolean = false) {

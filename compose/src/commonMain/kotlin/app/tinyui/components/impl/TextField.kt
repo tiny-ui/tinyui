@@ -97,6 +97,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
     var focused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    AutoFocus(scope, focusRequester)
     // the last text the page heard of: a change is reported once, by whoever notices it first, so `setText` and a commit
     // right after an edit report in order; the same text again is not a change
     val reported = remember { mutableStateOf(state.text.toString()) }

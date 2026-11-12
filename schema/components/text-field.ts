@@ -4,6 +4,7 @@ export default defineComponent("TextField", {
     doc: "Text and cursor live on the Kotlin side; JS gets notified and issues commands (docs/adr-004 §3.3).",
     props: {
         initialText: string({ initial: true, default: "" }),
+        autoFocus: boolean({ initial: true, default: false, doc: "takes focus once, when the field first appears, and brings the keyboard up; later focus changes go through the focus command" }),
         placeholder: string({ default: "" }),
         singleLine: boolean({ default: true }),
         keyboard: enumOf(["text", "number", "email", "phone", "password"], { default: "text" }),

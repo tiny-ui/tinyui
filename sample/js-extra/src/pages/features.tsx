@@ -1,4 +1,4 @@
-import { BottomSheet, Box, Button, Column, Divider, Icon, Loading, observable, RadioButton, Row, Show, signal, Text } from "tinyui-core";
+import { BottomSheet, Box, Button, Column, Divider, Icon, Loading, observable, RadioButton, Row, Show, signal, Text, TextField } from "tinyui-core";
 import { analytics, cached, clipboard, http, i18n, linking, session, storage, ui } from "tinyui-native";
 import bolt from "@material-symbols/svg-400/outlined/bolt.svg";
 import heart from "../assets/heart.svg";
@@ -72,6 +72,8 @@ export default function Features() {
                     <Column width="fill" paddingHorizontal={24} paddingVertical={16} gap={12}>
                         <Text text={t("features.sheet.title")} style="titleMedium" />
                         <Text text={t("features.sheet.body")} style="bodyMedium" />
+                        {/* a new field at every opening, focused as it appears */}
+                        <TextField width="fill" placeholder={t("features.sheet.note")} autoFocus />
                         <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
                     </Column>
                 )}
