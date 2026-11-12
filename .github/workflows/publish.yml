@@ -68,11 +68,14 @@ jobs:
         run: node packages/cli/scripts/release-notes.ts "$GITHUB_REF_NAME" > ai-notes.md
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # 预发布版本（带 -，如 0.14.0-alpha01）标成 prerelease，不抢 Latest
       - run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
           if [ -s ai-notes.md ]; then
-            gh release create "$GITHUB_REF_NAME" --generate-notes --notes-file ai-notes.md
+            gh release create "$GITHUB_REF_NAME" --generate-notes --notes-file ai-notes.md $prerelease
           else
-            gh release create "$GITHUB_REF_NAME" --generate-notes
+            gh release create "$GITHUB_REF_NAME" --generate-notes $prerelease
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,4 +99,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
-      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
+      # 预发布版本（带 -）发到 dist-tag next，latest 留给正式版；版本号取 packages/core，dry-run 时也按它判断
+      - run: |
+          version=$(node -p "require('./packages/core/package.json').version")
+          tag="latest"
+          case "$version" in *-*) tag="next" ;; esac
+          pnpm publish -r --access public --no-git-checks --tag "$tag" ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
