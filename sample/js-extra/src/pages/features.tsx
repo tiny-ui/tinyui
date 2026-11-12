@@ -68,11 +68,13 @@ export default function Features() {
                 <Button text={t("features.sheet")} variant="outlined" onClick={() => setSheet(true)} />
             </Row>
             <BottomSheet open={sheet()} onDismiss={() => setSheet(false)}>
-                <Column width="fill" paddingHorizontal={24} paddingVertical={16} gap={12}>
-                    <Text text={t("features.sheet.title")} style="titleMedium" />
-                    <Text text={t("features.sheet.body")} style="bodyMedium" />
-                    <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
-                </Column>
+                {() => (
+                    <Column width="fill" paddingHorizontal={24} paddingVertical={16} gap={12}>
+                        <Text text={t("features.sheet.title")} style="titleMedium" />
+                        <Text text={t("features.sheet.body")} style="bodyMedium" />
+                        <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
+                    </Column>
+                )}
             </BottomSheet>
             <Show when={zen() !== undefined} fallback={() => <Box padding={8}><Loading /></Box>}>
                 {() => <Text text={t("features.zen", { text: zen() ?? "" })} style="bodySmall" color="onSurfaceVariant" />}

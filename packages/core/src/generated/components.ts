@@ -237,7 +237,7 @@ export interface LoadingProps extends LayoutProps {
 export interface BottomSheetDismissPayload {
 }
 
-/** M3 modal bottom sheet over the page; children are its content. Shown while `open`; set it to false in `onDismiss`, which fires after the user swiped, tapped the scrim or pressed back. */
+/** The node behind `BottomSheet`: an M3 modal bottom sheet over the page, shown while `open`. Pages use the `BottomSheet` component of tinyui-core, which builds the content anew at every opening. */
 export interface BottomSheetProps {
     /** true slides it in, false animates it out */
     open: boolean;

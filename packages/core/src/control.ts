@@ -1,6 +1,6 @@
-// For / Show: docs/runtime-api.md §4; slot mechanics in node.ts.
+// For / Show / BottomSheet: docs/runtime-api.md §4; slot mechanics in node.ts.
 import { disposeOwner, effect, onCleanup, signal, untrack, type Owner } from "./reactive.ts";
-import { CONTROL, renderInOwner, Slot, type Node } from "./node.ts";
+import { CONTROL, h, renderInOwner, Slot, thunk, type Node } from "./node.ts";
 
 export interface ShowProps<T> {
     when: T;
@@ -92,3 +92,46 @@ export const For: Control<<T>(props: ForProps<T>) => Node> = Object.assign(funct
     onCleanup(() => { for (const row of rows.values()) disposeOwner(row.owner); });
     return slot as unknown as Node;
 }, { [CONTROL]: true as const });
+
+/** What `open` can be while the sheet is open. */
+export type Opened<T> = Exclude<T, false | null | undefined | 0 | "">;
+
+export interface BottomSheetProps<T = boolean> {
+    /** Truthy slides the sheet in, falsy animates it out. Pass the data the sheet is about to get it as a snapshot in `children`. */
+    open: T;
+    /** Fires after the user swiped, tapped the scrim or pressed back; make `open` falsy in it. */
+    onDismiss?: () => void;
+    /** Builds the content, once per opening, with the value `open` had at that moment. */
+    children: (value: Opened<T>) => Node;
+}
+
+/**
+ * M3 modal bottom sheet over the page (docs/components.md §3). Its content is built anew each time it opens, so
+ * what the user typed last time is gone on both sides of the bridge; nothing is built while it has never been open.
+ * Closing keeps the content for the hide animation: it is disposed at the next opening or with the page.
+ */
+export function BottomSheet<T>(props: BottomSheetProps<T>): Node {
+    const render = props.children;
+    if (typeof render !== "function") throw new Error("<BottomSheet> children must be a function: {() => <Content />}");
+    const slot = new Slot();
+    let current: { owner: Owner; node: number } | null = null;
+    let last: unknown = undefined;
+    effect(() => {
+        const value = props.open;
+        const opened = !!value && value !== last;
+        last = value;
+        if (!opened) return;
+        untrack(() => {
+            if (current) {
+                disposeOwner(current.owner);
+                slot.remove(current.node);
+                current = null;
+            }
+            current = renderInOwner(() => render(value as Opened<T>), "<BottomSheet> children");
+            slot.insert(current.node, 0);
+        });
+    });
+    onCleanup(() => { if (current) disposeOwner(current.owner); });
+    const onDismiss = props.onDismiss;
+    return h("BottomSheet", { open: thunk(() => !!props.open), ...(onDismiss ? { onDismiss } : {}) }, slot);
+}

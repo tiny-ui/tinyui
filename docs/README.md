@@ -32,7 +32,7 @@ JS                                   桥                          Kotlin
 
 - JS 不做整树 diff，Kotlin 不做任何比对：两边都只处理"真正变了的那几个属性"（详见 [ADR-001](./adr-001-reactivity-model.md)）
 - 每次 K 入口结束前先排空微任务（Promise 回调在同一次宿主调用内跑完），再 flush
-- 结构变化只发生在 `For`（keyed reconcile，限于单个父节点的子列表）和 `Show` 两个原语里
+- 结构变化只发生在 `For`（keyed reconcile，限于单个父节点的子列表）、`Show` 和 `BottomSheet` 的内容（每次打开重建）里
 - 文本输入、滚动位置等高频交互状态**默认留在 Kotlin 侧自治**，JS 只收 `onChange` 通知，需要改时发命令（`x` op）而非回写 prop——避免受控组件跨桥往返造成的输入卡顿（详见 [ADR-004](./adr-004-events-and-input-ownership.md)）
 
 ## 决策索引
