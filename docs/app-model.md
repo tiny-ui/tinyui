@@ -25,7 +25,8 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 | 场景 | JS 侧 | 过桥 | 到达形态 |
 |---|---|---|---|
 | 向前传参 | `navigation.push("subscription/detail", {id})` | J4 | 新页 K1 `__mount(props)` |
-| 向后回传 | `navigation.pop(result)` | J4 | 上一页收 K5 固定 topic（如 `navigation.result`） |
+| 向前并关掉自己 | `navigation.replace("subscription/done", {id})`；带 `{ since }` 时关掉本流程从第一页到本页的一段 | J4 | 新页 K1 `__mount(props)`，占原来的位置 |
+| 向后回传 | `navigation.pop(result)`；带 `{ since }` 时整段退出 | J4 | 被关掉的那一段下面的页面收 K5 固定 topic（如 `navigation.result`） |
 | 共享状态 | `store.get(key)` / `store.set(key, v)` | J2 读，J4 写 | 真值在 Kotlin，变更经 K5 推给订阅了该 key 的页面 |
 | 事件广播 | `events.emit(topic, payload)` / `events.on(topic, fn)` | J4 | 所有订阅了该 topic 的活页面各收一次 K5 |
 | 直接调用另一页 | 无 | 无 | 不支持；需要它说明那个状态该进 store |

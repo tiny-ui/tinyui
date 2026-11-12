@@ -55,7 +55,7 @@ internal enum class J3(val wire: String) {
 
 /** J4: not answered. */
 internal enum class J4(val wire: String) {
-    TimerCancel("timer.cancel"), NavigationPush("navigation.push"), NavigationPop("navigation.pop"),
+    TimerCancel("timer.cancel"), NavigationPush("navigation.push"), NavigationReplace("navigation.replace"), NavigationPop("navigation.pop"),
     StoreSet("store.set"), StoreSubscribe("store.subscribe"), StorageRemove("storage.remove"), StorageClear("storage.clear"),
     EventsEmit("events.emit"), EventsSubscribe("events.subscribe"), I18nSubscribe("i18n.subscribe"), SessionSubscribe("session.subscribe"),
     AnalyticsTrack("analytics.track");

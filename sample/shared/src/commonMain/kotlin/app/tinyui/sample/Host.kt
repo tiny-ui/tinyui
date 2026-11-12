@@ -47,7 +47,8 @@ internal fun sampleHost(dataDir: Path? = null) = TinyUIHost(
     // tabs, no stack: a page closing itself (navigation.pop, top bar back) only shows up in the log
     navigator = object : Navigator {
         override fun push(page: String, paramsJson: String, from: PageContext) = println("TinyUI navigation.push $page from ${from.name}")
-        override fun pop(resultJson: String?, from: PageContext) = println("TinyUI navigation.pop from ${from.name}")
+        override fun replace(page: String, paramsJson: String, since: String?, from: PageContext) = println("TinyUI navigation.replace $page since $since from ${from.name}")
+        override fun pop(resultJson: String?, since: String?, from: PageContext) = println("TinyUI navigation.pop since $since from ${from.name}")
     },
     analytics = AnalyticsSink { name, props, page -> println("TinyUI analytics ${page.name} $name $props") },
     dataDir = dataDir,

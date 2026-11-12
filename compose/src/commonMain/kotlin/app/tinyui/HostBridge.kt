@@ -191,7 +191,8 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
         when (J4.of(name)) {
             J4.TimerCancel -> a["cbId"]?.jsonPrimitive?.intOrNull?.let { timers.remove(it)?.cancel() }
             J4.NavigationPush -> host.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}", context)
-            J4.NavigationPop -> host.navigator.pop(a["result"]?.toString(), context)
+            J4.NavigationReplace -> host.navigator.replace(a.str("page") ?: return, a["params"]?.toString() ?: "{}", a.str("since"), context)
+            J4.NavigationPop -> host.navigator.pop(a["result"]?.toString(), a.str("since"), context)
             J4.StoreSet -> { val key = a.str("key") ?: return; host.store.setJson(key, a.str("value") ?: "null") }
             // one host listener per key / topic; JS fans out to its own handlers
             J4.StoreSubscribe -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { host.store.observe(key) { v -> storeChanged(key, v) } } }
