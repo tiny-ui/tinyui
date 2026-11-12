@@ -1,6 +1,6 @@
 # 内置组件：schema、布局 prop、首批清单
 
-- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）
+- 状态：已定（2026-09-16）；M2 的实现依据；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加 `Icon`、`Loading` 与公共 prop `role` / `selected`；2026-10-28 为注册流程加 `Checkbox`、`CodeField`、`Select` / `Option`、`TextField` 外观与焦点、`Text` 内联链接；2026-11-03 为登录流程加 `Tabs`；2026-11-05 为登录流程加 `LazyColumn` 的分组（`SectionHeader`、`IndexBar`）；2026-11-12 `BottomSheet` 的内容改为每次打开重建（破坏性：children 只收函数）
 - 来源：ADR-003 §3.3 / §3.4（注册表、schema、公共布局 prop）、ADR-004（事件三分、命令、文本框）；roadmap C 组
 - 相关：[runtime-api.md](./runtime-api.md) §3（`h()` 怎么处理 prop）、[patch-protocol.md](./patch-protocol.md) §4（值类型）
 
@@ -95,7 +95,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Spacer` | （只有布局 prop） | | | |
 | `Icon` | `icon`（必填，`icon` 类型）、`size`（dp，默认 24）、`tint`（color，缺省跟随内容色）、`label`（读屏念的名字；紧挨文字的装饰图标不设） | `onClick` | | |
 | `Loading` | `size`（dp，默认 24）、`color`（缺省 `primary`） | | | |
-| `BottomSheet` | `open`（必填）；不接受布局 prop | `onDismiss` | | 是：弹层的内容 |
+| `BottomSheet` | `open`（必填，真值即打开）；不接受布局 prop | `onDismiss` | | 一个函数：每次打开调用一次，返回弹层的内容 |
 | `Popover` | `open`（必填）、`placement`（above / below，默认 below）、`matchAnchorWidth`；不接受布局 prop | `onDismiss`（点了弹层外面） | | 是：卡片的内容 |
 | `TopAppBar` | `title`、`backIcon`（`icon` 类型，设了才有返回按钮）、`backLabel`（返回按钮的读屏名）、`backIconSize`（dp，返回图标的尺寸；不设用图标自带的 24dp） | | | 是：右侧的操作 |
 | `BackHandler` | `enabled`（默认 true）；不接受布局 prop | `onBack` | | |
@@ -145,9 +145,28 @@ const ICONS: Record<string, string> = { quota: bolt };
 const [open, setOpen] = signal(false);
 <Button text="查看收款账户" onClick={() => setOpen(true)} />
 <BottomSheet open={open()} onDismiss={() => setOpen(false)}>
-    <Column paddingHorizontal={24} paddingVertical={16} gap={12}>…</Column>
+    {() => <Column paddingHorizontal={24} paddingVertical={16} gap={12}>…</Column>}
 </BottomSheet>
 ```
+
+**内容每次打开重建**（2026-11-12 改，破坏性：此前 children 是静态节点，页面挂载时建一次）。children 是一个函数，`open` 由假变真时在新的作用域里调用它，上一次的内容这时才拆掉：
+
+- 每次打开都是全新的一份：内容里的 `signal`、输入框里的字、滚动位置都从头开始，页面不用在打开前逐个清。改之前两侧寿命不一致——JS 的节点与状态一直活着，Kotlin 侧的内容却只在弹层显示期间参与组合——再打开时界面是空的而 JS 里还是上次的值，要页面自己对齐
+- 收起时不拆：收起动画期间内容还在，留到下一次打开或页面卸载。这期间它的 effect、定时器照常运行
+- 从没打开过就不建：页面挂载不为弹层的内容花时间
+- 要跨多次打开留着的东西（拉过一次的字典、上次选中的项）放在函数外面，即页面或包着弹层的组件里
+- 写成静态 children 在类型检查时报错，运行时 `mount` 抛 E2
+
+**弹层要展示一份数据时，把数据本身交给 `open`**：它是真值即打开，函数收到打开那一刻的值。收起动画期间页面的数据已经置空，内容里读的是这份快照，不会读到 `null`；数据换成另一份（`!==`）时内容也重建。
+
+```tsx
+const [account, setAccount] = signal<Account | null>(null);
+<BottomSheet open={account()} onDismiss={() => setAccount(null)}>
+    {(a) => <AccountDetail account={a} />}
+</BottomSheet>
+```
+
+内容里不要再响应式地读 `account()`，读参数 `a`。过桥的 `open` 仍是布尔，Kotlin 侧不变；`BottomSheet` 在 `tinyui-core` 里是包着同名节点的一个组件（runtime-api.md §4.3）。
 
 `Popover` 是锚在父节点上的浮动卡片（2026-10-29 加，注册流程触发：密码框聚焦时在它上方浮出规则清单，盖住上面的内容而不推开布局）。锚点就是父节点，不另设 ref：Compose `Popup` 本来就锚在调用处的父布局上，内置组件渲染 children 也不加包装。所以写法是用 `Box` 把锚元素和它包在一起；直接放进带 `gap` 的 `Column` 会锚到整列。它在组合里占一个零尺寸的位置，`Column` / `Row` 的 `gap` 不计它（2026-11-02 起；此前打开时会多出一份 `gap`，整行闪一下）。`placement` 是首选的一侧，那一侧放不下就翻到另一侧，两侧都放不下取空间大的一侧；水平方向与锚点起始边对齐，两个方向都不出窗口，页面滚动时跟着锚点走。`matchAnchorWidth` 让卡片与锚点同宽（输入框下的说明），不设就按内容宽（图标按钮旁的提示）。
 

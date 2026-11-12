@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { Button, Column, For, h, onCleanup, Show, signal, Text, thunk } from "../src/index.ts";
+import { BottomSheet, Button, Column, For, h, onCleanup, Show, signal, Text, thunk } from "../src/index.ts";
 
 const g = globalThis as Record<string, unknown>;
 afterEach(() => unmount());
@@ -119,5 +119,57 @@ describe("For", () => {
         unmount();
         assert.throws(() => mount(() => h(function Wrap() { return h(Show, { when: true }, () => h(Text, { text: "x" })); }, null)), /got a For \/ Show/);
         unmount();
+    });
+});
+
+describe("BottomSheet", () => {
+    const sheet = (props: Record<string, unknown>, render: (value: never) => unknown) =>
+        h(Column, null, h(BottomSheet as never, props, render as never));
+
+    it("builds nothing until it opens, and a new content at every opening", () => {
+        const log: string[] = [];
+        let built = 0;
+        mount(() => {
+            const [open, setOpen] = signal(false);
+            g["__setOpen"] = setOpen;
+            return sheet({ open: thunk(() => open()), onDismiss: () => setOpen(false) }, () => {
+                const n = ++built;
+                onCleanup(() => log.push(`content ${n} disposed`));
+                return h(Text, { text: `content ${n}` });
+            });
+        });
+        const setOpen = g["__setOpen"] as (v: boolean) => void;
+        assert.deepEqual(bridge.ops(), [["c", 1, "BottomSheet"], ["p", 1, "open", false], ["p", 1, "onDismiss", true], ["c", 2, "Column"], ["i", 2, 1, 0], ["i", 0, 2, 0]]);
+        assert.deepEqual(transaction(() => setOpen(true)), [["c", 3, "Text"], ["p", 3, "text", "content 1"], ["i", 1, 3, 0], ["p", 1, "open", true]]);
+        assert.deepEqual(transaction(() => setOpen(false)), [["p", 1, "open", false]], "closing keeps the content for the hide animation");
+        assert.deepEqual(log, []);
+        assert.deepEqual(transaction(() => setOpen(true)), [["r", 3], ["c", 4, "Text"], ["p", 4, "text", "content 2"], ["i", 1, 4, 0], ["p", 1, "open", true]]);
+        assert.deepEqual(log, ["content 1 disposed"]);
+        unmount();
+        assert.deepEqual(log, ["content 1 disposed", "content 2 disposed"]);
+    });
+
+    it("hands the content the value it opened with, and rebuilds when that value is replaced", () => {
+        mount(() => {
+            const [user, setUser] = signal<{ name: string } | null>(null);
+            g["__setUser"] = setUser;
+            return sheet({ open: thunk(() => user()) }, (u: { name: string }) => h(Text, { text: u.name }));
+        });
+        const setUser = g["__setUser"] as (v: unknown) => void;
+        assert.deepEqual(transaction(() => setUser({ name: "a" })), [["c", 3, "Text"], ["p", 3, "text", "a"], ["i", 1, 3, 0], ["p", 1, "open", true]]);
+        assert.deepEqual(transaction(() => setUser(null)), [["p", 1, "open", false]], "the snapshot outlives the data");
+        assert.deepEqual(transaction(() => setUser({ name: "b" })), [["r", 3], ["c", 4, "Text"], ["p", 4, "text", "b"], ["i", 1, 4, 0], ["p", 1, "open", true]]);
+        assert.deepEqual(transaction(() => setUser({ name: "c" })), [["r", 4], ["c", 5, "Text"], ["p", 5, "text", "c"], ["i", 1, 5, 0]], "new data while open: new content, still open");
+        unmount();
+    });
+
+    it("builds the content with the node when it starts open", () => {
+        mount(() => sheet({ open: true }, () => h(Text, { text: "now" })));
+        assert.deepEqual(bridge.ops(), [["c", 1, "Text"], ["p", 1, "text", "now"], ["c", 2, "BottomSheet"], ["p", 2, "open", true], ["i", 2, 1, 0], ["c", 3, "Column"], ["i", 3, 2, 0], ["i", 0, 3, 0]]);
+        unmount();
+    });
+
+    it("rejects static children", () => {
+        assert.throws(() => mount(() => h(Column, null, h(BottomSheet as never, { open: false }, h(Text, { text: "static" })))), /children must be a function/);
     });
 });

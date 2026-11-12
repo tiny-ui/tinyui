@@ -20,6 +20,7 @@
 | | `thunk(fn)` | 编译器包动态 prop 用；业务一般不手写 |
 | 结构 | `For` | keyed 列表 |
 | | `Show` | 条件分支 |
+| | `BottomSheet` | 弹层：内容每次打开重建 |
 | 命令 | `ref()` → `Ref`，`ref.cmd(name, args?)` | 对节点发一次性动作 |
 | 异步 | `resource(fetcher)` | 同步期建 signal，异步期写 |
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
@@ -64,7 +65,7 @@ function effect(fn: () => void): void
 - 创建时**立即同步跑一次**（收集依赖）；此后每当任一依赖变化，在本事务的 flush 阶段重跑
 - 重跑前先解绑全部旧依赖、执行本 effect 登记的 `onCleanup`，再重新收集。条件分支切换后不残留过期订阅
 - 调度：待重跑的 effect 进 FIFO 队列，flush 按入队顺序跑；跑的过程中新入队的在同一次 flush 内继续跑；已被 dispose 的跳过。同一个 effect 在一次 flush 里被重跑超过 100 次视为更新环，抛 E2
-- **必须在同步渲染期内创建**：即在 `mount`、`For` 建行、`Show` 切分支、或另一个 effect 的执行期间。此外（异步回调、handler、`.then`）调用直接抛错（ADR-001 §3.7）
+- **必须在同步渲染期内创建**：即在 `mount`、`For` 建行、`Show` 切分支、`BottomSheet` 建内容、或另一个 effect 的执行期间。此外（异步回调、handler、`.then`）调用直接抛错（ADR-001 §3.7）
 - 归属：创建时登记到当前 owner（根 / 行 / 分支）；在另一个 effect 执行期间创建的 effect 归属同一个 owner，不归属外层 effect（effect 不拥有 effect）
 
 ### 2.4 `onCleanup`
@@ -124,7 +125,7 @@ type Child = Node | Node[] | null | undefined | false
 
 内置 / 宿主节点的 prop 类型集是封闭的，因为它们全部要变成 patch、函数不过桥；这个限制**只在这里**。
 
-children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序发 `i`。**children 在创建后不可变**：结构变化只经 `For` / `Show`。
+children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序发 `i`。**children 在创建后不可变**：结构变化只经 `For` / `Show`，以及 `BottomSheet` 的内容（§4.3）。
 
 **业务组件**（`type` 为函数）：把 props 里 `thunk` 包过的项转成 getter 属性、其余原样复制（**任何值都合法，含函数、对象、数组**：render prop、格式化函数都是普通用法，它们不过桥）、children 放进 `props.children`，调用一次 `type(props)`，返回值原样作为本节点。组件函数：
 
@@ -189,6 +190,30 @@ interface ShowProps<T> {
 - 只在 `when` 的**真值性**变化时切分支：`user()` 从一个对象换成另一个对象不重建；从对象变 `null` 才切到 fallback
 - 切换 = dispose 旧分支 owner + 发 `r`，再在新分支 owner 里调分支函数 + 发 `i`。再显示是全新的一套节点与 effect，不复用
 - 没有 fallback 且条件为假时该位置为空
+
+### 4.3 `BottomSheet`
+
+```tsx
+<BottomSheet open={account()} onDismiss={() => setAccount(null)}>
+    {(a) => <AccountDetail account={a} />}
+</BottomSheet>
+```
+
+```ts
+interface BottomSheetProps<T = boolean> {
+    open: T                                       // 编译器包成 thunk；真值即打开
+    onDismiss?: () => void
+    children: (value: Opened<T>) => Node          // Opened<T>：T 去掉假值
+}
+```
+
+- 它是一个组件，返回同名的内置节点（外观与收起行为见 [components.md](./components.md) §3）；节点的 `open` 是 `!!props.open`，children 是一个长度 0 / 1 的槽位
+- `open` 变成一个真值、且与上一次读到的值 `!==` 时建内容：dispose 上一份的 owner + 发 `r`，在新 owner 里调 `children(value)` + 发 `i`，`value` 是这一刻的 `open`。由假变真、由一份数据换成另一份都算；`true` 到 `true`、同一个对象不算
+- `open` 变假时什么都不拆：内容留给收起动画，到下一次打开或所在 owner dispose 时才拆
+- 挂载时 `open` 为假就不调 `children`
+- `children` 不是函数时抛 E2
+
+这是 `For` / `Show` 之外第三处开作用域的地方（ADR-001「作用域只开在结构边界」）。放在运行时而不是让页面用 `Show` 拼：「条件为假时留着、下次为真时换新」不是 `Show` 的语义，而每个弹层都需要它。
 
 ## 5. `ref` + `cmd`
 
@@ -287,6 +312,6 @@ Kotlin 侧的统一上报对象 `PageError` 与栈回映射见 [build-chain.md](
 
 运行时随宿主（ADR-006 §2.11）：页面用构建时的 tinyui 版本编出，在这个版本及以上的宿主上都要能跑。所以：
 
-**运行时公开面只增不删、不改语义。** 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`（[jsx-transform.md](./jsx-transform.md)）、§1 列出的 API、内置组件的 schema（[components.md](./components.md)）。破坏性修改只能加新名字，或升 major；1.0 之前不允许破坏，真要破坏即发 1.0。升 major 后旧 major 构建的页面被客户端判不兼容（updates.md §1.1），宿主须加 `hostVersion`。
+**运行时公开面只增不删、不改语义。**（2026-11-12：`BottomSheet` 的 children 由静态节点改为函数，是一次有意的破坏，见 [components.md](./components.md) §3；本节的承诺是否改写另议。） 公开面 = 编译器注入的 `h` / `Fragment` / `thunk`（[jsx-transform.md](./jsx-transform.md)）、§1 列出的 API、内置组件的 schema（[components.md](./components.md)）。破坏性修改只能加新名字，或升 major；1.0 之前不允许破坏，真要破坏即发 1.0。升 major 后旧 major 构建的页面被客户端判不兼容（updates.md §1.1），宿主须加 `hostVersion`。
 
 挡住的改动：内置组件 prop 改名或改义；删除已公开的 API；改编译器注入函数的调用约定。§9 的桥入口是运行时与 Kotlin 之间的内部契约，两侧同一 PR 改、随同一个库版本发，不在此列。
