@@ -19,5 +19,6 @@ export type { CachedActions } from "./storage.ts";
 export type { RsaEncryptOptions } from "./crypto.ts";
 export type { DeviceInfo } from "./device.ts";
 export type { I18nKeys } from "./i18n.ts";
+export type { PageProps, Params, RoutePackage, Routes } from "./navigation.ts";
 export type { Session } from "./session.ts";
 export { HostError } from "tinyui-core";

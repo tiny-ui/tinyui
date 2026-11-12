@@ -1,6 +1,6 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、页面级配置文件不在本期（`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完，见 §5）；字节码行号回映射见 §7
 
@@ -145,3 +145,13 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - 构建失败：渐变、`image`、`text`、`use`、`mask`、`transform`、`style`、透明度、另一种颜色的 `fill`、没有 `viewBox`（且没有 `width` / `height`）
 - 类型：页面工程的 tsconfig 加 `"types": ["tinyui-core/assets"]`，`*.svg` 的默认导出是 `string`
 
+## 10. 路由类型
+
+定于 2026-11-12（运行时契约见 native-api.md §3）。页面名就是文件路径（§2），页面的参数就是它默认导出的 props，这两样本来都在源码里，不该再手写一张表。
+
+- `tinyui routes --ts <file>` 扫描页面目录，生成对 `tinyui-native` 的模块扩充：`RoutePackage`（包名）与 `Routes`（每个页面名 → 它的 props）。props 不靠解析源码，写成 `PageProps<typeof import("<页面文件>")>`，由类型检查器从默认导出上读，页面用 `interface` 还是 `type` 声明都行
+- 生成之后 `navigation.push` / `replace` 在编译期检查：本包的页面名必须在表里（拼错即报，编辑器有补全），参数必须是那一页的 props，页面不收 props 时可省略；`since` 只收本包的页面名。没生成这张表时不检查，与 `i18n.t` 没生成 key 类型时一样
+- 以别的前缀开头的名字（别的包的页面、宿主 `Navigator` 认识的原生路由）照原样放行，参数是扁平的 `Params`。跨包的参数是两个团队之间的接口（[app-model.md](./app-model.md) §7），它的类型怎么交付等第二个真实的跨包跳转出现再定
+- `--check` 在生成物与页面目录对不上时失败（增删、改名了页面却没重新生成），放进页面工程的 CI，用法同 `tinyui i18n --check`
+- 与 `tinyui i18n`、`tinyui schema` 一样把生成物提交进仓。两条命令并列而不合成一条：合并要改掉所有页面工程的脚本与 CI，等出现第三种要生成的类型再合
+- 业界同类：Expo Router、TanStack Router、Next.js typed routes 按文件路径生成路由类型；React Navigation 是手写一份 `ParamList` 再全局声明合并，这里省掉手写的那一份

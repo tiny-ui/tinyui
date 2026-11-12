@@ -163,7 +163,8 @@ async function pageRequires(pages: BuiltModule[]): Promise<Record<string, PageRe
     return requires;
 }
 
-async function discoverPages(pkg: string, pagesDir: string): Promise<Map<string, string>> {
+/** Page name (`<package>/<path under the pages directory>`) → source file, sorted by name. */
+export async function discoverPages(pkg: string, pagesDir: string): Promise<Map<string, string>> {
     const found = new Map<string, string>();
     let entries;
     try {
