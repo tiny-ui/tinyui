@@ -191,5 +191,13 @@ describe("tinyui-native", () => {
         assert.deepEqual(seen, [{ online: true }, 42]);
         navigation.push("pages/detail", { id: 1 });
         assert.deepEqual(bridge.sent.at(-1), { name: "navigation.push", args: { page: "pages/detail", params: { id: 1 } } });
+        navigation.replace("pages/next");
+        assert.deepEqual(bridge.sent.at(-1), { name: "navigation.replace", args: { page: "pages/next", params: {} } });
+        navigation.replace("pages/next", { id: 2 }, { since: "pages/first" });
+        assert.deepEqual(bridge.sent.at(-1), { name: "navigation.replace", args: { page: "pages/next", params: { id: 2 }, since: "pages/first" } });
+        navigation.pop();
+        assert.deepEqual(bridge.sent.at(-1), { name: "navigation.pop", args: { result: null } });
+        navigation.pop({ done: true }, { since: "pages/first" });
+        assert.deepEqual(bridge.sent.at(-1), { name: "navigation.pop", args: { result: { done: true }, since: "pages/first" } });
     });
 });
