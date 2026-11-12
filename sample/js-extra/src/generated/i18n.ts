@@ -17,6 +17,7 @@ declare module "tinyui-native" {
         "features.sheet": never;
         "features.sheet.body": never;
         "features.sheet.close": never;
+        "features.sheet.note": never;
         "features.sheet.title": never;
         "features.signin": never;
         "features.tap": never;

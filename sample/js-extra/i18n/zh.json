@@ -21,5 +21,6 @@
   "features.sheet": "打开底部弹层",
   "features.sheet.title": "底部弹层",
   "features.sheet.body": "下滑、点外面或按返回都能关；也可以在这里关。",
-  "features.sheet.close": "关闭"
+  "features.sheet.close": "关闭",
+  "features.sheet.note": "备注"
 }

@@ -21,5 +21,6 @@
   "features.sheet": "Open a sheet",
   "features.sheet.title": "A bottom sheet",
   "features.sheet.body": "Swipe down, tap outside or press back; or close it from here.",
-  "features.sheet.close": "Close"
+  "features.sheet.close": "Close",
+  "features.sheet.note": "A note"
 }

@@ -117,6 +117,7 @@ object BuiltinSchemas {
         type = "TextField",
         props = mapOf(
             "initialText" to PropSpec.Str(default = "", required = false, initial = true),
+            "autoFocus" to PropSpec.Bool(default = false, required = false, initial = true),
             "placeholder" to PropSpec.Str(default = "", required = false, initial = false),
             "singleLine" to PropSpec.Bool(default = true, required = false, initial = false),
             "keyboard" to PropSpec.Enum(values = setOf("text", "number", "email", "phone", "password"), default = "text", required = false, initial = false),
@@ -263,6 +264,7 @@ object BuiltinSchemas {
         type = "CodeField",
         props = mapOf(
             "length" to PropSpec.Num(default = 6.0, required = false, initial = false),
+            "autoFocus" to PropSpec.Bool(default = false, required = false, initial = true),
             "secure" to PropSpec.Bool(default = false, required = false, initial = false),
             "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
             "error" to PropSpec.Bool(default = false, required = false, initial = false),
