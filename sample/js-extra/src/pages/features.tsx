@@ -74,7 +74,11 @@ export default function Features() {
                         <Text text={t("features.sheet.body")} style="bodyMedium" />
                         {/* a new field at every opening, focused as it appears */}
                         <TextField width="fill" placeholder={t("features.sheet.note")} autoFocus />
-                        <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
+                        <Row gap={12}>
+                            {/* a toast while the sheet is up shows in the sheet, not under it */}
+                            <Button text={t("features.toast")} variant="outlined" onClick={() => void toast()} />
+                            <Button text={t("features.sheet.close")} onClick={() => setSheet(false)} />
+                        </Row>
                     </Column>
                 )}
             </BottomSheet>

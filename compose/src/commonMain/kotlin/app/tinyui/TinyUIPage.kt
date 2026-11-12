@@ -2,6 +2,7 @@ package app.tinyui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
@@ -14,6 +15,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.tinyui.components.LocalToastLayer
 
 /**
  * Renders one TinyUI page; the host owns navigation and passes the page's bytecode (docs/app-model.md).
@@ -80,7 +82,9 @@ fun TinyUIPage(
         if (failure != null) {
             error(failure)
         } else {
-            for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
+            CompositionLocalProvider(LocalToastLayer provides pageHost.ui.toasts) {
+                for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
+            }
         }
         pageHost.ui.Overlay(Modifier.align(Alignment.BottomCenter))
     }

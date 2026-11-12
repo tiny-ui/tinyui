@@ -166,6 +166,8 @@ const [account, setAccount] = signal<Account | null>(null);
 </BottomSheet>
 ```
 
+弹层开着时页面的 `ui.toast` 浮在弹层上沿之外的遮罩区，不占弹层的内容（2026-11-12 加）：弹层的底部是按钮、下面还可能贴着键盘，画在里面会挡住它们。叠了几个弹层时归最上面那个；弹层收起，还在显示的提示回到页面底部。弹层高到顶住状态栏时提示贴着状态栏下沿、压在弹层顶部。同一份 Snackbar 状态，只是换了谁来画，`ui.toast` 的返回值与时长不变。
+
 弹层一打开就要输入时，给输入框写 `autoFocus`（`TextField`、`CodeField` 都有，2026-11-12 加）：内容每次打开都是新建的，所以每次打开都会聚焦、拉起键盘，页面不用等弹层进场再发 `focus` 命令。它只认创建时的值，只在输入框第一次出现时生效一次——页面从返回栈回来不会再拉一次键盘；之后要挪焦点仍用 `focus` 命令。各家都是这两样并存：HTML `autofocus`、React Native `autoFocus`、Flutter `autofocus` 管「一出现就聚焦」，命令式的 `focus()` 管之后。
 
 内容里不要再响应式地读 `account()`，读参数 `a`。过桥的 `open` 仍是布尔，Kotlin 侧不变；`BottomSheet` 在 `tinyui-core` 里是包着同名节点的一个组件（runtime-api.md §4.4）。
