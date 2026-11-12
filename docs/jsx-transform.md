@@ -60,7 +60,7 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 | 非空白的 JSXText：`<Text>hi</Text>` | 同上 | `<Text text="hi" />` |
 | `async` 组件函数上的 JSX（`export default async function`） | 组件必须同步 | `resource` |
 
-例外：children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `BottomSheet` 的渲染函数）合法，原样传为 `children`。
+例外：children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `Keyed` / `BottomSheet` 的渲染函数）合法，原样传为 `children`。
 
 ## 4. 元素类型
 

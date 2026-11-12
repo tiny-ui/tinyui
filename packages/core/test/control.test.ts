@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { BottomSheet, Button, Column, For, h, onCleanup, Show, signal, Text, thunk } from "../src/index.ts";
+import { BottomSheet, Button, Column, For, h, Keyed, onCleanup, Show, signal, Text, thunk } from "../src/index.ts";
 
 const g = globalThis as Record<string, unknown>;
 afterEach(() => unmount());
@@ -118,6 +118,57 @@ describe("For", () => {
         assert.throws(() => mount(() => h(For, { each: [], key: (t: Todo) => t.id }, () => h(Text, { text: "x" })) as never), /page must return exactly one node/);
         unmount();
         assert.throws(() => mount(() => h(function Wrap() { return h(Show, { when: true }, () => h(Text, { text: "x" })); }, null)), /got a For \/ Show/);
+        unmount();
+    });
+});
+
+describe("Show children", () => {
+    it("get the value as an accessor that follows it and never turns falsy", () => {
+        const seen: unknown[] = [];
+        mount(() => {
+            const [user, setUser] = signal<{ name: string } | null>({ name: "a" });
+            g["__setUser"] = setUser;
+            return h(Column, null, h(Show, { when: thunk(() => user()) }, (u: () => { name: string }) => {
+                onCleanup(() => seen.push(u()));
+                return h(Text, { text: thunk(() => u().name) });
+            }));
+        });
+        const setUser = g["__setUser"] as (v: unknown) => void;
+        assert.deepEqual(transaction(() => setUser({ name: "b" })), [["p", 1, "text", "b"]]);
+        assert.deepEqual(transaction(() => setUser(null)), [["r", 1]], "the binding did not run with null");
+        assert.deepEqual(seen, [{ name: "b" }], "the branch still reads the last truthy value while it is disposed");
+        assert.deepEqual(transaction(() => setUser({ name: "c" })), [["c", 3, "Text"], ["p", 3, "text", "c"], ["i", 2, 3, 0]]);
+        unmount();
+    });
+});
+
+describe("Keyed", () => {
+    it("rebuilds its node when the value changes, falsy values included, and not otherwise", () => {
+        const log: string[] = [];
+        mount(() => {
+            const [tab, setTab] = signal<number>(1);
+            g["__setTab"] = setTab;
+            return h(Column, null,
+                h(Text, { text: "head" }),
+                h(Keyed, { by: thunk(() => tab()) }, (t: number) => {
+                    onCleanup(() => log.push(`tab ${t} disposed`));
+                    return h(Text, { text: `tab ${t}` });
+                }),
+                h(Text, { text: "tail" }),
+            );
+        });
+        const setTab = g["__setTab"] as (v: number) => void;
+        assert.deepEqual(bridge.ops().filter((o) => o[0] === "i"), [["i", 4, 1, 0], ["i", 4, 2, 1], ["i", 4, 3, 2], ["i", 0, 4, 0]]);
+        assert.deepEqual(transaction(() => setTab(1)), [], "same value: nothing");
+        assert.deepEqual(transaction(() => setTab(0)), [["r", 2], ["c", 5, "Text"], ["p", 5, "text", "tab 0"], ["i", 4, 5, 1]], "0 is a value like any other");
+        assert.deepEqual(log, ["tab 1 disposed"]);
+        unmount();
+        assert.deepEqual(log, ["tab 1 disposed", "tab 0 disposed"]);
+    });
+
+    it("builds once for an undefined value", () => {
+        mount(() => h(Column, null, h(Keyed, { by: undefined }, () => h(Text, { text: "only" }))));
+        assert.deepEqual(bridge.ops(), [["c", 1, "Text"], ["p", 1, "text", "only"], ["c", 2, "Column"], ["i", 2, 1, 0], ["i", 0, 2, 0]]);
         unmount();
     });
 });
