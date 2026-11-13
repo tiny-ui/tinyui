@@ -23,7 +23,7 @@ internal actual fun platformInfo(): Map<String, String> = mapOf(
     "osVersion" to UIDevice.currentDevice.systemVersion,
     "model" to UIDevice.currentDevice.model,
     // the region of the device's locale setting, ISO 3166-1 alpha-2; empty when the locale has none
-    "region" to (NSLocale.currentLocale.countryCode?.uppercase() ?: ""),
+    "region" to regionCode(NSLocale.currentLocale.countryCode),
 )
 
 internal actual fun systemLocale(): String =

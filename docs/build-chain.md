@@ -92,10 +92,10 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 - **`host.call` 的第一个参数是字符串字面量**：`host.call("billing.prices")` 可以，`host.call(`analytics.${kind}`)` 或把名字放进变量都不行，要改写成若干个明确的字面量调用。`host` 也只能以 `host.call(…)` 的形式使用，不能赋给别的变量或传出去；整体导入时（`import * as native`）只能写 `native.host.call(…)` 这类按成员的用法
 - **`session.signIn` 按成员调用**：`session.signIn(…)` 记作能力 `session.signIn` 进 `requires`；`session` 同样不能赋给别的变量或传出去
-- **`i18n.setLocale` 按成员调用**：`i18n.setLocale(…)` 记作能力 `i18n.setLocale` 进 `requires`（2026-11-13）。`i18n` 的其他用法不受限；把 `setLocale` 解构出来再调，构建认不出来
+- **`i18n` 只按成员使用**：`i18n.t(…)`、`const t = i18n.t` 都可以；用到 `i18n.setLocale` 即记作能力 `i18n.setLocale` 进 `requires`（2026-11-13）。`i18n` 同样不能解构、赋给别的变量或传出去：那样 `setLocale` 可能藏着不被看见，包会被发到切不了语言的宿主上
 - **`http.client` 的参数是字符串字面量**：`http.client("app")` 可以，变量或模板串不行；`http` 的其他用法（`http.get` 等，走 `default` 通道）不受限。`http.client` 同样只能按成员调用，不能赋给别的变量或传出去（2026-09-25）
 - **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行；`ta` 这类组件对象不能被改写、删属性或整个传出去
-- 页面里不要再声明名叫 `host`、`http`、`session`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
+- 页面里不要再声明名叫 `host`、`http`、`session`、`i18n`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
 
 内置组件不受限（随 tinyui 版本走，发布前核对目标宿主的下限与包的 tinyui 兼容即可（updates.md §1.1））。放宽的出口是在 `tinyui.config.json` 里手工声明额外用到的能力与组件，现在不开，有真实需求再加。
 

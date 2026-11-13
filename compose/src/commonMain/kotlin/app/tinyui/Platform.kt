@@ -18,3 +18,13 @@ internal expect fun plainTextClipEntry(text: String): ClipEntry
 
 /** The engine each platform ships; the `default` channel adds nothing to it. */
 internal expect fun defaultHttpClient(): HttpClient
+
+/**
+ * What `device.info().region` promises: ISO 3166-1 alpha-2, upper case, or empty. A locale's region can also be a
+ * UN M.49 area such as `419` (Latin America); that is not a country, and a page looking it up in a country table
+ * would find nothing.
+ */
+internal fun regionCode(raw: String?): String {
+    val code = raw?.uppercase() ?: return ""
+    return if (code.length == 2 && code.all { it in 'A'..'Z' }) code else ""
+}

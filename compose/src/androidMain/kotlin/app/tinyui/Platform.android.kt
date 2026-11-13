@@ -23,7 +23,7 @@ internal actual fun platformInfo(): Map<String, String> = mapOf(
  * language-only locale, and that wipes the region for the whole process.
  */
 private fun systemRegion(): String =
-    runCatching { Resources.getSystem().configuration.locales[0].country.uppercase() }.getOrDefault("")
+    regionCode(runCatching { Resources.getSystem().configuration.locales[0].country }.getOrNull())
 
 internal actual fun systemLocale(): String = Locale.getDefault().toLanguageTag()
 

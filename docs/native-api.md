@@ -359,6 +359,6 @@ await api.post("/api/v1/auth/register", { email, password: cipher })
 const scene = device.info().os === "ios" ? SCENES.ios : SCENES.android
 ```
 
-- J2 `device.info`（§2），同步返回 `{ os, osVersion, model, region }`：`os` 是 `"android"` 或 `"ios"`，`osVersion` 与 `model` 是系统报的原值。`region` 是设备地区设置的 ISO 3166-1 两位国家码（`"US"`、`"CN"`，大写；Android 取系统配置 `Resources.getSystem().configuration.locales[0].country`，iOS `NSLocale.currentLocale.countryCode`）。Android 不读 `Locale.getDefault()`：App 自己切界面语言时会 `Locale.setDefault` 成只有语言的 locale，整个进程的地区就被抹成空的了，系统没给时是空字符串（2026-11-13 加：按设备地区预选手机区号，原生要给的只有这一个值，字典在页面自己手里）。它是设备的地区，不是 App 的语言（§8），也不是用户实际所在地。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
+- J2 `device.info`（§2），同步返回 `{ os, osVersion, model, region }`：`os` 是 `"android"` 或 `"ios"`，`osVersion` 与 `model` 是系统报的原值。`region` 是设备地区设置的 ISO 3166-1 两位国家码（`"US"`、`"CN"`，大写；Android 取系统配置 `Resources.getSystem().configuration.locales[0].country`，iOS `NSLocale.currentLocale.countryCode`）。Android 不读 `Locale.getDefault()`：App 自己切界面语言时会 `Locale.setDefault` 成只有语言的 locale，整个进程的地区就被抹成空的了，系统没给、或给的不是国家（地区设置可以是 `419` 这样的区域码）时是空字符串（2026-11-13 加：按设备地区预选手机区号，原生要给的只有这一个值，字典在页面自己手里）。它是设备的地区，不是 App 的语言（§8），也不是用户实际所在地。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
 - 只给「按平台取不同值」这类少数场合用：同一个配置在两个平台各有一套值，页面按 `os` 取。界面差异交给组件，不要按平台分支画界面
 - 2026-11-11 加（第一个需要的页面触发：人机验证的场景配置按平台各有一套）

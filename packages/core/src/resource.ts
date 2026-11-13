@@ -42,19 +42,18 @@ export function resource<S, T>(
     onCleanup(() => { disposed = true; });
 
     let latest = 0;
-    /** The newest fetch while it is on its way. */
-    let pending: Promise<T> | null = null;
+    /**
+     * What everyone waiting right now gets: settled by the newest fetch, whichever fetch they started waiting on. A
+     * fetch that overtakes another takes its waiters along at once, so a slow or stuck older fetch holds nobody up.
+     */
+    let round: { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } | null = null;
     /** Whether `data` is the result of the newest fetch, for the current source. */
     let fresh = false;
     /** Whether a fetch was ever asked for: a lazy resource that nobody used does not start on a source change. */
     let wanted = false;
     let current = undefined as S;
-    // the newest fetch's result, kept apart from the signals: they stop being written once the owner is disposed
+    // the newest result, kept apart from the signal: that stops being written once the owner is disposed
     let value: T | undefined;
-    let failure: unknown;
-
-    /** How the newest fetch ended, or will end. */
-    const outcome = (): Promise<T> => pending ?? (fresh ? Promise.resolve(value as T) : Promise.reject(failure));
 
     function run(): Promise<T> {
         const id = ++latest;
@@ -64,43 +63,40 @@ export function resource<S, T>(
             setLoading(true);
             setError(undefined);
         }
+        const waiting = (round ??= newRound<T>());
         let fetched: Promise<T>;
         try {
             fetched = fetcher(current);
         } catch (e) {
             fetched = Promise.reject(e);
         }
-        const settled: Promise<T> = fetched.then(
+        fetched.then(
             (v) => {
-                // overtaken by a newer fetch: its caller gets that one's outcome, the signals are not touched
-                if (id !== latest) return outcome();
-                pending = null;
+                // overtaken by a newer fetch: the signals and the waiters are that one's to settle
+                if (id !== latest) return;
+                round = null;
                 fresh = true;
                 value = v;
                 if (!disposed) {
                     setData(() => v);
                     setLoading(false);
                 }
-                return v;
+                waiting.resolve(v);
             },
             (e: unknown) => {
-                if (id !== latest) return outcome();
-                pending = null;
-                failure = e;
+                if (id !== latest) return;
+                round = null;
                 if (!disposed) {
                     setError(e);
                     setLoading(false);
                 }
-                throw e;
+                waiting.reject(e);
             },
         );
-        // a failure nobody awaits is in error(), not an unhandled rejection
-        settled.catch(() => {});
-        pending = settled;
-        return settled;
+        return waiting.promise;
     }
 
-    const load = (): Promise<T> => (fresh ? Promise.resolve(value as T) : pending ?? run());
+    const load = (): Promise<T> => (fresh ? Promise.resolve(value as T) : round?.promise ?? run());
 
     if (source) {
         let first = true;
@@ -118,4 +114,12 @@ export function resource<S, T>(
         run();
     }
     return [data, { loading, error, load, refetch: run }];
+}
+
+function newRound<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+    let resolve!: (value: T) => void, reject!: (error: unknown) => void;
+    const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+    // a failure nobody awaits is in error(), not an unhandled rejection
+    promise.catch(() => {});
+    return { promise, resolve, reject };
 }
