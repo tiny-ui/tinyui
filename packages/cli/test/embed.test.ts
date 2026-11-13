@@ -67,6 +67,8 @@ describe("tinyui embed", { skip: qjsc ? false : "no qjsc-kmp on this machine" },
         await assert.rejects(embed({ root, out, dist: join(out, "build") }), /overlap/);
         await assert.rejects(embed({ root, out, dist: join(tmp, "host-overlap") }), /overlap/);
         assert.deepEqual(await tree(out), before, "the package there is untouched");
+        // a directory whose name merely starts with two dots is still inside its parent
+        await assert.rejects(embed({ root, out: join(tmp, "host-overlap", "..fixture"), dist: join(tmp, "host-overlap") }), /overlap/);
     });
 
     it("refuses a directory that holds another package, or files that are not a package", async () => {
