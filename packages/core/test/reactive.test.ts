@@ -81,6 +81,49 @@ describe("memo", () => {
         assert.equal(computed, 2);
     });
 
+    it("does not re-run its readers when it recomputes to the same value", () => {
+        const [n, setN] = signal(1);
+        let computed = 0, runs = 0;
+        render(() => { const parity = memo(() => { computed++; return n() % 2; }); effect(() => { parity(); runs++; }); });
+        setN(3); runPending();
+        assert.equal(computed, 2, "recomputed");
+        assert.equal(runs, 1, "same parity: the effect did not run again");
+        setN(4); runPending();
+        assert.equal(runs, 2, "a new value does");
+    });
+
+    it("stops a change at the first memo that comes out the same, through a chain of memos", () => {
+        const [n, setN] = signal(1);
+        const log: string[] = [];
+        render(() => {
+            const sign = memo(() => { log.push("sign"); return Math.sign(n()); });
+            const label = memo(() => { log.push("label"); return sign() > 0 ? "positive" : "other"; });
+            effect(() => { log.push(`effect ${label()}`); });
+        });
+        log.length = 0;
+        setN(5); runPending();
+        assert.deepEqual(log, ["sign"], "label is not recomputed, the effect is not re-run");
+        setN(-5); runPending();
+        assert.deepEqual(log, ["sign", "sign", "label", "effect other"]);
+    });
+
+    it("an effect that also read a written signal runs even if its memos are unchanged", () => {
+        const [n, setN] = signal(1);
+        const seen: string[] = [];
+        render(() => { const parity = memo(() => n() % 2); effect(() => { seen.push(`${n()}:${parity()}`); }); });
+        setN(3); runPending();
+        assert.deepEqual(seen, ["1:1", "3:1"]);
+    });
+
+    it("a memo that threw is computed again on the next read", () => {
+        const [n, setN] = signal(0);
+        const { result: m } = render(() => memo(() => { if (n() === 0) throw new Error("zero"); return n(); }));
+        assert.throws(() => m(), /zero/);
+        assert.throws(() => m(), /zero/, "not a stale undefined");
+        setN(2);
+        assert.equal(m(), 2);
+    });
+
     it("schedules effects that read it", () => {
         const [n, setN] = signal(1);
         const seen: number[] = [];
