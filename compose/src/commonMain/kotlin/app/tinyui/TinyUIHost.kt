@@ -6,11 +6,12 @@ import okio.Path
 
 /**
  * What one App gives every TinyUI page, built once at startup and not changed after (docs/native-api.md §1).
- * Its host components, capability names, channel names and whether it has a [session] are the host contract
+ * Its host components, capability names, channel names, whether it has a [session] and whether pages may change the
+ * language ([LocaleSource.set]) are the host contract
  * [HostSnapshot] renders; the other standard interfaces fall back to defaults when absent.
  *
  * @param channels HTTP channels pages pick by name (`http.client("app")`); `default` is the framework's own and cannot be registered.
- * @param locale the user's language (BCP 47); the system language when null.
+ * @param locale the App's language and, optionally, how a page changes it; the system language, read-only, when null.
  * @param timeZone the zone dates are shown in (IANA id, e.g. `Asia/Shanghai`); the system zone when null.
  * @param dataDir where `storage` keeps each package's file; `storage` answers E_UNSUPPORTED when null. Not the `Updates` directory.
  */
@@ -19,7 +20,7 @@ class TinyUIHost(
     val sink: PageSink,
     val capabilities: CapabilityRegistry = CapabilityRegistry(),
     val channels: Map<String, HttpChannel> = emptyMap(),
-    val locale: StateFlow<String>? = null,
+    val locale: LocaleSource? = null,
     val timeZone: StateFlow<String>? = null,
     val session: SessionSource? = null,
     val analytics: AnalyticsSink? = null,
@@ -33,8 +34,13 @@ class TinyUIHost(
     /** App-level bus: host events to pages, business events from pages (docs/native-api.md §5). */
     val events: EventBus = EventBus()
 
-    /** Capability names pages may rely on beyond the framework's: the registered ones, and `session.signIn` with a [session]. */
-    val capabilityNames: Set<String> get() = capabilities.names + if (session != null) setOf(J3.SessionSignIn.wire) else emptySet()
+    /**
+     * Capability names pages may rely on beyond the framework's: the registered ones, `session.signIn` with a
+     * [session], and `i18n.setLocale` when [locale] can be set.
+     */
+    val capabilityNames: Set<String> get() = capabilities.names +
+        (if (session != null) setOf(J3.SessionSignIn.wire) else emptySet()) +
+        (if (locale?.set != null) setOf(J3.I18nSetLocale.wire) else emptySet())
 
     internal val storages = Storages(dataDir, sink)
     internal val missingKeys = MissingKeys()
@@ -53,7 +59,7 @@ class TinyUIHost(
 
     internal fun channel(name: String): HttpChannel? = if (name == DEFAULT_CHANNEL) defaultChannel else channels[name]
 
-    internal fun currentLocale(): String = locale?.value ?: systemLocale()
+    internal fun currentLocale(): String = locale?.state?.value ?: systemLocale()
 
     internal fun currentTimeZone(): String = timeZone?.value ?: systemZone()
 

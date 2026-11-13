@@ -59,6 +59,10 @@ describe("host requirements of a page", () => {
         assert.deepEqual(page.channels, ["app", "pay"]);
         assert.deepEqual(page.capabilities, ["session.signIn"]);
         assert.deepEqual(analyzePage("shop/home", `${HTTP}session.state();\n`).capabilities, [], "reading the session is not a use of signIn");
+        const I18N = `import { i18n } from "tinyui-native";\n`;
+        assert.deepEqual(analyzePage("shop/home", `${I18N}i18n.setLocale("zh");\n`).capabilities, ["i18n.setLocale"]);
+        assert.deepEqual(analyzePage("shop/home", `${I18N}const t = i18n.t;\ni18n.locale();\n`).capabilities, [], "reading the language is not a use of setLocale");
+        assert.deepEqual(analyzePage("shop/home", `import * as native from "tinyui-native";\nnative.i18n.setLocale("zh");\n`).capabilities, ["i18n.setLocale"]);
         const ns = analyzePage("shop/home", `import * as native from "tinyui-native";\nnative.http.client("app");\nnative.session.signIn();\n`);
         assert.deepEqual([ns.channels, ns.capabilities], [["app"], ["session.signIn"]]);
         rejects(`${HTTP}const name = "app";\nhttp.client(name);\n`, /argument of http\.client must be a string literal/);

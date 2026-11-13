@@ -20,8 +20,8 @@ class FrameworkNamesTest {
 
     /** A host without a session does not offer `session.signIn`; everything else is there on every host. */
     @Test
-    fun signInIsTheOnlyNameThatDependsOnTheHost() {
-        assertEquals(setOf("session.signIn"), FrameworkNames - FrameworkCapabilities)
+    fun signInAndSetLocaleAreTheNamesThatDependOnTheHost() {
+        assertEquals(setOf("session.signIn", "i18n.setLocale"), FrameworkNames - FrameworkCapabilities)
         assertTrue("http.request" in FrameworkCapabilities && "device.info" in FrameworkCapabilities && "analytics.track" in FrameworkCapabilities)
     }
 }

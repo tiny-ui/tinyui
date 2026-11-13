@@ -43,7 +43,7 @@ internal enum class J2(val wire: String) {
 
 /** J3: answered later, with a resolve or a reject. A name that is not here is looked up among the host's capabilities. */
 internal enum class J3(val wire: String) {
-    TimerSchedule("timer.schedule"), HttpRequest("http.request"), SessionSignIn("session.signIn"),
+    TimerSchedule("timer.schedule"), HttpRequest("http.request"), SessionSignIn("session.signIn"), I18nSetLocale("i18n.setLocale"),
     UiToast("ui.toast"), UiAlert("ui.alert"), UiConfirm("ui.confirm"),
     CryptoRsaEncrypt("crypto.rsaEncrypt"), ClipboardSetText("clipboard.setText"), LinkingOpenUrl("linking.openUrl");
 
@@ -69,5 +69,8 @@ internal enum class J4(val wire: String) {
 /** Every name above; a host capability may not take one. */
 internal val FrameworkNames: Set<String> = (J2.entries.map { it.wire } + J3.entries.map { it.wire } + J4.entries.map { it.wire }).toSet()
 
-/** What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a session. */
-internal val FrameworkCapabilities: Set<String> = FrameworkNames - J3.SessionSignIn.wire
+/**
+ * What every host offers, listed in the mount manifest ahead of the host's own; `session.signIn` only comes with a
+ * session, `i18n.setLocale` only with a language the host lets pages set.
+ */
+internal val FrameworkCapabilities: Set<String> = FrameworkNames - J3.SessionSignIn.wire - J3.I18nSetLocale.wire

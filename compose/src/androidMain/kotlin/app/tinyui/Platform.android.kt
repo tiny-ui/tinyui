@@ -1,6 +1,7 @@
 package app.tinyui
 
 import android.content.ClipData
+import android.content.res.Resources
 import android.os.Build
 import androidx.compose.ui.platform.ClipEntry
 import io.ktor.client.HttpClient
@@ -13,7 +14,16 @@ internal actual fun platformInfo(): Map<String, String> = mapOf(
     "os" to "android",
     "osVersion" to Build.VERSION.RELEASE.orEmpty(),
     "model" to Build.MODEL.orEmpty(),
+    "region" to systemRegion(),
 )
+
+/**
+ * The region of the device's locale setting, ISO 3166-1 alpha-2; empty when it has none. Read from the system's
+ * configuration, not `Locale.getDefault()`: an App that switches its own language calls `Locale.setDefault` with a
+ * language-only locale, and that wipes the region for the whole process.
+ */
+private fun systemRegion(): String =
+    runCatching { Resources.getSystem().configuration.locales[0].country.uppercase() }.getOrDefault("")
 
 internal actual fun systemLocale(): String = Locale.getDefault().toLanguageTag()
 

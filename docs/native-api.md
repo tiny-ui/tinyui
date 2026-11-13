@@ -1,6 +1,6 @@
 # `tinyui-native` 与宿主接口
 
-- 状态：已定（2026-09-16）；2026-11-12 加 `navigation.replace` 与 `replace` / `pop` 的 `since`（§3，破坏性：宿主的 `Navigator` 接口多一个方法、`pop` 多一个参数），`BottomSheet` 开着时 toast 浮在弹层上方（§10）；2026-11-11 加 `device.info` 的 JS 封装（§17）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16），同日 `Navigator` 带调用方 `from`、`pop` 定为关闭调用方（§3）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
+- 状态：已定（2026-09-16）；2026-11-13 加 `i18n.setLocale`、`TinyUIHost.locale` 改为 `LocaleSource`（§8，破坏性）、`device.info` 加 `region`（§17）；2026-11-12 加 `navigation.replace` 与 `replace` / `pop` 的 `since`（§3，破坏性：宿主的 `Navigator` 接口多一个方法、`pop` 多一个参数），`BottomSheet` 开着时 toast 浮在弹层上方（§10）；2026-11-11 加 `device.info` 的 JS 封装（§17）；2026-10-28 加 `http` 请求 `tags`（§6）与 `crypto.rsaEncrypt`（§16），同日 `Navigator` 带调用方 `from`、`pop` 定为关闭调用方（§3）；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 重写：框架自己实现网络、存储、i18n、toast / 对话框、打开链接、埋点门面与会话，宿主只提供标准接口的实现；删 `HostServices`、`config.get`、宿主 `I18n` / `Config` / `HttpClient`
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、会话、事件）、ADR-004 §3.1（连续事件阈值）、ADR-007（职责边界）
 - 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 侧宿主给页面的东西只有 App 级的 `TinyUIHost`（§1），启动时建一次，交给每个 `TinyUIPage`
 
@@ -12,7 +12,7 @@ val host = TinyUIHost(
     sink = pageSink,
     dataDir = filesDir / "tinyui-data",                    // storage 落盘目录（§7）
     channels = mapOf("app" to KtorChannel(appHttpClient)), // §6
-    locale = uiLanguage,                                   // StateFlow<String>，BCP 47；缺省跟系统（§8）
+    locale = LocaleSource(uiLanguage) { setLanguage(it) }, // 当前语言（StateFlow<String>，BCP 47）与页面怎么改它；缺省跟系统、只读（§8）
     timeZone = displayZone,                                // StateFlow<String>，IANA；缺省跟系统（§8）
     session = SessionSource(state, signIn),                // §9
     analytics = AnalyticsSink { name, props, page -> … },  // §12
@@ -24,7 +24,7 @@ val host = TinyUIHost(
 TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 ```
 
-除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
+除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）、是否让页面改语言（记作能力 `i18n.setLocale`，§8）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
 
 `locals` 是这一次挂载交给 `host.call` 能力的对象（§13），只有兜底能力用得到。
 
@@ -34,7 +34,7 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 
 | 名字 | 返回 |
 |---|---|
-| `device.info` | 对象：`os`、`osVersion`、`model`（§17） |
+| `device.info` | 对象：`os`、`osVersion`、`model`、`region`（§17） |
 | `store.get` | 任意（§4） |
 | `storage.get` | 任意（§7） |
 | `storage.set` | `null`，或错误码 `"E_QUOTA"`；`tinyui-native` 收到错误码即抛 `HostError`（§7） |
@@ -191,13 +191,21 @@ const [paywall] = cached("paywall.v1", () => api.get(`${BASE}/api/app-config`).t
 i18n.t("subscription.title")
 i18n.t("subscription.savings", { percent: "43%" })
 i18n.locale()   // accessor，如 "zh"
+await i18n.setLocale("zh")   // 请求宿主切换 App 的语言
 i18n.timeZone() // accessor，如 "Asia/Shanghai"
 i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2026-01-01 08:00:00"
 ```
 
 - 字典在包里：`i18n/<locale>.json`，扁平的 key → 字符串，包的默认语言写在 `tinyui.config.json`（build-chain.md §8）
 - 包第一次挂页面时，各语言的字典全部读进内存（manifest 的 `i18n`，与字节码同一来源）
-- 当前语言：`TinyUIHost.locale` 的值，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
+- 当前语言：`TinyUIHost.locale`（`LocaleSource`）的 `state`，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
+- 改语言（2026-11-13 加）：`i18n.setLocale(tag)` 是 J3，交给 `LocaleSource.set`（在主线程调用）。语言的真值在宿主，页面只是请求：宿主改了 `state`，页面经上一条跟上，`setLocale` 自己不改任何东西。宿主不认识的语言由 `set` 抛 `HostException("E_INVALID")`；没给 `set`（只读，或根本没给 `locale`）时以 `E_UNSUPPORTED` reject。此前页面里的语言切换只能靠宿主自定一个 `host.call` 能力，每个有这个入口的宿主都要造一遍
+
+```kotlin
+class LocaleSource(val state: StateFlow<String>, val set: (suspend (locale: String) -> Unit)? = null)
+```
+
+- 读写放在一个参数里（此前 `locale` 就是那个 `StateFlow`，2026-11-13 改，破坏性）：与 `SessionSource` 同形，也不会出现「能改却读不到」的组合。给了 `set` 的宿主，快照的能力段多一行 `i18n.setLocale`；调用了它的页面把它记进 `requires`，发布前照能力名核对，与 `session.signIn` 同理（§9）。`host.call` 注册同名能力在 `register` 时报错
 - 查找回退：`zh-Hant-TW → zh-Hant → zh → 默认语言`；全部缺失返回 key 本身，并经 `PageSink` 每个 key 上报一次
 - 插值只有 `{name}`，值按字符串替换；没有复数与数字格式化（引擎无 `Intl`）
 - 当前时区：`TinyUIHost.timeZone` 的值（IANA id），缺省为系统时区；变化时经 K5 topic `i18n.timeZone` 通知活页面，`timeZone()` 与 `formatDate()` 的绑定重算。不给 `timeZone` 时跟系统时区：公共代码里没有系统时区的变化回调，页面每次回到前台（`pageVisible()` 变 true，用户可能刚在设置里改过）时重新读一次，变了才推 K5；iOS 每次读前清掉进程内的系统时区缓存。平台不认识的 id 按系统时区显示，并经 `PageSink` 每个 id 上报一次
@@ -355,6 +363,6 @@ await api.post("/api/v1/auth/register", { email, password: cipher })
 const scene = device.info().os === "ios" ? SCENES.ios : SCENES.android
 ```
 
-- J2 `device.info`（§2），同步返回 `{ os, osVersion, model }`：`os` 是 `"android"` 或 `"ios"`，另两项是系统报的原值。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
+- J2 `device.info`（§2），同步返回 `{ os, osVersion, model, region }`：`os` 是 `"android"` 或 `"ios"`，`osVersion` 与 `model` 是系统报的原值。`region` 是设备地区设置的 ISO 3166-1 两位国家码（`"US"`、`"CN"`，大写；Android 取系统配置 `Resources.getSystem().configuration.locales[0].country`，iOS `NSLocale.currentLocale.countryCode`）。Android 不读 `Locale.getDefault()`：App 自己切界面语言时会 `Locale.setDefault` 成只有语言的 locale，整个进程的地区就被抹成空的了，系统没给时是空字符串（2026-11-13 加：按设备地区预选手机区号，原生要给的只有这一个值，字典在页面自己手里）。它是设备的地区，不是 App 的语言（§8），也不是用户实际所在地。框架实现，宿主不参与；原生两侧早已实现，这里只补 JS 封装。封装在随宿主内置的运行时里，用到它的页面要求宿主内置的是带 `device` 的框架版本，与其他新 API 一样由版本检查把关
 - 只给「按平台取不同值」这类少数场合用：同一个配置在两个平台各有一套值，页面按 `os` 取。界面差异交给组件，不要按平台分支画界面
 - 2026-11-11 加（第一个需要的页面触发：人机验证的场景配置按平台各有一套）
