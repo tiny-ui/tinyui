@@ -68,7 +68,7 @@ describe("tinyui-native", () => {
         const resolvers: ((v: string) => void)[] = [];
         let first = true;
         let data: () => string | undefined = () => undefined;
-        let actions: { error: () => unknown; refetch: () => void } | undefined;
+        let actions: { error: () => unknown; refetch: () => Promise<string> } | undefined;
         tinyui().mount(() => {
             [data, actions] = cached<string>("r", () => {
                 if (first) { first = false; throw new Error("sync"); }
@@ -78,12 +78,28 @@ describe("tinyui-native", () => {
         }, "{}", HOST);
         await drain();
         assert.equal((actions!.error() as Error).message, "sync");
-        actions!.refetch();
-        actions!.refetch();
+        void actions!.refetch();
+        void actions!.refetch();
         resolvers[1]!("newer");
         resolvers[0]!("older");
         await drain();
         assert.equal(data(), "newer");
+    });
+
+    it("cached with lazy fetches at load() and stores what the fetch brought", async () => {
+        bridge.queries["storage.get"] = "old";
+        bridge.queries["storage.set"] = null;
+        let data: () => string | undefined = () => undefined;
+        let actions: { error: () => unknown; load: () => Promise<string> } | undefined;
+        tinyui().mount(() => { [data, actions] = cached<string>("cached-lazy", () => Promise.resolve("new"), { lazy: true }); return h(Text, { text: "x" }); }, "{}", HOST);
+        tinyui().flush();
+        assert.equal(data(), "old");
+        const stored = () => bridge.queried.filter((q) => q.name === "storage.set" && (q.args as { key: string }).key === "cached-lazy").map((q) => (q.args as { value: string }).value);
+        assert.deepEqual(stored(), [], "nothing fetched, nothing stored");
+        assert.equal(await actions!.load(), "new");
+        tinyui().flush();
+        assert.deepEqual(stored(), [JSON.stringify("new")]);
+        assert.equal(actions!.error(), undefined);
     });
 
     // one engine per page, so i18n subscribes once per module: everything that relies on its K5 topics is in this one test

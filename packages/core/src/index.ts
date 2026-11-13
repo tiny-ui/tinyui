@@ -8,7 +8,7 @@ export type { Node, Ref, Component } from "./node.ts";
 export { For, Keyed, Show } from "./control.ts";
 export type { ForProps, KeyedProps, ShowProps, Truthy } from "./control.ts";
 export { resource } from "./resource.ts";
-export type { ResourceActions } from "./resource.ts";
+export type { ResourceActions, ResourceOptions } from "./resource.ts";
 export { HostError } from "./host.ts";
 export type { HostErrorDetails } from "./host.ts";
 export * as internal from "./internal.ts";

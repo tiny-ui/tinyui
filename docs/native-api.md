@@ -183,7 +183,7 @@ const [paywall] = cached("paywall.v1", () => api.get(`${BASE}/api/app-config`).t
 - 按设备存，不区分用户：用户相关数据 key 带 `session().userId`，或在其变化时自行清理
 - 不加密，不存敏感信息；框架不做格式迁移，跨版本与回滚的兼容由页面负责（换 key 或读取时容错）
 
-`cached(key, fetcher)` 是纯 JS 工具（先旧后新）：渲染期调用，返回 `[data, { loading, error, refetch }]`，与 `resource` 同形；`data` 初值是 `storage.get(key)`，随后执行 `fetcher`，成功即更新并 `storage.set`，失败保留旧值并置 `error`。
+`cached(key, fetcher, { lazy? })` 是纯 JS 工具（先旧后新）：渲染期调用，返回 `[data, { loading, error, load, refetch }]`。它就是 `resource`（runtime-api.md §6）加两样：`data` 初值是 `storage.get(key)`，每次取到新结果就 `storage.set`；失败保留旧值并置 `error`，存不进去（`E_QUOTA`）同样进 `error`。`lazy`、`load()`、只认最新一次都随 `resource`（2026-11-13 起建在它上面，此前是另一份实现）。
 
 ## 8. `i18n`
 
