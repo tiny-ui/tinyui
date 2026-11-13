@@ -38,7 +38,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 
 ### 3.1 登录会话与业务状态
 
-- **登录态**是宿主的真值（token 在宿主的网络通道里，登录是原生流程），由框架定义标准会话 `{ loggedIn, userId }`：宿主在 `TinyUIHost` 上提供 `StateFlow<Session>` 与 `signIn`，框架推给所有活页面（native-api.md §9）。不用 store 的自定 key 表达登录态
+- **登录态**是宿主的真值（token 在宿主的网络通道里），由框架定义标准会话 `{ loggedIn, userId }`：宿主在 `TinyUIHost` 上提供 `StateFlow<Session>` 与 `signIn`，框架推给所有活页面（native-api.md §9）。不用 store 的自定 key 表达登录态
 - **业务状态**（是否 Pro、额度等）真值在服务端，页面经身份通道自己请求，在 `pageVisible()` 由 false 变 true 与 `session` 变化时刷新；不由宿主写进 store
 - 宿主往 store 写东西即构成宿主依赖，只用于确实要与原生互通、又没有框架标准接口的状态
 
