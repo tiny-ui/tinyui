@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { isPathSegment } from "./bundle.ts";
 import { requireSecureUrl, segments } from "./client.ts";
-import { payload, requirePackagePath } from "./payload.ts";
+import { payload, replaceDir, requirePackagePath } from "./payload.ts";
 import { verify } from "./keys.ts";
 
 export interface PullOptions {
@@ -109,29 +109,4 @@ async function readManifest(file: string): Promise<Manifest | null> {
         return null;
     }
     return JSON.parse(text) as Manifest;
-}
-
-/** Assembled beside [out] and swapped in: a failure at any step leaves the previous package in place. */
-async function replaceDir(out: string, files: Map<string, Uint8Array>): Promise<void> {
-    await mkdir(dirname(out), { recursive: true });
-    const staging = await mkdtemp(`${out}.pulling-`);
-    const backup = `${staging}.previous`;
-    let moved = false;
-    try {
-        for (const [path, bytes] of files) {
-            await mkdir(dirname(join(staging, path)), { recursive: true });
-            await writeFile(join(staging, path), bytes);
-        }
-        moved = await rename(out, backup).then(() => true, (e: NodeJS.ErrnoException) => {
-            if (e.code === "ENOENT") return false;
-            throw e;
-        });
-        await rename(staging, out);
-    } catch (e) {
-        if (moved) await rename(backup, out).catch(() => {});
-        await rm(staging, { recursive: true, force: true });
-        throw e;
-    }
-    // the new package is in place; a backup that will not go away is litter, not a failure
-    await rm(backup, { recursive: true, force: true }).catch(() => {});
 }

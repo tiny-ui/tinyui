@@ -106,7 +106,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | `packages/core` / `native` | 不动运行时 API，只保证入口能打成单模块，各导出 `VERSION` 供 sample 显示 |
 | `compose/` | ADR-002 K0 最小版：注册 core → 注册 native → 运行页面模块 → 返回 namespace。命名待 M1 定，本期只保证序列在库里而不在 sample 里。commonTest 用 `JsBytecode.compile` 现场编字节码，不依赖宿主工具 |
 | `sample/js` | 新 pnpm workspace 成员，包名 `sample`，`src/pages/home.tsx`。本期页面用纯 TS 只 import `VERSION`：`h` 的签名是 C 组的事，不在 core 放临时实现；JSX 变换的正确性由 CLI 单元测试覆盖 |
-| `sample/shared` | Gradle：`pnpm run build` → `tinyui build` → `Sync` 只取 `.jsb` 与清单 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0。AGP 9 的 KMP 库插件默认不处理 assets，Compose resources 在 Android 走 assets，必须 `androidResources { enable = true }`，否则 APK 里没有资源且构建不报错（2026-09-16 实测） |
+| `sample/shared` | Gradle：`pnpm run build` → `tinyui embed`（2026-11-13 起；此前 `tinyui build` 再由 `Sync` 挑 `.jsb` 与清单，现在挑哪些文件归 CLI，updates.md §1.4）→ `Sync` 原样收进资源目录 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0。AGP 9 的 KMP 库插件默认不处理 assets，Compose resources 在 Android 走 assets，必须 `androidResources { enable = true }`，否则 APK 里没有资源且构建不报错（2026-09-16 实测） |
 | `settings.gradle.kts` | 有 `quickjs-kmp.dir` 时把 `qjsc-kmp` 路径传给 Exec 任务 |
 | CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QUICKJS_HOST_JNI` 传入；`qjsc-kmp` 来自 npm 包（2026-09-23 起）；ios.yml 同样 |
 

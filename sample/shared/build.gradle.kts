@@ -39,10 +39,14 @@ kotlin {
 
 val updateHostSnapshot = providers.gradleProperty("tinyui.updateHostSnapshot")
 
-// JS 侧：pnpm 编三个包 → tinyui build 把每个示例包的页面编成字节码 → 只把 .jsb 与清单打成 Compose 资源（运行时随库）
+// JS 侧：pnpm 编三个包 → tinyui embed 把每个示例包编成字节码并写成内置包的样子（清单、.jsb、文案）→ 打成 Compose 资源（运行时随库）
 // 两个包演示多包模型（docs/updates.md §0）：各自的 JS 工程、密钥、资源子目录
 val jsPackages = mapOf("sample" to rootDir.resolve("sample/js"), "sample-extra" to rootDir.resolve("sample/js-extra"))
 val cliOut = layout.buildDirectory.dir("tinyui-cli")
+// what each package looks like embedded in a host: `tinyui embed` picks the files, nothing here knows which they are
+val embeddedOut = layout.buildDirectory.dir("tinyui-embedded")
+// maps ride along for the debug-only failure screen (docs/build-chain.md); -Ptinyui.maps=false leaves them out
+val embedMaps = providers.gradleProperty("tinyui.maps").orNull != "false"
 val quickjsKmpDir = (gradle as ExtensionAware).extra.properties["quickjs-kmp.dir"] as File?
 val qjsc: Provider<String> = providers.gradleProperty("tinyui.qjsc")
     .orElse(providers.environmentVariable("TINYUI_QJSC"))
@@ -60,13 +64,13 @@ val buildJsPackages by tasks.registering(Exec::class) {
 
 val buildTinyUIPages by tasks.registering {
     group = "build"
-    description = "tinyui build for every sample package"
+    description = "tinyui embed for every sample package"
 }
 val packageBuilds = jsPackages.map { (pkg, jsRoot) ->
     val name = "buildTinyUIPages" + pkg.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }
     tasks.register<Exec>(name) {
         group = "build"
-        description = "tinyui build for ${jsRoot.relativeTo(rootDir)}"
+        description = "tinyui embed for ${jsRoot.relativeTo(rootDir)}"
         dependsOn(buildJsPackages)
         if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildHostTools"))
         workingDir = jsRoot
@@ -75,9 +79,16 @@ val packageBuilds = jsPackages.map { (pkg, jsRoot) ->
         inputs.files(fileTree(jsRoot.resolve("i18n"))).withPropertyName("i18n")
         inputs.files(buildJsPackages.map { it.outputs.files })
         inputs.property("qjsc", qjsc.orElse(""))
-        val out = cliOut.map { it.dir(pkg) }
-        outputs.dir(out)
-        val args = mutableListOf("node", rootDir.resolve("packages/cli/dist/bin.js").path, "build", "--root", jsRoot.path, "--out", out.get().asFile.path)
+        inputs.property("maps", embedMaps)
+        val dist = cliOut.map { it.dir(pkg) }
+        val out = embeddedOut.map { it.dir(pkg) }
+        outputs.dir(dist).withPropertyName("dist")
+        outputs.dir(out).withPropertyName("embedded")
+        val args = mutableListOf(
+            "node", rootDir.resolve("packages/cli/dist/bin.js").path, "embed",
+            "--root", jsRoot.path, "--dist", dist.get().asFile.path, "--out", out.get().asFile.path,
+        )
+        if (embedMaps) args += "--maps"
         qjsc.orNull?.let { args += listOf("--qjsc", it) }
         commandLine(args)
     }.also { buildTinyUIPages.configure { dependsOn(it) } }
@@ -86,13 +97,9 @@ val packageBuilds = jsPackages.map { (pkg, jsRoot) ->
 // one resource subdirectory per package (docs/updates.md §3): files/tinyui/<pkg>/
 val tinyUIResourcesRoot = layout.buildDirectory.dir("tinyui-resources")
 val collectTinyUIResources by tasks.registering(Sync::class) {
-    // maps ride along for the debug-only failure screen (docs/build-chain.md); -Ptinyui.maps=false leaves them out
     jsPackages.keys.forEachIndexed { i, pkg ->
-        from(packageBuilds[i]) {
-            into("files/tinyui/$pkg")
-            include("pages/**/*.jsb", "i18n/*.json", "manifest.json")
-            if (providers.gradleProperty("tinyui.maps").orNull != "false") include("pages/**/*.js.map")
-        }
+        dependsOn(packageBuilds[i])
+        from(embeddedOut.map { it.dir(pkg) }) { into("files/tinyui/$pkg") }
     }
     // the whole root is synced, so a package directory from an earlier layout does not linger
     into(tinyUIResourcesRoot)

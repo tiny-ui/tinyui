@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；实现依据，实现待开
+- 状态：已定（2026-09-18；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；实现依据，实现待开
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -93,6 +93,19 @@ tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<
 - 走公开投递端点，不要 token。输出与 `tinyui build` 产物同布局（`manifest.json`、`pages/`），manifest 是下载来的原始字节；包里没有 `.js.map`，内置包的栈同热下发的包一样按 `buildId` 离线对映射（build-chain.md §7）
 
 宿主仓里的是提交的字节，F-Droid 从源码构建时不需要 Node。
+
+
+**本地联调：`tinyui embed`**（2026-11-13 加）。改了页面要在宿主里跑起来，等不到发布，内置包目录由本地源码填：
+
+```
+tinyui embed --out <宿主资源目录>/<pkg> [--maps] [--root <JS 工程>] [--dist <构建目录>]
+```
+
+- 先 `tinyui build`，再让 `--out` 恰好是一个内置包：`manifest.json`、各页的 `.jsb`、文案文件，别的构建产物不进；`--maps` 连同 source map（失败页能显示 JS 调用栈，会把页面源码带进安装包，只用于调试）
+- `--out` 与 `pull` 的是同一个目录、同样整目录换入：删掉的页面不残留，失败时原来的包还在。目录里已有别的包（`manifest.json` 的包名不同）、或有文件却不是一个包时拒绝，免得指错目录把别的东西冲掉；`--out` 的上级目录不存在时也拒绝，写错的路径不会凭空长出一棵目录
+- 它写的 manifest 没有 `hostVersion`，也不验签、不看灰度：宿主的发版检查不认它（上文），发版用的内置包仍由 `pull` 取。写进去的东西只留在本地，不提交
+- 「哪些文件算内置包」只在 CLI 里（`pull` 与 `embed` 共用）。此前每个页面工程各写一份同步脚本去挑文件，产物布局一变就要各改一遍；业界同类是 Expo 的 `export:embed`、React Native 的 `bundle --bundle-output … --assets-dest …`
+- 类型检查、`i18n --check`、`routes --check` 不在里面：那是页面工程自己的检查，由工程的脚本串在它前面
 
 ## 2. 投递协议
 
