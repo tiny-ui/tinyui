@@ -133,6 +133,19 @@ describe("resource: load, lazy, source", () => {
         assert.equal(actions!.error(), undefined);
     });
 
+    it("a fetch that never settles holds nobody up once a newer one has", async () => {
+        const { calls, fetcher } = manual<string>();
+        let data: () => string | undefined = () => undefined, actions: Actions<string> | undefined;
+        mount(() => { [data, actions] = resource(() => fetcher()); return h(Text, { text: "x" }); });
+        const stuck = actions!.load();
+        const newer = actions!.refetch();
+        calls[1]!.resolve("newer");
+        // calls[0] is never settled
+        assert.deepEqual(await Promise.all([stuck, newer]), ["newer", "newer"]);
+        assert.equal(data(), "newer");
+        assert.equal(actions!.loading(), false);
+    });
+
     it("a source hands its value to the fetcher and fetches again when it changes", async () => {
         const { calls, fetcher } = manual<string>();
         let data: () => string | undefined = () => undefined, actions: Actions<string> | undefined;

@@ -65,9 +65,15 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (!member) return problem(ref, "session may only be used as session.<member> (docs/build-chain.md §5.1)");
         if (member.name === "signIn") capabilities.add("session.signIn");
     };
-    /** [ref] is `i18n` (or `native.i18n`): reaching setLocale needs a host that lets pages set the language. */
+    /**
+     * [ref] is `i18n` (or `native.i18n`): only its members; reaching setLocale needs a host that lets pages set the
+     * language. Destructured or passed whole, a `setLocale` could go unseen and the package be published to a host
+     * that cannot honour it.
+     */
     const useI18n = (ref: AnyNode) => {
-        if (memberOf(ref, parentOf(ref))?.name === "setLocale") capabilities.add("i18n.setLocale");
+        const member = memberOf(ref, parentOf(ref));
+        if (!member) return problem(ref, "i18n may only be used as i18n.<member> (docs/build-chain.md §5.1)");
+        if (member.name === "setLocale") capabilities.add("i18n.setLocale");
     };
     const useH = (ref: AnyNode) => {
         const call = (ref as AnyNode & { parentNode?: AnyNode })["parentNode"];
