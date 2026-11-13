@@ -124,7 +124,7 @@ const api = http.client("app");      // 宿主注册的通道
 await api.post(`${BASE}/api/billing/checkout`, { plan });
 ```
 
-J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout?, tags? }`；`http.get` / `post` / `request` 走 `channel: "default"`。URL 由页面给全，框架不拼 base。
+J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout?, tags? }`；`http.get` / `post` / `request` 走 `channel: "default"`。
 
 | 通道 | 实现 | 用途 |
 |---|---|---|
@@ -161,8 +161,6 @@ class AppChannel(…) : HttpChannel {
     }
 }
 ```
-
-**通道是身份边界**（最佳实践，2026-10-28）：建立或撤销身份的响应在宿主通道里消费，页面永远只见会话状态（§9）。登录 / 注册接口返回的 token 由通道写进宿主的会话存储，交给页面的 body 先剥掉凭证字段；之后 `session.state()` 变成已登录，宿主的导航自己切走，页面什么都不用做。临时的"注册中"凭证同理：通道收下、后续请求自动带上，页面看不见。这样包被热下发、被调试器看到时都不含凭证。
 
 `setTimeout` / `clearTimeout` 是 core 提供的全局，经 J3 `timer.schedule` / J4 `timer.cancel`，宿主侧由 `PageHost` 实现，随页面关闭取消。
 
