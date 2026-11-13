@@ -1,6 +1,6 @@
 // `tinyui embed`: the package built from this source, written as a host's embedded package (docs/updates.md §1.4).
 import { readdir, readFile, stat } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { build, type Manifest } from "./build.ts";
 import { payload, replaceDir } from "./payload.ts";
 
@@ -30,11 +30,13 @@ export interface EmbedResult {
 export async function embed(options: EmbedOptions): Promise<EmbedResult> {
     const out = resolve(options.out);
     const dist = resolve(options.dist ?? join(options.root, "dist"));
+    // the build empties and rewrites its directory: pointed at the package (or around it), it would damage what is there before anything is checked
+    if (within(dist, out) || within(out, dist)) throw new Error(`--dist ${dist} and --out ${out} overlap: the build needs a directory of its own`);
     await requireEmbeddable(out);
+    const held = await heldPackage(out);
     const result = await build({ root: options.root, out: dist, ...(options.qjsc !== undefined && { qjsc: options.qjsc }) });
     const manifestBytes = await readFile(result.manifest);
     const manifest = JSON.parse(manifestBytes.toString("utf8")) as Manifest;
-    const held = await heldPackage(out);
     if (held !== null && held !== manifest.name) throw new Error(`${out} holds package ${held}, not ${manifest.name}`);
 
     const paths = payload(manifest).map((file) => file.path);
@@ -46,10 +48,25 @@ export async function embed(options: EmbedOptions): Promise<EmbedResult> {
     return { version: manifest.version, files: [...files.keys()].sort() };
 }
 
-/** The package name in [out]'s manifest; null when there is none. */
+/** The package name in [out]'s manifest; null when [out] has no manifest. A manifest that names no package is not one to replace. */
 async function heldPackage(out: string): Promise<string | null> {
-    const text = await readFile(join(out, "manifest.json"), "utf8").catch(() => null);
-    return text === null ? null : ((JSON.parse(text) as { name?: string }).name ?? null);
+    const file = join(out, "manifest.json");
+    const text = await readFile(file, "utf8").catch(() => null);
+    if (text === null) return null;
+    let name: unknown;
+    try {
+        name = (JSON.parse(text) as { name?: unknown }).name;
+    } catch {
+        name = undefined;
+    }
+    if (typeof name !== "string" || name === "") throw new Error(`${file} names no package: --out is one package's embedded directory and is replaced as a whole`);
+    return name;
+}
+
+/** Whether [inner] is [outer] or lies inside it. */
+function within(inner: string, outer: string): boolean {
+    const rel = relative(outer, inner);
+    return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
 /**

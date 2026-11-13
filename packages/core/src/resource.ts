@@ -96,7 +96,24 @@ export function resource<S, T>(
         return waiting.promise;
     }
 
-    const load = (): Promise<T> => (fresh ? Promise.resolve(value as T) : round?.promise ?? run());
+    /**
+     * Reads the source now. A handler may write it and ask for the data in the same turn, before the effect that
+     * follows the source has run: what was fetched is then for the old source, and so is a fetch on its way.
+     */
+    function sourceMoved(): boolean {
+        if (!source) return false;
+        const next = untrack(source);
+        if (next === current) return false;
+        current = next;
+        fresh = false;
+        return true;
+    }
+
+    const load = (): Promise<T> => (sourceMoved() ? run() : fresh ? Promise.resolve(value as T) : round?.promise ?? run());
+    const refetch = (): Promise<T> => {
+        sourceMoved();
+        return run();
+    };
 
     if (source) {
         let first = true;
@@ -113,7 +130,7 @@ export function resource<S, T>(
     } else if (!options.lazy) {
         run();
     }
-    return [data, { loading, error, load, refetch: run }];
+    return [data, { loading, error, load, refetch }];
 }
 
 function newRound<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {

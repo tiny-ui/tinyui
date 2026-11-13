@@ -58,12 +58,30 @@ describe("tinyui embed", { skip: qjsc ? false : "no qjsc-kmp on this machine" },
         assert.ok(!(await tree(tmp)).some((f) => f.startsWith("typo/")));
     });
 
+    it("refuses a build directory that is the output or overlaps it, before building", async () => {
+        const out = join(tmp, "host-overlap", "fixture");
+        await mkdir(join(tmp, "host-overlap"));
+        await embed({ root, out, dist: join(tmp, "dist") });
+        const before = await tree(out);
+        await assert.rejects(embed({ root, out, dist: out }), /overlap/);
+        await assert.rejects(embed({ root, out, dist: join(out, "build") }), /overlap/);
+        await assert.rejects(embed({ root, out, dist: join(tmp, "host-overlap") }), /overlap/);
+        assert.deepEqual(await tree(out), before, "the package there is untouched");
+    });
+
     it("refuses a directory that holds another package, or files that are not a package", async () => {
         const other = join(tmp, "other");
         await mkdir(other, { recursive: true });
         await writeFile(join(other, "manifest.json"), JSON.stringify({ name: "another" }));
         await assert.rejects(embed({ root, out: other, dist: join(tmp, "dist") }), /holds package another, not fixture/);
         assert.deepEqual(await tree(other), ["manifest.json"], "left as it was");
+
+        const nameless = join(tmp, "nameless");
+        await mkdir(nameless, { recursive: true });
+        await writeFile(join(nameless, "manifest.json"), JSON.stringify({ pages: [] }));
+        await writeFile(join(nameless, "notes.txt"), "keep me");
+        await assert.rejects(embed({ root, out: nameless, dist: join(tmp, "dist") }), /names no package/);
+        assert.deepEqual(await tree(nameless), ["manifest.json", "notes.txt"]);
 
         const notAPackage = join(tmp, "sources");
         await mkdir(notAPackage, { recursive: true });
