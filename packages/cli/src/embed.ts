@@ -1,6 +1,6 @@
 // `tinyui embed`: the package built from this source, written as a host's embedded package (docs/updates.md §1.4).
 import { readdir, readFile, stat } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { build, type Manifest } from "./build.ts";
 import { payload, replaceDir } from "./payload.ts";
 
@@ -66,7 +66,8 @@ async function heldPackage(out: string): Promise<string | null> {
 /** Whether [inner] is [outer] or lies inside it. */
 function within(inner: string, outer: string): boolean {
     const rel = relative(outer, inner);
-    return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+    // a directory may itself be called `..name`: only `..` and `../…` lead out
+    return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 /**
