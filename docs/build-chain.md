@@ -117,11 +117,11 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 **栈的形态**：QuickJS 打印 `at fn (模块名:行:列)`，`--strip-source` 保留行与列（宿主测试断言）。J3 的 `HostError` 在 K3 `reject` 处创建，它自己的栈只会指向 core 的入口，所以 `call()` 时先记下调用点的栈（约 1 µs），rejection 带着它——`await http.get` 无人 catch 的 E7 因此指向业务的 `await` 那一行。
 
-**回映射在哪做**：dev 构建把 `.js.map` 一起打进 App，Kotlin 侧 `SourceMaps` 按模块名惰性解析（source map v3 的 VLQ，约百行，无依赖），只解析栈里出现的行；release 不进包，sink 拿到原始栈 + `buildId`，离线对 map（Sentry / Crashlytics 的做法）。否掉 JS 侧运行时映射：字节码与内存都涨，出错时还要跑 JS。
+**回映射在哪做**：dev 构建把 `.js.map` 一起打进 App，Kotlin 侧 `SourceMaps` 按模块名惰性解析（source map v3 的 VLQ，约百行，无依赖），只解析栈里出现的行；release 不进包，sink 拿到的是原始栈 + `buildId`。否掉 JS 侧运行时映射：字节码与内存都涨，出错时还要跑 JS。
 
-**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`（运行时模块不进包，栈帧按 tinyui 版本对回，ADR-006 §2.11），`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
+**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`（运行时模块不进包，栈帧按 tinyui 版本对回，ADR-006 §2.11），`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。
 
-**map 的路径**：thunk pass 的内联 map 以绝对路径作 `source`（相对路径会被 esbuild 再按文件目录解析一次，出现 `src/pages/src/pages/` 的重复，2026-09-17 修），esbuild 输出后 CLI 把 `sources` 改写为相对项目根（`src/pages/todos.tsx`、`../../packages/core/src/host.ts`），运行时与离线符号化都以此显示。
+**map 的路径**：thunk pass 的内联 map 以绝对路径作 `source`（相对路径会被 esbuild 再按文件目录解析一次，出现 `src/pages/src/pages/` 的重复，2026-09-17 修），esbuild 输出后 CLI 把 `sources` 改写为相对项目根（`src/pages/todos.tsx`、`../../packages/core/src/host.ts`），运行时以此显示。
 
 **sample 的接线**：`collectTinyUIResources` 默认连 `.js.map` 一起进资源，`-Ptinyui.maps=false` 不带；`App.kt` 读 manifest，能读到的 map 交给 `SourceMaps`，读不到就按原始栈上报。真实 App 按构建变体决定要不要带 map，库不替宿主决定。
 

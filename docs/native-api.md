@@ -81,12 +81,12 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 }
 ```
 
-- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载（如被回收后按 props 重建）时结果会等它挂载完再送达，不会丢
+- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载时，结果等它挂载完再送达
 - 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；别的包的页面与原生路由照原样放行
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
-- `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方并经 `PageSink` 上报
-- `push` 从不在栈顶的页面发起时由宿主定，通常忽略并经 `PageSink` 上报：被盖住的页面不该把用户带去别处
-- 缺省 `Navigator.None`（调用无效果）跳原生页的路由名由 `Navigator` 解释，不进快照；`push` 是 J4，页面拿不到结果，认不出的名字由 `Navigator` 忽略并经 `PageSink` 上报。
+- `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方，并记一条日志
+- `push` 从不在栈顶的页面发起时由宿主定，通常忽略并记一条日志：被盖住的页面不该把用户带去别处
+- 缺省 `Navigator.None`（调用无效果）。`push` 是 J4，页面拿不到结果，宿主认不出的页面名由它忽略
 
 ## 4. `store`
 
@@ -103,7 +103,7 @@ host.store.set("trendingai.flag", true)            // 按 kotlinx.serialization 
 host.store.bind("trendingai.flag", flow, scope)    // 把一个 Flow 持续写入
 ```
 
-`watch` 经 J4 `store.subscribe` 登记，只有登记过的页面收到该 key 的变更。key 带包名前缀（app-model.md §7）。宿主不能替换 store 的实现；要落盘用 §7。
+`watch` 经 J4 `store.subscribe` 登记，只有登记过的页面收到该 key 的变更。宿主不能替换 store 的实现；要落盘用 §7。
 
 ## 5. `events`
 
@@ -208,7 +208,7 @@ class LocaleSource(val state: StateFlow<String>, val set: (suspend (locale: Stri
 - 插值只有 `{name}`，值按字符串替换；没有复数与数字格式化（引擎无 `Intl`）
 - 当前时区：`TinyUIHost.timeZone` 的值（IANA id），缺省为系统时区；变化时经 K5 topic `i18n.timeZone` 通知活页面，`timeZone()` 与 `formatDate()` 的绑定重算。不给 `timeZone` 时跟系统时区：公共代码里没有系统时区的变化回调，页面每次回到前台（`pageVisible()` 变 true，用户可能刚在设置里改过）时重新读一次，变了才推 K5；iOS 每次读前清掉进程内的系统时区缓存。平台不认识的 id 按系统时区显示，并经 `PageSink` 每个 id 上报一次
 - `formatDate(epochMs, pattern)`：Unicode 日期模式的纯数字子集——`yyyy MM M dd d HH H mm ss SSS`，字母之外原样输出，`'…'` 内是字面量，`''` 是一个单引号；其他字母（`MMM`、`yy`、`a`、`EEE`…）以及超出 JS `Date` 范围（±8.64e15 ms）的时间以 `E_INVALID` 抛出。2026-10-12 加（第一个需要的业务页面触发：后端给毫秒时间戳，按用户设置的时区显示）
-- 分工：JS 唯一拿不到的是时区规则，所以原生只答 J2 `i18n.zoneOffset`（那一刻的偏移，夏令时随日期走），模式在 JS 里格式化——全是数字字段，不需要语言数据，同步、可在 node 测试。月份名、星期、上下午这类随语言变的文字字段，以及复数与数字格式化，仍等第一个需要的页面，届时原生实现
+- 分工：JS 唯一拿不到的是时区规则，所以原生只答 J2 `i18n.zoneOffset`（那一刻的偏移，夏令时随日期走），模式在 JS 里格式化——全是数字字段，不需要语言数据，同步、可在 node 测试。月份名、星期、上下午这类随语言变的文字字段，以及复数与数字格式化，都不支持
 - key 的 TS 类型由 CLI 生成（build-chain.md §8），写错的 key 编译期报
 
 ## 9. `session`
@@ -310,7 +310,6 @@ TinyUIPage(module, host, locals = listOf(Coupon provides viewModel))
 | `E_NET` | 网络层失败，或宿主实现抛了非 `HostException` 的异常 |
 | `E_HTTP` | 非 2xx；`HostError` 带 `status` / `headers` / `body` |
 | `E_TIMEOUT` | 超时 |
-| `E_DENIED` | 权限拒绝 |
 | `E_CANCELLED` | 页面关闭或宿主取消 |
 | `E_QUOTA` | `storage` 超出本包上限 |
 | `E_BAD_JSON` | 载荷不是合法 JSON（JS 侧生成） |
@@ -322,7 +321,6 @@ TinyUIPage(module, host, locals = listOf(Coupon provides viewModel))
 | K 入口超时 | 5 s，超时 interrupt 判 E6 页面失败 | `PageHost.entryTimeoutMs` |
 | `onReachEnd` | 最后一行进入可见区时触发一次；列表长度变化后再武装 | `LazyColumnComponent` |
 | `onScrollEnd` | 滚动停止时触发，带首个可见行 index | 同上 |
-| `onProgress` 类节流 | 1 s | 首批组件没有，写在这里备查 |
 | `storage` 每包上限 | 约 1 MB | `Storage` |
 
 ## 15. `clipboard`
@@ -333,7 +331,7 @@ await ui.toast(i18n.t("copied"))   // 要不要提示由页面决定
 ```
 
 - J3 `clipboard.setText`，纯文本写入系统剪贴板后 resolve；框架实现（Compose `Clipboard`，Android `ClipData`、iOS `UIPasteboard`），宿主不接管
-- 只写不读：读剪贴板在 iOS 会弹"粘贴自…"的系统提示，也会让页面看到别处复制的内容；出现需要读的页面再议
+- 只写不读：读剪贴板在 iOS 会弹"粘贴自…"的系统提示，也会让页面看到别处复制的内容
 - 没给 `text` → `E_INVALID`；页面不在屏幕上（`TinyUIPage` 不在组合里）→ `E_UNSUPPORTED`
 - Android 13 起系统会自己弹"已复制"浮层，页面再 toast 会重复；这是平台行为，框架不判断
 - 2026-10-12 加（第一个需要的业务页面触发：复制订单号）
@@ -350,9 +348,9 @@ await api.post("/api/v1/auth/register", { email, password: cipher })
 - `text` 最多「密钥字节数 − 11」字节（2048 位密钥 245 字节），超长、公钥读不出或不是 RSA → `E_INVALID`；两端在同一处检查，报错一致
 - 填充带随机数：同一输入每次密文都不同，不能拿密文比对是否相等；验证只能用私钥解回来
 - 公钥须是完整合法的 X.509（各层无多余字节、带指数），且不少于 1024 位（512 / 768 位已被分解）；不合格一律 `E_INVALID`，不交给平台再报别的码
-- 选 PKCS#1 v1.5 是为了兼容仍在用它的后端。它的已知风险在解密端：服务端若让人分辨出「填充错误」与其他错误，就可能被 Bleichenbacher 式选择密文攻击；解密接口要对所有失败回同一个响应。后端支持后改用 OAEP（新增参数，不改默认）
+- 选 PKCS#1 v1.5 是为了兼容仍在用它的后端。它的已知风险在解密端：服务端若让人分辨出「填充错误」与其他错误，就可能被 Bleichenbacher 式选择密文攻击；解密接口要对所有失败回同一个响应
 - 为什么是框架能力而不是 `host.call`：加密是通用原生能力，第二个宿主一样要；在 QuickJS 里跑 JS 的 RSA 库既慢，又把加密实现放进了可热下发的包里。公钥由页面经自己的通道取、页内缓存，换钥只改页面
-- 只做 RSA 公钥加密一项；OAEP、`sha256`、`hmac`、对称加密等第一个需要的页面出现时再加，参数对象为它们留了位置
+- 只做 RSA 公钥加密（PKCS#1 v1.5）一项
 - 2026-10-28 加（注册流程触发：密码在第一步就转成密文，明文不离开那一页）
 
 ## 17. `device`
