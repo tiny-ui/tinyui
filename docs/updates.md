@@ -59,7 +59,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n �
 
 `current.json` 只有三个字段：`version` 指向哪个目录；`rollout` 0～100 的整数，缺省 100，服务端可改；`signature` 是对 `<version>/manifest.json` 原始字节的签名（§7）。指针里只有投递策略与签名值，没有任何需要签名保护的字段。
 
-这个目录是包的最终形态：交给 `tinyui publish` 上传，或者原样放到任何静态目录（§2.2）——它的布局就是 §2 客户端要请求的路径。`.js.map` 不进包，发布方归档 build 输出目录以便按 `buildId` 离线对映射（build-chain.md §7）。
+这个目录是包的最终形态：交给 `tinyui publish` 上传，或者原样放到任何静态目录（§2.2）——它的布局就是 §2 客户端要请求的路径。`.js.map` 不进包（build-chain.md §7）。
 
 ### 1.3 发布前核对目标宿主版本
 
@@ -90,7 +90,7 @@ tinyui pull --channel production --host-version <n> --out <宿主资源目录>/<
 - 指针正在灰度（`rollout` < 100）时保持现状：灰度中的版本不能成为每个新装用户的地板
 - 指针指向的版本不新于现有内置包（同一 `hostVersion` 下比 `createdAt`）时保持现状
 - 像设备一样验签、核对 name / version / hostVersion、逐文件核对 sha256，任一步不过就一个文件都不写；换入时先备份旧目录，失败即还原
-- 走公开投递端点，不要 token。输出与 `tinyui build` 产物同布局（`manifest.json`、`pages/`），manifest 是下载来的原始字节；包里没有 `.js.map`，内置包的栈同热下发的包一样按 `buildId` 离线对映射（build-chain.md §7）
+- 走公开投递端点，不要 token。输出与 `tinyui build` 产物同布局（`manifest.json`、`pages/`），manifest 是下载来的原始字节；包里没有 `.js.map`
 
 宿主仓里的是提交的字节，F-Droid 从源码构建时不需要 Node。
 
@@ -136,7 +136,7 @@ base = https://updates.tinyui.app/<app>/<channel>
 
 托管实例的指针、release 记录与 token 都存 R2（强一致）：发布、回滚、吊销 token 立即生效。代价是 `current.json` 的读取不走 KV 的边缘缓存，延迟略高，对 App 启动时的后台 `check()` 可接受。
 
-进 URL 的只有永久不变的身份：`app` 由实例管理员分配、全局唯一（§6.3）；`channel` 由宿主构建变体决定（`production` / `staging` / `dev`），是 App 级的部署环境而不是包级的；`pkg`、`hostVersion` 见上。**组织 / 租户（计费主体）不进 URL**——它会改名、转让、拆合，只是 app 记录上的一个可改字段。
+进 URL 的只有永久不变的身份：`app` 由实例管理员分配、全局唯一（§6.3）；`channel` 由宿主构建变体决定（`production` / `staging` / `dev`），是 App 级的部署环境而不是包级的；`pkg`、`hostVersion` 见上。
 
 ### 2.2 静态目录
 
@@ -224,30 +224,7 @@ class Updates(
 
 `trigger`：`STARTUP` / `RETRY` / `FOREGROUND` / `MANUAL`，说明这次 `check()` 由什么发起（§4.6）；宿主直接调 `check()` 时为 `MANUAL`。重试与前台检查会让失败事件的次数变多，失败率按设备去重不受影响，按次数看时按 `trigger` 拆开。
 
-这些字段由下面的遥测产品功能倒推而来；事件在库里定形，上报到哪里（宿主埋点、更新服务的控制台）是宿主的事。控制台的一切视图都按 (app, pkg) 切，采用率的分母 `install` 按 app 去重（ADR-006 §4.3）。
-
-**遥测产品功能**（控制台按发布者的工作流排；"投递日志"指服务端对两种 GET 的计数）：
-
-| 阶段 | 功能 | 看什么 | 数据 | 分期 |
-|---|---|---|---|---|
-| 发布后观察 | 采用曲线 | 每个 release 跑它的活跃设备占比随时间变化，多条叠看新版吃掉旧版 | `Running` 按 (pkg, version, day) 去重计数 | MVP |
-| | 版本分布 | 此刻活跃设备各跑哪个 version、多少还在内置包 | `Running` 快照 | MVP |
-| | 安装漏斗 | check → 中签 → 下载 → 校验 → 安装 → 生效，每级掉多少 | `Skipped(ROLLOUT)`、`Failed(DOWNLOAD / INTEGRITY)`、`Installed`、`Running` | MVP |
-| | 下载量对照 | 服务端数到的 `<version>/` 下载次数 vs 客户端上报的 `Installed`，对不上即上报链路或 CDN 有问题 | 投递日志 + `Installed` | 二期 |
-| 灰度决策 | 灰度命中率 | 中签比例是否贴近 `rollout`，偏离即宿主 `installId` 有问题 | `Skipped(ROLLOUT)` vs `Installed` | MVP |
-| | 灰度期健康对比 | 灰度人群与内置包人群的回退率、失败率对比，决定推 100% 还是回滚 | `RolledBack`、`Failed` 按 version 分组 | MVP |
-| | 拨杆就地操作 | 曲线旁直接改 `rollout`，或一键触发回滚（发布方 CI 用旧内容重发一个新 version 再晋级；私钥只在发布方，服务端不能自己签，§6.2） | 发布协议 | MVP |
-| 止血 | 回退率告警 | `RolledBack / Installed` 超阈值即通知（webhook / 邮件） | `RolledBack`、`Installed` | 二期 |
-| | 自动止血 | 超阈值自动把 rollout 拨 0（止住新的安装），并通知发布方回滚，按包开关与阈值 | 同上 + 发布协议 | 二期 |
-| | 失败原因分布 | `Failed` 按 stage、`Skipped` 按 reason 分布——发错目录、公钥没换、CDN 缓存坏各有各的形状 | `Failed.stage`、`Skipped.reason` | MVP |
-| 排障 | 回退关联的页面错误 | `RolledBack` 的 kind / page / buildId 聚合，可对回 source map | `RolledBack` | 二期 |
-| | 兼容性错配 | 各不匹配项各多少台；App 新版发出后旧 hostVersion 还剩多少活跃设备，决定何时停发旧 hostVersion | `Skipped.mismatch` | 二期 |
-| | 按租户标识查询 | 租户在上报里自带用户 / 设备标识时，查该标识最近跑什么版本、有没有回退 | 上报里的 opaque 字段，服务端只存不解释 | 按需 |
-| 健康巡检 | hostVersion 存量 | 每个 hostVersion 还有多少活跃设备，哪些 hostVersion 可停止维护 | `Running` 按 hostVersion | 按需 |
-| | 内置包占比 | 长期跑内置包的比例，高了说明 `check()` 没被调用或更新服务被网络策略挡了 | `Running.source` | 按需 |
-| | 上报健康 | 遥测事件量与投递日志的比值 | 两者 | 按需 |
-
-不在遥测范围内：页面级性能与业务埋点（宿主埋点的事，遥测只关心包的生命周期）；逐设备实时状态与远程操作（与"投递请求不带设备信息、客户端掷骰"相冲）。
+事件在库里定形，上报到哪里是宿主的事。
 
 ### 4.3 `check(pkg)` 状态机
 
@@ -339,7 +316,7 @@ scheduler.checkNow()                                       // 切了通道或服
 
 服务端实现的第二组端点，`tinyui-cli` 是它的客户端。所有请求 `Authorization: Bearer <token>`。
 
-用词：**app** 是一个宿主 App——URL 的 `<app>` 段、`hostVersion` 序列、宿主快照、权限都挂在它上面；**租户**是拥有 app 的计费主体，只是 app 记录上可改的 `org` 字段，会改名、转让，所以不进 URL、不挂权限。一个租户可以有多个 app。
+用词：**app** 是一个宿主 App——URL 的 `<app>` 段、`hostVersion` 序列、宿主快照、权限都挂在它上面。
 
 凭据三层，下层由上层签发：
 
@@ -381,7 +358,7 @@ app token 与发布 token 一样可以签多个、只返回一次明文、服务
 
 | 请求 | 凭据 | 语义 |
 |---|---|---|
-| `POST /apps`，body `{ "id", "name", "org"? }` | `ADMIN_TOKEN` | 建 app；`org` 即租户，可改，不进任何路径 |
+| `POST /apps`，body `{ "id", "name", "org"? }` | `ADMIN_TOKEN` | 建 app；`org` 是可选的归属备注，建 app 时存下，不进任何路径 |
 | `POST /apps/<app>/tokens` | `ADMIN_TOKEN` | 签发 app token，只返回一次；服务端只存哈希 |
 | `DELETE /apps/<app>/tokens/<tokenId>` | `ADMIN_TOKEN` | 吊销 app token |
 
