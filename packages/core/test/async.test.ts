@@ -168,6 +168,26 @@ describe("resource: load, lazy, source", () => {
         assert.equal(calls.length, 2, "the same value is not a change");
     });
 
+    it("load() right after writing the source fetches for the new source, once", async () => {
+        const { calls, fetcher } = manual<string>();
+        let data: () => string | undefined = () => undefined, actions: Actions<string> | undefined;
+        mount(() => {
+            const [query, setQuery] = signal("a");
+            g["__setQuery"] = setQuery;
+            [data, actions] = resource(query, (q) => fetcher(q));
+            return h(Text, { text: "x" });
+        });
+        calls[0]!.resolve("for a");
+        await drain();
+        // a handler: write the source and ask for the data in the same turn, before any flush
+        let loaded: Promise<string> | undefined;
+        transaction(() => { (g["__setQuery"] as (v: string) => void)("b"); loaded = actions!.load(); });
+        assert.deepEqual(calls.map((c) => c.arg), ["a", "b"], "not the cached result for a, and the effect did not fetch b a second time");
+        calls[1]!.resolve("for b");
+        assert.equal(await loaded, "for b");
+        assert.equal(data(), "for b");
+    });
+
     it("a lazy resource with a source stays idle through source changes until it is asked for", async () => {
         const { calls, fetcher } = manual<string>();
         let actions: Actions<string> | undefined;
