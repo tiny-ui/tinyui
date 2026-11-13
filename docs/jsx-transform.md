@@ -58,7 +58,8 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 | `{...props}` 展开属性 | 展开会立刻求值 getter，丢失响应式 | 显式列出属性 |
 | children 里的表达式：`{cond && <A/>}`、`{cond ? <A/> : <B/>}`、`{list.map(...)}`、`{value}` | children 创建后不可变（runtime-api.md §3.1） | `<Show>` / `<For>`；文本走 `text` prop |
 | 非空白的 JSXText：`<Text>hi</Text>` | 同上 | `<Text text="hi" />` |
-| `async` 组件函数上的 JSX（`export default async function`） | 组件必须同步 | `resource` |
+
+`async` 组件不在编译期拦：运行时在组件返回 Promise 时抛错（runtime-api.md §3.1），改用 `resource`。
 
 例外：children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `Keyed` / `BottomSheet` 的渲染函数）合法，原样传为 `children`。
 
@@ -75,4 +76,4 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 
 ## 6. 实现（非契约）
 
-倾向 `oxc-parser`（含 TSX 的 ESTree AST，napi 二进制）+ `magic-string`（局部替换 + map），只改属性表达式与做 §3 检查，不做整文件代码生成；JSX → `h()` 仍交给 esbuild。备选 `@babel/parser`（纯 JS）。切换只影响 CLI 内一个文件。
+用 `oxc-parser`（含 TSX 的 ESTree AST，napi 二进制）+ `magic-string`（局部替换 + map），只改属性表达式与做 §3 检查，不做整文件代码生成；JSX → `h()` 仍交给 esbuild。实现在 `packages/cli/src/transform.ts` 一个文件里。

@@ -2,13 +2,13 @@
 
 - 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
-- 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、页面级配置文件不在本期（`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完，见 §5）；字节码行号回映射见 §7
+- 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk 已随 M1 做进 CLI（[jsx-transform.md](./jsx-transform.md)），`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完（§5）；字节码行号回映射见 §7
 
 ## 1. 目标与验收
 
 `tinyui build` 把每个页面的 TSX 编成一个 ESM 模块字节码；`tinyui-core` / `tinyui-native` 各编成一个运行时模块字节码，由库构建时编好、随库发布（ADR-006 §2.11）。每页一个 Runtime 按 ADR-002 K0 的顺序加载。
 
-验收：sample（包名 `sample`）的 `src/pages/home.tsx` 经 CLI 产出 `pages/home.jsb`，Android / iOS 上 App 启动后显示页面 `default` 导出的返回值，其中含 `import.meta.url` 的值 `tinyui:sample/home`——模块名、external、注册顺序三件事一次验完。CI 的 gradle 与 pnpm 两条 job 都经过这条链。
+验收：sample（包名 `sample`）的 `src/pages/counter.tsx` 经 CLI 产出 `pages/counter.jsb`，Android / iOS 上 App 启动后渲染出这一页，它的 `import.meta.url` 是 `tinyui:sample/counter`——模块名、external、注册顺序三件事一次验完。CI 的 gradle 与 pnpm 两条 job 都经过这条链。
 
 ## 2. 管线
 
@@ -63,14 +63,14 @@ tinyui-native 同上（对它而言 tinyui-core 是 external）
 
 ### 4.3 选 esbuild 的理由
 
-- 需求全在内置能力里：`bundle` / `external` / `format` / `target` / `jsxFactory` / `sourcemap` 六个选项即全部配置，零插件
+- 打包、擦除、JSX → `h()` 都在内置能力里：`bundle` / `external` / `format` / `target` / `jsxFactory` / `sourcemap`。其余靠一个自己的插件接进来：自动 thunk、`.svg` 加载器、把运行时模块留作外部依赖
 - 不降级是默认行为：它的定位就是擦除与打包，`esnext` 下不碰语法，与 ADR-005 "CLI 只做 TS 擦除与 JSX 变换"一致；以转换为核心的工具反而要花精力确认它没改写语法
-- 一个依赖、一个二进制：CLI 是业务 App 要安装的包，依赖树越小越好
+- 依赖树小：CLI 是业务 App 要安装的包。现在的运行时依赖是 esbuild、JSX 变换用的 `oxc-parser` 与 `magic-string`、`qjsc-kmp`、联网命令用的 `undici`
 - 速度：单页毫秒级，watch 与几十页全量构建不需要额外优化
 
 ### 4.4 局限与出口
 
-esbuild 的 JSX 变换是内置固定逻辑、不可编程。C 组的自动 thunk 要对 JSX 属性表达式判断后包成 getter，esbuild 做不到。出口：`onLoad` 插件拦截 `.tsx`，先跑自有 JSX 变换（TypeScript transformer API 或 oxc），把已是 `h()` 调用的 JS 交回 esbuild 合并——esbuild 退化为"擦除 + 合并"，变换逻辑在自己手里。
+esbuild 的 JSX 变换是内置固定逻辑、不可编程，自动 thunk 要对 JSX 属性表达式判断后包成 getter，它做不到。所以 `onLoad` 插件拦截 `.tsx`，先跑自己的变换（oxc 解析、只改属性表达式），再把仍是 JSX 的源码交回 esbuild 变成 `h()` 调用并合并。
 
 rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一次 `build()` 调用，切换成本在一个文件内，不需要现在锁定。
 
@@ -88,10 +88,11 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 ### 5.1 页面对宿主的使用必须能静态识别
 
-热下发发布前要核对"这个包用到的宿主能力、网络通道与宿主组件，目标宿主版本都提供"（updates.md §1.3），所以 `tinyui build` 必须能从页面代码里找全这些名字，四条硬规则，违反即构建失败：
+热下发发布前要核对"这个包用到的宿主能力、网络通道与宿主组件，目标宿主版本都提供"（updates.md §1.3），所以 `tinyui build` 必须能从页面代码里找全这些名字，下面几条硬规则，违反即构建失败：
 
 - **`host.call` 的第一个参数是字符串字面量**：`host.call("billing.prices")` 可以，`host.call(`analytics.${kind}`)` 或把名字放进变量都不行，要改写成若干个明确的字面量调用。`host` 也只能以 `host.call(…)` 的形式使用，不能赋给别的变量或传出去；整体导入时（`import * as native`）只能写 `native.host.call(…)` 这类按成员的用法
 - **`session.signIn` 按成员调用**：`session.signIn(…)` 记作能力 `session.signIn` 进 `requires`；`session` 同样不能赋给别的变量或传出去
+- **`i18n.setLocale` 按成员调用**：`i18n.setLocale(…)` 记作能力 `i18n.setLocale` 进 `requires`（2026-11-13）。`i18n` 的其他用法不受限；把 `setLocale` 解构出来再调，构建认不出来
 - **`http.client` 的参数是字符串字面量**：`http.client("app")` 可以，变量或模板串不行；`http` 的其他用法（`http.get` 等，走 `default` 通道）不受限。`http.client` 同样只能按成员调用，不能赋给别的变量或传出去（2026-09-25）
 - **宿主组件的类型能静态解析**：直接写 `<ta.Icon>` 这类标签（`tinyui schema` 生成的 `ta` 对象），或字符串字面量类型；条件选择（`cond ? ta.Icon : ta.Loading`）可以。先赋给变量再用（`const C = ta.Icon; <C />`）、来自函数参数、运行时计算的类型都不行；`ta` 这类组件对象不能被改写、删属性或整个传出去
 - 页面里不要再声明名叫 `host`、`http`、`session`、`h` 的局部变量或参数：解析按名字进行，重名会让所有用法都无法确定
@@ -100,15 +101,15 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 
 ## 6. 各处职责
 
-| 位置 | 改动 |
+| 位置 | 做什么 |
 |---|---|
-| `packages/cli` | `bin` 入口 `tinyui`，子命令 `build`，读工程根 `tinyui.config.json`（包名、公钥、页面目录），参数 `--root` / `--out` / `--qjsc`；依赖 esbuild。测试：夹具 TSX 打包后断言 `h(` 调用、裸说明符保留、相对 import 已合并、`.map` 存在；qjsc 步骤在找不到 `qjsc-kmp` 时跳过 |
-| `packages/core` / `native` | 不动运行时 API，只保证入口能打成单模块，各导出 `VERSION` 供 sample 显示 |
-| `compose/` | ADR-002 K0 最小版：注册 core → 注册 native → 运行页面模块 → 返回 namespace。命名待 M1 定，本期只保证序列在库里而不在 sample 里。commonTest 用 `JsBytecode.compile` 现场编字节码，不依赖宿主工具 |
-| `sample/js` | 新 pnpm workspace 成员，包名 `sample`，`src/pages/home.tsx`。本期页面用纯 TS 只 import `VERSION`：`h` 的签名是 C 组的事，不在 core 放临时实现；JSX 变换的正确性由 CLI 单元测试覆盖 |
-| `sample/shared` | Gradle：`pnpm run build` → `tinyui embed`（2026-11-13 起；此前 `tinyui build` 再由 `Sync` 挑 `.jsb` 与清单，现在挑哪些文件归 CLI，updates.md §1.4）→ `Sync` 原样收进资源目录 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0。AGP 9 的 KMP 库插件默认不处理 assets，Compose resources 在 Android 走 assets，必须 `androidResources { enable = true }`，否则 APK 里没有资源且构建不报错（2026-09-16 实测） |
+| `packages/cli` | `tinyui build`：读工程根 `tinyui.config.json`（包名、公钥、页面目录），每页打成一个模块、编成字节码、写 `manifest.json`；`tinyui embed` 再写成内置包（updates.md §1.4）。测试：夹具 TSX 打包后断言 `h(` 调用、裸说明符保留、相对 import 已合并、`.map` 存在；找不到 `qjsc-kmp` 的机器上跳过字节码那一步 |
+| `packages/core` / `native` | 运行时模块，随库内置（`pnpm runtime` 生成字节码），不进页面包 |
+| `compose/` | K0 加载序列：注册 core → 注册 native → 运行页面模块 → 取 `default` 导出挂载 |
+| `sample/js`、`sample/js-extra` | 两个示例包（pnpm workspace 成员），演示多包 |
+| `sample/shared` | Gradle：`pnpm run build` → `tinyui embed`（挑哪些文件归 CLI）→ `Sync` 原样收进资源目录 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0 |
 | `settings.gradle.kts` | 有 `quickjs-kmp.dir` 时把 `qjsc-kmp` 路径传给 Exec 任务 |
-| CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QUICKJS_HOST_JNI` 传入；`qjsc-kmp` 来自 npm 包（2026-09-23 起）；ios.yml 同样 |
+| CI | gradle job 装 node 与 pnpm；Android host 测试要加载宿主 JNI 库（Maven 包里没有），clone quickjs-kmp 对应版本编 `buildNativeHostJni`，经 `TINYUI_QUICKJS_HOST_JNI` 传入；`qjsc-kmp` 来自 npm 包 |
 
 ## 7. 错误上报与 source map
 

@@ -27,8 +27,9 @@
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | | `manifest()` | Kotlin 下发的组件 / 能力清单 |
-| 版本 | `VERSION` | 包版本，也是运行时与 Kotlin 侧对齐的依据（patch-protocol.md §6） |
-| 内部 | `internal.{call, query, send, onEmit}` | core 与 `tinyui-native` 之间的桥契约（§9），业务不用 |
+| 错误 | `HostError` | 宿主调用失败时 Promise 以它 reject，带 `code`（native-api.md §14），`http` 的还带 `status` / `headers` / `body`；也从 `tinyui-native` 导出 |
+| 版本 | `VERSION` | 包版本 |
+| 内部 | `internal.{call, query, send, onEmit, listen}` | core 与 `tinyui-native` 之间的桥契约（§9），业务不用 |
 
 不在 v1：`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal` / `observable`（每页一个引擎，模块作用域就是页面作用域）。
 
@@ -327,19 +328,19 @@ export default function Home(props: HomeProps): Node { … }
 | 入口 | 全局名 | 签名 | 说明 |
 |---|---|---|---|
 | J1 | `__host_apply` | `(patchJson: string) => void` | 每次 flush 至多一次；patch 为空时不调 |
-| J2 | `__host_query` | `(name: string, argsJson: string) => string \| number \| boolean \| null` | 白名单同步查询；对象结果为 JSON 文本 |
+| J2 | `__host_query` | `(name: string, argsJson: string) => string` | 白名单同步查询；结果一律是 JSON 文本，JS 侧 `JSON.parse` |
 | J3 | `__host_call` | `(name: string, cbId: number, argsJson: string) => void` | 结果经 K3 |
 | J4 | `__host_send` | `(name: string, argsJson: string) => void` | 即发即忘 |
 | J5 | `__host_report` | `(kind: "E1", detailJson: string) => void` | 运行时捕获但不中断事务的业务错误 `{ entry, message, stack }`；`console.*` 走引擎 logger |
 
-`tinyui-native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），经 core 的 `internal.{call, query, send, onEmit}` 调用；业务不直接碰 `__host_*` 也不碰 `internal`。`internal` 留在主入口而不是子路径 `tinyui-core/internal`：运行时模块按名字注册进引擎的模块表，子路径会成为第三个模块名，要么再注册一个模块、要么被打进 native 的字节码而复制一份 core 的模块状态（pending 表分裂）。
+`tinyui-native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），经 core 的 `internal.{call, query, send, onEmit, listen}` 调用；业务不直接碰 `__host_*` 也不碰 `internal`。`internal` 留在主入口而不是子路径 `tinyui-core/internal`：运行时模块按名字注册进引擎的模块表，子路径会成为第三个模块名，要么再注册一个模块、要么被打进 native 的字节码而复制一份 core 的模块状态（pending 表分裂）。
 
 错误分类的运行时侧行为（ADR-002 §3.5）：
 
 | | 运行时做什么 |
 |---|---|
 | E1 handler / 回调抛错 | `dispatch` / `resolve` / `reject` / `emit` 内 catch → `__host_report("E1")` → 入口正常返回，Kotlin 照常调 `flush()` |
-| E2 渲染期抛错 | `mount()` 或 `flush()` **直接抛出**（`JsException` 带 JS 栈），运行时先清空 patch 缓冲；Kotlin 不再调 `flush()`，判页面失败 |
+| E2 渲染期抛错 | `mount()` 或 `flush()` **直接抛出**（`JsException` 带 JS 栈），运行时先清空 patch 缓冲；Kotlin 不再调 `flush()`，判页面失败。宿主收到的 kind 分两种：页面挂载完成之后（事件、回送、推送引起的 flush）是 `E2`；挂载期间抛的与加载失败归在一起，是 `E6`。本文各处说「抛 E2」指的是这类渲染期错误，首帧发生时宿主看到的是 `E6` |
 | E3 `reject` 到达 | 对应 Promise reject 为 `HostError`，其 `stack` 是 J3 调用点（`call()` 时记下），不是 `reject` 到达处；无人 catch 走 E7（引擎的 unhandled rejection 回调，Kotlin 侧接） |
 | E4 `__host_query` 抛错 | 在 JS 里是普通异常，落入 E1 |
 | E7 未处理 rejection | quickjs-kmp `onUnhandledRejection` → Kotlin `PageError("E7")`，页面继续 |

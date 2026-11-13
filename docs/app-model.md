@@ -1,6 +1,6 @@
 # 应用模型：页面是 JS 的世界，应用是 Kotlin 的世界
 
-- 状态：已对齐（2026-09-16；2026-09-19 加多包：路由键含包名、§7 跨包约定；2026-09-23 宿主层面的页面标识加 `tinyui:` 前缀，M6 拍板第 7 点；2026-09-25 按 ADR-007：store 为框架持有的 App 级单例、登录态改为框架标准会话、持久化由框架 `storage` 提供）；API 面（`tinyui-native` 的 `navigation` / `store` / `events`）归 roadmap C 组与 J2 白名单一起定
+- 状态：已对齐（2026-09-16；2026-09-19 加多包：路由键含包名、§7 跨包约定；2026-09-23 宿主层面的页面标识加 `tinyui:` 前缀，M6 拍板第 7 点；2026-09-25 按 ADR-007：store 为框架持有的 App 级单例、登录态改为框架标准会话、持久化由框架 `storage` 提供）；API 面见 native-api.md §3–§5
 - 来源：ADR-002 "跨页共享状态走 Kotlin（K5 推送）"、"多页共享引擎被否：JS 全局正是隔离问题的来源"、`navigation.push` 为 J4；ADR-003 "组件注册表 App 级、不可变"
 
 ## 1. 前提
@@ -16,7 +16,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 | 跨页状态 | 框架的 App 级内存 store（`TinyUIHost.store`） | 见第 3 节；登录会话见第 3.1 节 |
 | 应用级 JS 逻辑 | Kotlin，或无状态工具代码打进各页模块 | 常驻 JS 的出口是"应用级服务 Runtime"：一个不挂 UI、随 App 生命周期的引擎，页面经 Kotlin 以 JSON 与它通信，形态同 J3 / K3。v1 不做，触发条件见 roadmap D 组 |
 
-**TinyUI 页从宿主看只是一个 Composable**，导航栈里可以混放原生页与 TinyUI 页。v1 不内置路由器：库提供页面 Composable 与 `Navigator` 接口，宿主用自己的导航框架实现，JS 的 `navigation.*` 委托给它；sample 给最简实现。
+**TinyUI 页从宿主看只是一个 Composable**，导航栈里可以混放原生页与 TinyUI 页。v1 不内置路由器：库提供页面 Composable 与 `Navigator` 接口，宿主用自己的导航框架实现，JS 的 `navigation.*` 委托给它（sample 是标签页结构、没有返回栈，它的 `Navigator` 只打日志；带返回栈的写法见 native-api.md §3）。
 
 ## 3. 页面之间怎么通信
 
@@ -32,7 +32,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 | 直接调用另一页 | 无 | 无 | 不支持；需要它说明那个状态该进 store |
 
 - **向前传参**：props 是 JSON，函数不过桥。"完成后回调我"只能靠回传或事件
-- **向后回传**：原语是 K5 topic，结果投给"处在那个栈位置的页面"而不是某个闭包，页面被回收重建后照样收到。`push` 返回 Promise 的写法（J3 + cbId）与栈深回收冲突——被回收页的闭包已不存在；可之后作为糖加在 `tinyui-native`，文档写明回收语义
+- **向后回传**：原语是 K5 topic，结果投给"处在那个栈位置的页面"而不是某个闭包，页面被回收重建后照样收到。`push` 返回 Promise 的写法不做：结果要投给栈上那个位置的页面，不是某个闭包；页面要这种写法可以自己用 `onResult` 包一层
 - **共享状态**：真值在框架持有的 `TinyUIHost.store`，全 App 一份，原生页与 TinyUI 页共用；内存 key-value 所以 J2 同步读合法；JS 侧包成 signal，K5 到达时更新 signal，绑定了它的 prop 自动重算，与页内响应式同一套。store 不落盘；包自己的持久数据用 `storage`（按包隔离，native-api.md §7）
 - **事件广播**：与宿主事件同一条总线，网络状态、主题是 Kotlin 往总线发，业务事件是 JS 往总线发，消费方不区分来源。订阅登记到 Kotlin，只推给感兴趣的页面（每次 K5 = 一次线程切换 + 一个事务）；订阅随引擎关闭消失
 
@@ -86,7 +86,7 @@ sample 的四个 tab 各给一个存储（`App.kt`），切走再切回，表单
 
 ## 6. 对构建链的影响
 
-每页一份字节码正好是路由键到产物的一一映射，`tinyui build` 输出页面清单（`manifest.json`），Kotlin 侧路由表以它为来源，不两边手写。App 挂多个包时路由表是各包 manifest 的并集，键已含包名，不会撞。见 [build-chain.md](./build-chain.md)。
+每页一份字节码正好是路由键到产物的一一映射，`tinyui build` 输出页面清单（`manifest.json`），宿主按页面名从包里取字节码。页面名到宿主导航条目的映射由宿主自己写；App 挂多个包时键已含包名，不会撞。见 [build-chain.md](./build-chain.md)。
 
 ## 7. 多包
 
