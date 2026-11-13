@@ -1,6 +1,6 @@
 # 下一阶段清单
 
-四份 ADR 的"待定 / 待验证"汇总（2026-09-15），按性质分四组。条目状态在此更新，不回改 ADR。
+各 ADR 的"待定 / 待验证"汇总（2026-09-15 起），按性质分四组。条目状态在此更新，不回改 ADR。
 
 ## A. 立项骨架（一切的前置）
 
@@ -29,7 +29,7 @@
 | 项 | 来源 | 状态 |
 |---|---|---|
 | JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`resource`**（原拟名 `createResource`）；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 已定（2026-09-16，[js-runtime.html](./js-runtime.html) + [runtime-api.md](./runtime-api.md)） |
-| CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 已定（2026-09-16，[jsx-transform.md](./jsx-transform.md)） |
+| CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 已定并实现（2026-09-16，[jsx-transform.md](./jsx-transform.md)） |
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 已定（2026-09-16，[patch-protocol.md](./patch-protocol.md)） |
 | schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 已定（[components.md](./components.md) §1，`tinyui schema`） |
 | 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 已定（components.md §2） |
@@ -46,7 +46,7 @@
 | 项 | 来源 | 触发条件 |
 |---|---|---|
 | ~~`createStore`（Solid 式 Proxy 深层响应式）~~ | ADR-005 | 已完成（2026-09-17，定名 `observable`，[runtime-api.md](./runtime-api.md) §2.6）：直接赋值、属性级订阅、只深代理纯对象与数组；`reconcile` / `produce` 不做，触发条件"服务端全量刷新导致整表重绑成为性能问题" |
-| ~~热下发~~ | ADR-005 | 已定（2026-09-18，[ADR-006](./adr-006-hot-updates.md) + [updates.md](./updates.md)；2026-09-19 定服务端与签名、改多包模型），实现待开，顺序见下方第 7 条；ADR-006 §4.3 的推迟项（控制台、遥测、D1、非 CF 适配器、计费）各带触发条件 |
+| ~~热下发~~ | ADR-005 | 已定（2026-09-18，[ADR-006](./adr-006-hot-updates.md) + [updates.md](./updates.md)；2026-09-19 定服务端与签名、改多包模型），已实现（[updates-plan.md](./updates-plan.md)）；ADR-006 §4.3 的推迟项（控制台、遥测、D1、非 CF 适配器、计费）各带触发条件 |
 | `qjsc-kmp` 宿主二进制分发 | build-chain.md §5 | **已完成**（2026-09-23，热下发 M5.2）：npm 入口包 `qjsc-kmp` 加 `@qjsc-kmp/<os>-<arch>` 平台包（esbuild 模式）而非 GitHub Release——内网 npm 代理天然能拉；quickjs-kmp 0.1.2 起随 tag 发布，`tinyui-cli` 依赖它 |
 | ~~App 级共享模块（业务共享代码进 external 列表与模块表）~~ | build-chain.md §3 | 砍掉（2026-09-19）：多包模型下包自包含，体积问题的出口是拆包（ADR-006 §2.10） |
 | 向 bellard/mquickjs 上报 S4 段错误 | ADR-005 §3.2 | 用户决定 |
@@ -79,11 +79,11 @@
 
 ## 建议顺序与里程碑
 
-1. **A 立项骨架**——先 quickjs-kmp（M1～M3），再 TinyUI 构建链，否则 B、C 都没有落点
-2. **B 前三项并行**——半天到一天的实验，结果决定 C 里几个数值和 ADR-003 的退路
-3. **C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写
+1. ~~**A 立项骨架**——先 quickjs-kmp（M1～M3），再 TinyUI 构建链~~ 已完成
+2. **B 验证实验**——整体延后（见 B 组开头），何时做由人工判断
+3. ~~**C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写~~ 已完成
 4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`tinyui-core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），真机需要 quickjs-kmp ≥ 0.1.1（2026-09-18 已发并 bump catalog）
 5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`tinyui-native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
-6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提——tinyui 0.1.0（Maven + npm 三包 `tinyui-core` / `tinyui-native` / `tinyui-cli`）与 quickjs-kmp 0.1.1——已于 2026-09-18 发出（PR #11）；iOS 模拟器 smoke 通过，三条状态验证（结账失败 / 未登录 / 已是 Pro）不做
-7. **热下发实现**（ADR-006 定稿后；里程碑与进度见 [updates-plan.md](./updates-plan.md)）：CLI（`tinyui.config.json`、模块名加包名、manifest 扩展、`bundle` + 签名、`keys`）→ core 库 `Bundle` → `updates/` 模块（多包 `Updates`）→ `tinyui-updates-server` 仓 MVP（投递 + 发布 + 管理端点，部署 `updates.tinyui.app`）→ CLI `publish` / `apps` / `packages` / `tokens` / `releases` → TrendingAI 接入 → 第二个 App 接入。前置：`qjsc-kmp` npm 平台包
+6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提——tinyui 0.1.0（Maven + npm 三包 `tinyui-core` / `tinyui-native` / `tinyui-cli`）与 quickjs-kmp 0.1.1——已于 2026-09-18 发出（PR #11）；iOS 模拟器 smoke 通过，三条状态验证（结账失败 / 未登录 / 已是 Pro）不做
+7. ~~**热下发实现**（ADR-006 定稿后；里程碑与进度见 [updates-plan.md](./updates-plan.md)）：CLI（`tinyui.config.json`、模块名加包名、manifest 扩展、`bundle` + 签名、`keys`）→ core 库 `Bundle` → `updates/` 模块（多包 `Updates`）→ `tinyui-updates-server` 仓 MVP（投递 + 发布 + 管理端点，部署 `updates.tinyui.app`）→ CLI `publish` / `apps` / `packages` / `tokens` / `releases` → TrendingAI 接入 → 第二个 App 接入。前置：`qjsc-kmp` npm 平台包~~ 已完成（进度见 updates-plan.md）
 8. ~~**框架职责边界**（[ADR-007](./adr-007-host-boundary.md)，2026-09-25 定）：tinyui 一个 PR——`TinyUIHost` 重组、删 `HostServices`、App 级 store 与 `pageVisible()` 驱动、`http` 通道、`storage` 与 `cached`、包内 i18n（CLI 校验与类型）、`ui` / `linking` / `analytics` / `session`、`Icon` 与 CLI 的 `.svg` 加载器、`Loading`、`role` / `selected`、快照通道段，sample 同步改写 → 发 minor → TrendingAI 订阅页按新形态重写（trendingai-tinyui 删 `schema/` 与宿主封装；TrendingAI 删五个能力、props、宿主组件，`hostVersion` 加 1）。验收见 ADR-007 §5.4~~ 已完成（2026-09-25）：tinyui PR #28、0.8.0；热下发服务端 PR #6（manifest 认 i18n 文件）；TrendingAI PR #150（HOST_VERSION 6），trendingai-tinyui PR #5（staging 已发）。TrendingAI 订阅页体积 +1.9 KiB

@@ -70,7 +70,7 @@ npm 裸包 `tinyui` 不可用：npm 防仿冒规则判定其与已有的 `tiny-u
 ```
 tinyui/
 ├── docs/               README、ADR、roadmap
-├── packages/           所有 npm 包，目录名 = 包名去掉 scope（pnpm workspace）
+├── packages/           所有 npm 包，目录名 = 包名去掉 `tinyui-` 前缀（pnpm workspace）
 │   ├── core/           tinyui-core    JS 运行时（signal / effect / owner / h / For / Show / ref + cmd）+ 内置组件的 TS 类型（由 schema/ 生成，无运行时代码）；作为 ES 模块字节码内置
 │   ├── native/         tinyui-native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
 │   └── cli/            tinyui-cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`；`tinyui bundle` 产签名后的热下发目录，`tinyui keys generate` 产签名密钥对
@@ -88,7 +88,7 @@ tinyui/
 ```
 
 命名依据：
-- `packages/`：npm 生态惯例，`pnpm -r` / changesets 零配置；目录名与包名一一对应
+- `packages/`：npm 生态惯例，`pnpm -r` 零配置；目录名与包名一一对应
 - `core`：主包，业务 `import from "tinyui-core"`；内置组件类型并入而不单独成包（只有 `.d.ts`，不值得多一个依赖；宿主 App 自己扩展的组件类型由它自己的 schema 生成到它自己的包里，不经过本仓）
 - `native`：回答业务的问题"怎么调原生"；与 `core` 互补——core 是 JS 世界里的东西，native 是伸到 JS 外面的手。否掉 `host`（与运行时视角的"宿主"一词混）、`platform`（泛）、`capabilities`（长）
 - `compose/`：直说它是 Compose Multiplatform 那一侧，将来若有第二渲染端可并列扩展；否掉 `host/`（运行时视角的词不适合做目录）、`library/`（多生态仓里"library of what"不清）、`container/`（国内直觉好但海外联想 Docker）、`kmp/`（说构建方式不说职责）
@@ -97,7 +97,7 @@ tinyui/
 
 本地联调 quickjs-kmp：`local.properties` 写 `quickjs-kmp.dir=<仓路径>` 即 composite build 从源码构建，坐标映射由该仓 `gradle/composite-substitutions` 声明；CI 无 `local.properties`，解析 Maven 版本（catalog `quickjsKmp`）。
 
-约定：顶层只放这八个目录；新 npm 包进 `packages/`；Kotlin 侧只有独立发 artifact 的库才占顶层目录（`updates/`，ADR-006 §2.4），其他 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
+约定：顶层的源码目录就是上面这八个（另有 Gradle 自己的 `gradle/`）；新 npm 包进 `packages/`；Kotlin 侧只有独立发 artifact 的库才占顶层目录（`updates/`，ADR-006 §2.4）。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 
 ### `compose/` 的 Kotlin 包
 
@@ -133,7 +133,7 @@ app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及
 
 ## 下一阶段
 
-四份 ADR 遗留项的汇总、分组与建议顺序见 [roadmap.md](./roadmap.md)，状态在那里更新。
+各 ADR 遗留项的汇总、分组与建议顺序见 [roadmap.md](./roadmap.md)，状态在那里更新。
 
 ## ADR 写法
 
