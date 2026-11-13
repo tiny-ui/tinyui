@@ -111,6 +111,13 @@ data class Session(val loggedIn: Boolean, val userId: String?) {
 /** [signIn] runs the host's login flow and returns when it ends, whatever the outcome. */
 class SessionSource(val state: StateFlow<Session>, val signIn: suspend (source: String) -> Unit)
 
+/**
+ * The App's language as the host holds it (docs/native-api.md §8): [state] is the current one (BCP 47), which pages
+ * follow; [set] changes it when a page asks (`i18n.setLocale`), and throws [HostException] `E_INVALID` for a
+ * language the App does not have. Without [set] pages can only read it.
+ */
+class LocaleSource(val state: StateFlow<String>, val set: (suspend (locale: String) -> Unit)? = null)
+
 /** Where `analytics.track` goes (docs/native-api.md §12); [props] hold String, Long, Double, Boolean or null. */
 fun interface AnalyticsSink {
     fun track(name: String, props: Map<String, Any?>, page: PageContext)

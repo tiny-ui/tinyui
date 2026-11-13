@@ -29,6 +29,14 @@ export function locale(): string {
     return current();
 }
 
+/**
+ * J3: asks the host to change the App's language; once it has, [locale] and every `t()` binding follow. Rejects
+ * with E_UNSUPPORTED when the host does not let pages set it, E_INVALID for a language the App does not have.
+ */
+export function setLocale(locale: string): Promise<void> {
+    return internal.call<void>("i18n.setLocale", { locale });
+}
+
 /** The string for [key] in the current language, falling back towards the package default; `{name}` filled from args. */
 export function t<K extends Key>(key: K, ...rest: Args<K>): string {
     follow();

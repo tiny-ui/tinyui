@@ -4,7 +4,7 @@ import { parseSync } from "oxc-parser";
 export interface PageRequires {
     /** Host component types, always dotted (`ta.Icon`); built-ins follow the TinyUI version and are not listed. */
     components: string[];
-    /** `host.call` names, and `session.signIn` when the page calls it. */
+    /** `host.call` names, plus `session.signIn` and `i18n.setLocale` when the page calls them. */
     capabilities: string[];
     /** `http.client` channel names; the built-in `default` is not listed. */
     channels: string[];
@@ -65,6 +65,10 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (!member) return problem(ref, "session may only be used as session.<member> (docs/build-chain.md §5.1)");
         if (member.name === "signIn") capabilities.add("session.signIn");
     };
+    /** [ref] is `i18n` (or `native.i18n`): reaching setLocale needs a host that lets pages set the language. */
+    const useI18n = (ref: AnyNode) => {
+        if (memberOf(ref, parentOf(ref))?.name === "setLocale") capabilities.add("i18n.setLocale");
+    };
     const useH = (ref: AnyNode) => {
         const call = (ref as AnyNode & { parentNode?: AnyNode })["parentNode"];
         if (call?.type !== "CallExpression" || call["callee"] !== ref) return problem(ref, "h may only be called, not passed around (docs/build-chain.md §5.1)");
@@ -90,6 +94,7 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (binding?.kind === "native" && binding.imported === "host") return useHost(node);
         if (binding?.kind === "native" && binding.imported === "http") return useHttp(node);
         if (binding?.kind === "native" && binding.imported === "session") return useSession(node);
+        if (binding?.kind === "native" && binding.imported === "i18n") return useI18n(node);
         if (binding?.kind === "core" && binding.imported === "h") return useH(node);
         if ((binding?.kind === "native" || binding?.kind === "core") && binding.imported === "*") {
             // a namespace import is followed through its members, and only there: passed whole it could reach host or h unseen
@@ -100,6 +105,7 @@ export function analyzePage(page: string, code: string): PageRequires {
             if (binding.kind === "native" && member === "host") return useHost(parent);
             if (binding.kind === "native" && member === "http") return useHttp(parent);
             if (binding.kind === "native" && member === "session") return useSession(parent);
+            if (binding.kind === "native" && member === "i18n") return useI18n(parent);
             if (binding.kind === "core" && member === "h") return useH(parent);
         }
     });

@@ -14,6 +14,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Drives PageHost with a hand-written stand-in for `tinyui-core`: the K/J entry shapes, not the real runtime. */
@@ -26,6 +28,7 @@ class PageHostTest {
     }
 
     private val zoneFlow = MutableStateFlow("America/New_York")
+    private val localeFlow = MutableStateFlow("en")
 
     private val core = module("tinyui-core", """
         let patches = [], seq = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
@@ -44,6 +47,7 @@ class PageHostTest {
                 if (event === "onTimer") __host_call("timer.schedule", 7, JSON.stringify({ ms: 10 }));
                 if (event === "onBoom") { try { throw new Error("boom"); } catch (e) { __host_report("E1", JSON.stringify({ entry: "dispatch", message: e.message, stack: e.stack })); } }
                 if (event === "onReject") Promise.reject(new Error("nobody catches"));
+                if (event === "onSetLocale") { __host_call("i18n.setLocale", 31, JSON.stringify({ locale: "zh" })); __host_call("i18n.setLocale", 32, JSON.stringify({ locale: "fr" })); __host_call("i18n.setLocale", 33, "{}"); }
                 if (event === "onQuery") patches.push(["p",1,"text", __host_query("store.get", JSON.stringify({ key: "cart" })) + "|" + __host_query("i18n.t", JSON.stringify({ key: "hi" })) + "|" + JSON.parse(__host_query("device.info", "{}")).os]);
                 if (event === "onHttp") __host_call("http.request", 9, JSON.stringify({ channel: "app", method: "GET", url: "/todos" }));
                 if (event === "onCapability") { __host_call("checkout.start", 11, JSON.stringify({ plan: "annual" })); __host_call("checkout.start", 12, JSON.stringify({ plan: "weekly" })); __host_call("nobody.home", 13, "{}"); }
@@ -88,7 +92,7 @@ class PageHostTest {
             if (request.url == "/code") return@HttpChannel HttpResponse(200, emptyMap(), "\"${request.tags["captchaScene"]}\"")
             if (request.url == "/todos") HttpResponse(200, mapOf("content-type" to "application/json"), """[{"id":1}]""") else HttpResponse(404, emptyMap(), """{"gone":true}""")
         }),
-        locale = MutableStateFlow("en"),
+        locale = LocaleSource(localeFlow) { if (it == "en" || it == "zh") localeFlow.value = it else throw HostException("E_INVALID", "no $it") },
         timeZone = zoneFlow,
         analytics = AnalyticsSink { name, props, page -> tracked += "${page.name} $name $props" },
         navigator = object : Navigator {
@@ -206,6 +210,30 @@ class PageHostTest {
         delay(200)
         assertEquals("E6", host.failure!!.kind)
         assertEquals(emptyList(), navigated)
+        host.close()
+    }
+
+    @Test
+    fun setLocaleAsksTheHostWhichMayRefuseALanguage() = runTest {
+        // the host's setter runs on the main thread, as session.signIn does
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        val host = host()
+        try {
+            host.start()
+            host.await { host.tree.root.children.isNotEmpty() }
+            host.dispatch(2, "onSetLocale", "{}")
+            host.await { (host.tree.node(1)!!.props["text"] as String).count { it == ';' } == 2 }
+        } finally {
+            Dispatchers.resetMain()
+        }
+        val text = host.tree.node(1)!!.props["text"] as String
+        assertTrue(text.contains("ok 31"), text)
+        assertTrue(text.contains("rejected 32") && text.contains("no fr"), text)
+        assertTrue(text.contains("rejected 33") && text.contains("i18n.setLocale needs a locale"), text)
+        assertEquals("zh", localeFlow.value)
+        // a host that can set the language says so in its contract; one that only reads it does not
+        assertTrue("i18n.setLocale" in tinyui.capabilityNames)
+        assertTrue("i18n.setLocale" !in TinyUIHost(ComponentRegistry().registerBuiltins(), sink, locale = LocaleSource(localeFlow)).capabilityNames)
         host.close()
     }
 

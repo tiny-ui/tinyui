@@ -69,7 +69,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n �
 
 | 输入 | 来源 |
 |---|---|
-| 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities, channels }`）：`host.call` 的能力名与 `session.signIn`（页面调用了它时）、带点的宿主组件名（`ta.Icon`）、`http.client` 的通道名；内置组件与 `default` 通道不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
+| 包用到了什么 | `tinyui build` 从每页打包产物里静态找出，写进 manifest 的 `requires`（页 → `{ components, capabilities, channels }`）：`host.call` 的能力名、`session.signIn` 与 `i18n.setLocale`（页面调用了它们时）、带点的宿主组件名（`ta.Icon`）、`http.client` 的通道名；内置组件与 `default` 通道不列，随 tinyui 版本走（规则见 build-chain.md §5.1） |
 | 目标宿主版本提供了什么 | 宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件、能力名、通道名、tinyui 下限）。`hostVersion` 加 1 合入宿主 main 时由宿主 CI 上传到热下发服务，每个 (app, hostVersion) 只能写一次；`publish` 从服务端读 |
 
 不通过即拒绝发布（一个请求都不上传），报出哪一页缺了什么：页面用到的能力、通道或宿主组件不在快照里；或快照里的 tinyui 下限与 manifest 的 `tinyui` 不兼容（§1.1；包更新：页面可能用到新版运行时的东西，这个 `hostVersion` 下最旧的宿主没有，装不上而静默跳过；major 不同：公开面已有破坏）。目标宿主版本还没有快照（宿主没上传过）也拒绝。

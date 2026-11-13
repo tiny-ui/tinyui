@@ -8,6 +8,7 @@ import okio.FileSystem
 import platform.Foundation.NSDate
 import platform.Foundation.NSLocale
 import platform.Foundation.NSTimeZone
+import platform.Foundation.countryCode
 import platform.Foundation.currentLocale
 import platform.Foundation.dateWithTimeIntervalSince1970
 import platform.Foundation.localTimeZone
@@ -21,6 +22,8 @@ internal actual fun platformInfo(): Map<String, String> = mapOf(
     "os" to "ios",
     "osVersion" to UIDevice.currentDevice.systemVersion,
     "model" to UIDevice.currentDevice.model,
+    // the region of the device's locale setting, ISO 3166-1 alpha-2; empty when the locale has none
+    "region" to (NSLocale.currentLocale.countryCode?.uppercase() ?: ""),
 )
 
 internal actual fun systemLocale(): String =

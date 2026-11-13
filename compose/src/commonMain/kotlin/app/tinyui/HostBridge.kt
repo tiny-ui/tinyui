@@ -90,6 +90,12 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
                 withContext(Dispatchers.Main) { session.signIn(a.str("source") ?: "") }
                 ""
             }
+            J3.I18nSetLocale -> settle(cbId) {
+                val set = host.locale?.set ?: throw HostException("E_UNSUPPORTED", "the host does not let pages set the language")
+                val locale = a.str("locale")?.takeIf { it.isNotBlank() } ?: throw HostException("E_INVALID", "i18n.setLocale needs a locale")
+                withContext(Dispatchers.Main) { set(locale) }
+                ""
+            }
             J3.UiToast -> settle(cbId) {
                 val message = a.str("message") ?: throw HostException("E_INVALID", "ui.toast needs a message")
                 val long = a.str("duration") == "long"
@@ -201,7 +207,7 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
             J4.EventsEmit -> host.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
             J4.EventsSubscribe -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { host.events.subscribe(topic) { json -> pageHost.emit(topic, json) } } }
             J4.I18nSubscribe -> {
-                host.locale?.let { flow ->
+                host.locale?.state?.let { flow ->
                     subscriptions.getOrPut("i18n") { follow(flow) { pageHost.emit("i18n.locale", buildJsonObject { put("locale", it) }.toString()) } }
                 }
                 val zone = host.timeZone

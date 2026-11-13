@@ -12,8 +12,16 @@ afterEach(() => tinyui().unmount());
 
 describe("tinyui-native", () => {
     it("device.info is the J2 device.info query", () => {
-        bridge.queries["device.info"] = { os: "ios", osVersion: "17.4", model: "iPhone" };
-        assert.deepEqual(device.info(), { os: "ios", osVersion: "17.4", model: "iPhone" });
+        bridge.queries["device.info"] = { os: "ios", osVersion: "17.4", model: "iPhone", region: "US" };
+        assert.deepEqual(device.info(), { os: "ios", osVersion: "17.4", model: "iPhone", region: "US" });
+    });
+
+    it("i18n.setLocale is a J3 the host settles", async () => {
+        const done = i18n.setLocale("zh");
+        const call = bridge.calls.at(-1)!;
+        assert.deepEqual([call.name, call.args], ["i18n.setLocale", { locale: "zh" }]);
+        tinyui().resolve(call.cbId, "null");
+        await done;
     });
 
     it("http.get is a J3 http.request that resolves through K3", async () => {

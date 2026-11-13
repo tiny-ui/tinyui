@@ -3,6 +3,7 @@ package app.tinyui.sample
 import app.tinyui.AnalyticsSink
 import app.tinyui.HttpChannel
 import app.tinyui.HttpResponse
+import app.tinyui.LocaleSource
 import app.tinyui.Navigator
 import app.tinyui.PageContext
 import app.tinyui.PageError
@@ -42,7 +43,8 @@ internal fun sampleHost(dataDir: Path? = null) = TinyUIHost(
         override fun log(line: String) = println("TinyUI $line")
     },
     channels = mapOf("todos" to fakeTodos),
-    locale = sampleLocale,
+    // read-only for pages: the language button is the App's own (letting pages set it would be a new capability in the host snapshot)
+    locale = LocaleSource(sampleLocale),
     session = SessionSource(signedIn) { delay(500); signedIn.value = Session(true, "demo") },
     // tabs, no stack: a page closing itself (navigation.pop, top bar back) only shows up in the log
     navigator = object : Navigator {

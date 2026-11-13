@@ -8,6 +8,8 @@ export interface DeviceInfo {
     osVersion: string;
     /** the device model as the system reports it */
     model: string;
+    /** the region of the device's locale setting, ISO 3166-1 alpha-2 such as "US"; "" when the system gives none */
+    region: string;
 }
 
 /** The platform this page runs on; answered from memory, so it is cheap to call. */
