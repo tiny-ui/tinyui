@@ -150,8 +150,8 @@ li { margin-bottom: 6px; }
 <div class="tbl"><table>
 <thead><tr><th>东西</th><th>由谁创建</th><th>挂在谁名下</th><th>什么时候没</th></tr></thead>
 <tbody>
-<tr><td>owner</td><td><code>mount</code> 建根；<code>Show</code> 每次切分支建一个；<code>For</code> 每建一行建一个</td><td>根 owner 被运行时持有；分支 owner 被 <code>Show</code> 的 cleanup 持有；行 owner 被 <code>For</code> 持有</td><td>dispose：跑名下 effect 的解绑与 cleanups。分支切换、行删除、卸载</td></tr>
-<tr><td>effect</td><td><code>h()</code> 遇到 <code>thunk</code> prop；<code>effect()</code>；<code>For</code> / <code>Show</code> 自己</td><td>创建时的当前 owner</td><td>owner dispose 时；或它所属的 effect 重跑前（effect 内 <code>onCleanup</code>）</td></tr>
+<tr><td>owner</td><td><code>mount</code> 建根；<code>Show</code> 每次切分支建一个；<code>For</code> 每建一行建一个；<code>Keyed</code> 每换一个值、<code>BottomSheet</code> 每次打开各建一个</td><td>根 owner 被运行时持有；分支 owner 被 <code>Show</code> 的 cleanup 持有；行 owner 被 <code>For</code> 持有；<code>Keyed</code> / <code>BottomSheet</code> 的同 <code>Show</code></td><td>dispose：跑名下 effect 的解绑与 cleanups。分支切换、行删除、卸载</td></tr>
+<tr><td>effect</td><td><code>h()</code> 遇到 <code>thunk</code> prop；<code>effect()</code>；<code>For</code> / <code>Show</code> / <code>Keyed</code> / <code>BottomSheet</code> 自己</td><td>创建时的当前 owner</td><td>owner dispose 时；或它所属的 effect 重跑前（effect 内 <code>onCleanup</code>）</td></tr>
 <tr><td>signal</td><td><code>signal()</code>、<code>memo()</code>、<code>resource()</code>、<code>For</code> 的 item accessor</td><td>不挂任何名下，靠引用存活</td><td>没人引用时被 GC。订阅它的 effect 被解绑后，signal 若无其他引用即回收</td></tr>
 <tr><td>节点 id</td><td><code>h()</code> 对内置类型分配</td><td>不是对象，只是整数；Kotlin 侧才有节点</td><td>不回收。<code>r</code> 之后不再出现</td></tr>
 <tr><td>槽位表</td><td><code>h()</code> 处理 children 时</td><td>内置节点</td><td>随节点 <code>r</code></td></tr>
@@ -381,7 +381,7 @@ function TodoRow(props) {
 <tbody>
 <tr><td>effect / <code>onCleanup</code> 只能在同步渲染期创建</td><td>抛错</td><td>§1：没有 owner 的 effect 永远不会被清理</td></tr>
 <tr><td>组件函数只跑一次，必须同步返回一个节点</td><td><code>async</code> / 返回 Promise 抛 E2</td><td>§2：<code>await</code> 之后已在渲染期外；§1：组件不在图里，没有第二次机会</td></tr>
-<tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code></td><td>编译期报错</td><td>§1：只有 <code>For</code> / <code>Show</code> 开 owner，别处建的节点没人负责删</td></tr>
+<tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code> / <code>Keyed</code> 与 <code>BottomSheet</code> 的内容</td><td>编译期报错</td><td>§1：只有这几个结构原语开 owner，别处建的节点没人负责删</td></tr>
 <tr><td><code>For</code> / <code>Show</code> 只能直接写在内置节点的 children 里</td><td><code>h()</code> 抛 E2</td><td>§1：槽位表挂在内置节点上，它们需要一个父节点来算 index</td></tr>
 <tr><td>内置 / 宿主节点的 prop 不能是函数（<code>on*</code> 除外）；业务组件的 prop 不限</td><td><code>h()</code> / <code>bindProp</code> 抛 E2，抓的是 <code>text={fmt}</code> 忘了调用</td><td>ADR-002：函数不过桥，边界就是 patch；业务组件之间是纯 JS 调用</td></tr>
 <tr><td><code>signal</code> 里的数组 / 对象整体替换才触发；要按字段触发用 <code>observable</code></td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；Proxy 追踪只在 store 里（runtime-api.md §2.6）</td></tr>

@@ -65,7 +65,7 @@ bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersio
 i18n       type i18n.t from the package's strings (docs/build-chain.md §8); build checks them either way
 routes     type navigation.push / replace from the package's pages (docs/build-chain.md §10)
   --root     project root (default: cwd)
-  --ts       write the tinyui-native I18nKeys augmentation here
+  --ts       write the tinyui-native type augmentation here (I18nKeys for i18n, Routes for routes)
   --check    exit 1 if --ts is not already up to date, write nothing
 
 keys generate

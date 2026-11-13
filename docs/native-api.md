@@ -26,7 +26,7 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 
 除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）、是否让页面改语言（记作能力 `i18n.setLocale`，§8）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
 
-`locals` 是这一次挂载交给 `host.call` 能力的对象（§13），只有兜底能力用得到。
+`locals` 是这一次挂载交给宿主自己代码的对象：`Navigator`（§3）、`LinkOpener`（§11）与 `host.call` 的能力（§13）都从 `page[local]` 取回，最常见的用途是让导航找到调用方自己的导航条目。
 
 ## 2. J2 白名单
 
@@ -121,7 +121,7 @@ const { status, headers, body } = await http.get<Todo[]>("https://api.example.co
 await http.post(url, { title }, { headers: { "X-Trace": id } });
 
 const api = http.client("app");      // 宿主注册的通道
-await api.post(`${BASE}/api/billing/checkout`, { plan });
+await api.post("/api/billing/checkout", { plan });
 ```
 
 J3 `http.request`，参数 `{ channel, method, url, headers?, body?, timeout?, tags? }`；`http.get` / `post` / `request` 走 `channel: "default"`。
@@ -172,13 +172,13 @@ storage.set(key, value)      // J2，超额抛 HostError E_QUOTA
 storage.remove(key)          // J4
 storage.clear()              // J4，清本包全部
 
-const [paywall] = cached("paywall.v1", () => api.get(`${BASE}/api/app-config`).then((r) => r.body.pro_paywall));
+const [paywall] = cached("paywall.v1", () => api.get("/api/app-config").then((r) => r.body.pro_paywall));
 ```
 
 - 按包隔离：键空间是 `<包名>`，同一包的页面共享，别的包与宿主不读
-- 包的第一个页面挂载时，框架把 `<dataDir>/storage/<包名>.json`（`dataDir` 不要与 `Updates` 的目录相同，那里按包名分目录） 整体读进内存；读写都在内存，写盘在最后一次写入后合并进行（写临时文件再原子替换）。进程被杀可能丢失最后几十毫秒的写入
-- 每包总量上限（序列化后字节数）由框架常量定，约 1 MB；超出时 `set` 不生效并抛 `E_QUOTA`
-- 按设备存，不区分用户：用户相关数据 key 带 `session().userId`，或在其变化时自行清理
+- 包的第一个页面挂载时，框架把 `<dataDir>/storage/<包名>.json`（`dataDir` 不要与 `Updates` 的目录相同，那里按包名分目录） 整体读进内存；读写都在内存，写盘在最后一次写入后合并进行（写临时文件再原子替换）。进程被杀可能丢失最后约 200 毫秒的写入
+- 每包总量上限由框架常量定，100 万个字符（key 与序列化后的 value 都算），约 1 MB；超出时 `set` 不生效并抛 `E_QUOTA`
+- 按设备存，不区分用户：用户相关数据 key 带 `session.state().userId`，或在其变化时自行清理
 - 不加密，不存敏感信息；框架不做格式迁移，跨版本与回滚的兼容由页面负责（换 key 或读取时容错）
 
 `cached(key, fetcher, { lazy? })` 是纯 JS 工具（先旧后新）：渲染期调用，返回 `[data, { loading, error, load, refetch }]`。它就是 `resource`（runtime-api.md §6）加两样：`data` 初值是 `storage.get(key)`，每次取到新结果就 `storage.set`；失败保留旧值并置 `error`，存不进去（`E_QUOTA`）同样进 `error`。`lazy`、`load()`、只认最新一次都随 `resource`（2026-11-13 起建在它上面，此前是另一份实现）。

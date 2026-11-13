@@ -27,7 +27,7 @@
 
 - 正整数，JS 侧 `nextId++` 分配，页内唯一，**不回收不复用**；0 保留为根容器
 - 根容器只能有一个 child（页面根节点），`mount` 时插入一次
-- `r` 之后该 id 及其子树的 id 永远不再出现；再出现是 E5
+- `r` 之后该 id 及其子树的 id 运行时不会再发；对已删的 id 发 `c` 以外的 op 按 E5 跳过
 
 ## 4. 值
 
@@ -36,7 +36,9 @@
 | 文本 | string | UTF-8 |
 | 数字 | number | 尺寸一律 dp，字号由 schema 的 `sp()` 决定（ADR-003 §3.4），不靠后缀 |
 | 布尔 | boolean | |
-| 颜色 | string | `#RRGGBB` 或 `#AARRGGBB` |
+| 颜色 | string | `#RRGGBB`、`#AARRGGBB`，或主题 token 名（components.md §6） |
+| 尺寸 | number \| string | dp 数值，或 `"fill"` / `"wrap"` |
+| 图标 | string | `"<viewBox>\|<d>"` 及其描边、加粗变体（components.md §3） |
 | 枚举 | string | schema 声明的枚举名 |
 | 空 | null | 恢复默认 |
 

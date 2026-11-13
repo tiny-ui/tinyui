@@ -37,7 +37,7 @@ pages/**/*.jsb
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.jsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件，键为其相对路径（`i18n/en.json`） |
 | `i18n` | `tinyui build` | `{ "default": 默认语言, "files": { 语言: 相对路径 } }`，包没有 i18n 资源时省略（build-chain.md §8） |
 | `tinyui` | `tinyui build` | 页面需要的最低运行时：JS 工程构建时的 `tinyui-core` 版本（能用哪些内置组件与运行时 API）与 `tinyui-cli` 版本（产物布局由同版本起的库读取）取较新者；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
-| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels }`：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3），客户端不读 |
+| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels }`：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3）；`Updates` 不读它，宿主可以用 `PackageCheck` 在设备上再核对一遍 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
 签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包没有指针文件，不参与灰度、不验签；库不读内置包 manifest 的 `hostVersion`（宿主知道自己的值）。它由 `tinyui pull` 取来时带着这个字段，宿主的发版检查用它确认内置包是给当前宿主版本发布过的（§1.4）；本地构建的包没有这个字段。
@@ -208,9 +208,9 @@ class Updates(
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
 | `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
 | `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` 默认连同平台前后台一起接上，另有 `onForeground()` / `onBackground()` / `checkNow()`（§4.6） |
-| 顶层 `@Composable fun UpdatesPage(updates, name, host, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
+| 顶层 `@Composable fun UpdatesPage(updates, name, host, propsJson, locals, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
-`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running`、`EmbeddedIncompatible` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
+`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(version, stage, message)`。`UpdateEvent` 是同一组事实加 `Running`、`EmbeddedIncompatible` 与 `RolledBack`，给宿主打日志与埋点；**所有事件都带 `pkg`**。宿主的分析口径会依赖它，所以发布后字段同样只增不改：
 
 | 事件 | 何时 | 字段（均含 `pkg`） |
 |---|---|---|
@@ -219,7 +219,7 @@ class Updates(
 | `UpToDate` | `check()` | `version`、`trigger` |
 | `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`NAME` / `VERSION` / `ENGINE` / `TINYUI` / `HOST_VERSION` 的集合、`trigger` |
 | `Installed` | `check()` | `version`、`trigger` |
-| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出，`STORAGE` 也在回退落盘失败（§4.5）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换）、`trigger`（不来自 `check()` 的为空） |
+| `Failed` | `check()` | `version`（指针阶段就失败时为空）、`stage`：`POINTER` / `MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`；`INTEGRITY` 也在启动校验（§4.4）时发出，`STORAGE` 也在回退落盘失败（§4.5）时发出、`message`（`SIGNATURE` 时注明下载 manifest 的 `publicKey` 是否等于内置——区分被篡改与公钥已轮换）、`trigger`（不来自 `check()` 的为空） |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
 `trigger`：`STARTUP` / `RETRY` / `FOREGROUND` / `MANUAL`，说明这次 `check()` 由什么发起（§4.6）；宿主直接调 `check()` 时为 `MANUAL`。重试与前台检查会让失败事件的次数变多，失败率按设备去重不受影响，按次数看时按 `trigger` 拆开。
@@ -287,7 +287,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包不到 100 KB，重算不到 1 毫秒。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包几十到一两百 KB，重算一遍的开销可以忽略。
 
 `Running` 在按 manifest 选定之后、读页面文件重算 sha256 之前发出：宿主通常拿它给遥测挂「本进程跑哪个版本」，构造又多在后台协程里，等读完整包再发会晚于宿主启动后的第一条事件（Android 的 `ProcessLifecycleOwner` 在首个 Activity 启动时就触发）。installed 损坏时依次发 `Running(installed)`、`Failed(integrity)`、`Running(embedded)`，以最后一次为准；三者都在构造返回前发出，页面拿到 `Updates` 时已经是校验过的包。
 

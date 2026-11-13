@@ -75,7 +75,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 ## 3. 内置组件
 
-`onClick` 所有容器和 `Text` 都有。事件的 payload 字段、命令的参数字段见 `schema/components/*.ts`，这里只列名字。
+容器 `Box` / `Column` / `Row` / `SectionHeader` 与 `Text` 都有 `onClick`；`LazyColumn`、`TopAppBar`、`Select`、`Tabs` 没有。事件的 payload 字段、命令的参数字段见 `schema/components/*.ts`，这里只列名字。
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|
@@ -115,7 +115,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 `TextField` 的外观与通知（2026-10-28 加，注册流程触发）：`error` 把描边、`supportingText` 染成错误色，`supportingText` 是字段下方一行提示或错误文案；`secure` 不设时跟 `keyboard="password"`，显隐切换就是页面翻转它，配 `trailingIcon` + `onTrailingClick`（设了 `secure` 或 `keyboard="password"` 的字段是 M3 的 secure 输入框 `OutlinedSecureTextField`，翻转只换遮罩方式，焦点与键盘不丢；遮罩按 M3 默认，刚输入的那个字短暂可见，与各平台自带的密码框一致；M3 的 secure 输入框只有单行，这类字段上 `singleLine=false` 无效；2026-11-03 改，此前是 `PasswordVisualTransformation` 全遮）（清除按钮同理：`trailingIcon` + `setText("")`，不另加组件）。`prefixText` 是输入前的固定文字（区号），画在 leading 槽而不是 M3 `prefix`——后者在空且未聚焦时隐藏、也不能点；`onPrefixClick` 让它可点（打开区号选择）。前缀的文字与 `prefixIcon`（如下拉箭头，跟在文字后 4dp）用 M3 的 prefix 颜色（`TextFieldColors.prefixColor`，宿主可经 `TinyUIDefaults.textField.colors` 改），虽然借的是 leading 槽，语义上仍是前缀。`trailingIconSize`（2026-11-03 加，注册流程触发：设计稿密码框的眼睛是 20dp，打包图标是 24）同 `prefixIconSize`：只缩字形，M3 尾槽与 48dp 触控区不变，未设用图标自身尺寸——槽里放多大的图标是页面的事，M3 只管槽外。`prefixBackground`（2026-11-02 加，注册流程触发）把前缀画成一块填充：距边框起始侧 4dp，高度取输入框最小高度减上下各 4dp（M3 的 56dp 即 48dp；宿主经 `TinyUIDefaults.textField.minHeight` 改矮时跟着变）、在框内垂直居中，左右内边距 12dp，到输入文字 12dp（M3 在 leading 槽与输入之间已留 4dp，块右侧补 8dp）；圆角与输入框同心，即输入框圆角减 4dp，跟着主题的 `shapes.extraSmall` 走。整块是点击区。`imeAction="next"` 时键盘动作先 `onCommit` 再把焦点移到下一个可聚焦项。`maxLength` 超长截断而不是拒绝。`autofill` 告诉系统这一栏装的是什么、好给出建议（2026-11-02 加，注册流程触发：设计稿的验证码是一个输入框）：`oneTimeCode` 让系统建议刚收到的短信验证码，平台实现同 `CodeField`（iOS 走 `PlatformImeOptions` 的内容类型，Android 走 semantics 的 `SmsOtpCode`）。这是各平台通用文本框的同一类属性（Web `autocomplete`、iOS `textContentType`、Android `autofillHints`、Flutter `autofillHints`），取值按需再加（如 `email`、`newPassword`），名字对齐 Web / iOS 的词。不设时交给系统的启发式，所以 `TextField` 没有 `CodeField` 那样的 `none`：`CodeField` 用 `NumberPassword` 键盘，iOS 不设内容类型会当密码框弹钥匙串，要显式清掉；普通文本框没有这个问题，而各平台的「关闭自动填充」本来也不可靠。验证码用一个 `TextField`（`keyboard="number"` + `maxLength` + `autofill="oneTimeCode"`）还是 `CodeField` 的格子，按设计定；单框对粘贴、自动填充与读屏都更友好。`onFocusChange` 只在焦点真的变化时发，首次组合的"未聚焦"不算，所以 `onCommit` 也不会在首帧被误发（此前会）。文本仍归 Kotlin（ADR-004），这些都只是外观与通知。实现是 M3 `TextFieldState` 版的 `OutlinedTextField`（2026-11-03 起）：文本、光标、组合区都在 state 里，页面重载或所在弹层重组都不会把光标打回 0；高度不归页面，归宿主（§6 `TinyUIDefaults.textField`）。
 
-`CodeField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）。叫 Code 而不是 Pin / Otp：短信验证码与交易密码是同一个组件，`secure` 与 `autofill` 区分两者，名字不偏向任何一种。Compose 与 M3 都没有对应组件，它是框架自绘的（`BasicTextField` + 自画格子），格子尺寸由框架定、颜色跟主题。焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`autofill="oneTimeCode"` 让系统把刚收到的短信验证码作为建议（Android 自动填充 `SmsOtpCode`、iOS 键盘上方「来自信息」）；缺省 `none` 时明确告诉系统什么都别建议——iOS 不设内容类型会按 `NumberPassword` 键盘把它当密码框、弹钥匙串，交易密码不该这样。iOS 只从 `PlatformImeOptions` 读内容类型、不看 semantics，所以两端各走各的路，平台差异在框架里消化。`onComplete` 每次填满最后一格时发，`clear` / `setText` 与 `TextField.setText` 一样会触发 `onChange`——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
+`CodeField` 是一排数字格画在一个看不见的输入框之上（2026-10-28 加）。叫 Code 而不是 Pin / Otp：短信验证码与交易密码是同一个组件，`secure` 与 `autofill` 区分两者，名字不偏向任何一种。Compose 与 M3 都没有对应组件，它是框架自绘的（`BasicTextField` + 自画格子），格子尺寸由框架定、颜色跟主题。焦点与 IME 归 Kotlin，只接受数字、到 `length` 为止；不能用多个 `TextField` 拼，焦点逐格跳要跨桥往返（ADR-004 的反例）。`autofill="oneTimeCode"` 让系统把刚收到的短信验证码作为建议（Android 自动填充 `SmsOtpCode`、iOS 键盘上方「来自信息」）；缺省 `none` 时明确告诉系统什么都别建议——iOS 不设内容类型会按 `NumberPassword` 键盘把它当密码框、弹钥匙串，交易密码不该这样。iOS 只从 `PlatformImeOptions` 读内容类型、不看 semantics，所以两端各走各的路，平台差异在框架里消化。`onComplete` 每次填满最后一格时发，`clear` / `setText` 会触发 `onChange`（文本没变也触发，这一点与 `TextField.setText` 不同）——所以"输错 → 清空并标红"时，清错误态要放在有输入的 `onChange` 里，否则 `clear` 带来的空 `onChange` 会立刻把红色抹掉：
 
 ```tsx
 const pin = ref<CodeFieldCommands>();
@@ -155,7 +155,7 @@ const [open, setOpen] = signal(false);
 - 收起时不拆：收起动画期间内容还在，留到下一次打开或页面卸载。这期间它的 effect、定时器照常运行
 - 从没打开过就不建：页面挂载不为弹层的内容花时间
 - 要跨多次打开留着的东西（拉过一次的字典、上次选中的项）放在函数外面，即页面或包着弹层的组件里
-- 写成静态 children 在类型检查时报错，运行时 `mount` 抛 E2
+- 写成静态 children 在类型检查时报错，运行时挂载即抛错、页面失败
 
 **弹层要展示一份数据时，把数据本身交给 `open`**：它是真值即打开，函数收到打开那一刻的值。收起动画期间页面的数据已经置空，内容里读的是这份快照，不会读到 `null`；数据换成另一份（`!==`）时内容也重建。
 
@@ -261,7 +261,7 @@ const [method, setMethod] = signal("phone");
 </LazyColumn>
 ```
 
-`Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider` 要靠 `IntrinsicSize` 撑高，框架还没有内在尺寸）与一像素 hairline（尺寸只按 dp 过桥）。
+`Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider`，还没有页面需要）与一像素 hairline（尺寸只按 dp 过桥）。
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 

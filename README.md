@@ -50,7 +50,7 @@ pnpm schema                      # 改了 schema/ 之后重新生成两侧代码
 pnpm runtime                     # 改了 packages/core、packages/native 或升了 quickjs-kmp 之后，重新生成库内置的运行时字节码
 ```
 
-sample 的 Gradle 构建会调 `tinyui build` 把 `sample/js` 编成字节码，`qjsc-kmp` 来自 `pnpm install` 装好的 npm 包；Android host 测试还需要宿主 JNI 库。两种来源：
+sample 的 Gradle 构建会调 `tinyui embed` 把 `sample/js`、`sample/js-extra` 编成字节码并写成内置包，`qjsc-kmp` 来自 `pnpm install` 装好的 npm 包；Android host 测试还需要宿主 JNI 库。两种来源：
 
 - 本地联调：`local.properties` 加 `quickjs-kmp.dir=<quickjs-kmp 仓路径>`，SDK 从源码构建（composite build），`qjsc-kmp` 与 JNI 库都由该仓的任务自动编出，零配置
 - 否则：`TINYUI_QUICKJS_HOST_JNI` 指向含 `libquickjs_kmp` 的目录（CI 的做法见 `.github/workflows/build.yml`）；没有预编译 `qjsc-kmp` 的平台再用 `TINYUI_QJSC` 指向自己编的那份
