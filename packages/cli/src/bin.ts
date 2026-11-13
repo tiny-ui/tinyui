@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
 import { build, discoverPages } from "./build.ts";
+import { embed } from "./embed.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
@@ -18,6 +19,7 @@ import { generateKt, generateTs } from "./schema/generate.ts";
 import { loadSchema } from "./schema/load.ts";
 
 const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] [--js-only] [--version <v>]
+       tinyui embed --out <dir> [--root <dir>] [--dist <dir>] [--maps] [--qjsc <path>]
        tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui i18n --ts <file> [--root <dir>] [--check]
        tinyui routes --ts <file> [--root <dir>] [--check]
@@ -44,6 +46,14 @@ build      compile the pages of the package described by <root>/tinyui.config.js
   --js-only  emit ESM sources and source maps only, skip bytecode
   --version  package version to record (default: <createdAt>-<git sha>)
   pages import icons as .svg files: single-colour shapes become the string Icon takes (docs/components.md §3)
+
+embed      build, then make <out> hold the package as a host embeds it: manifest.json, bytecode and strings.
+           For running a change in the host before publishing; tinyui pull fills the same directory from a channel
+  --out      the host's embedded package directory for this package, replaced as a whole
+  --root     project root (default: cwd)
+  --dist     where the build goes (default: <root>/dist)
+  --maps     also write source maps, so a failing page shows its JS stack (they carry the page sources)
+  --qjsc     as for build
 
 bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersion>/ (docs/updates.md)
   --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1)
@@ -107,6 +117,22 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 jsOnly: v["js-only"] as boolean,
             });
             for (const m of result.pages) process.stdout.write(`${m.name} -> ${m.bin ?? m.js}\n`);
+            return 0;
+        },
+    },
+    embed: {
+        options: { root: { type: "string" }, out: { type: "string" }, dist: { type: "string" }, maps: { type: "boolean", default: false }, qjsc: { type: "string" } },
+        run: async (v) => {
+            const out = v["out"] as string | undefined;
+            if (!out) throw new Error("embed: --out is required");
+            const result = await embed({
+                root: (v["root"] as string | undefined) ?? process.cwd(),
+                out,
+                maps: v["maps"] as boolean,
+                ...(v["dist"] !== undefined && { dist: v["dist"] as string }),
+                ...(v["qjsc"] !== undefined && { qjsc: v["qjsc"] as string }),
+            });
+            process.stdout.write(`${result.version} -> ${out} (${result.files.length} files)\n`);
             return 0;
         },
     },
