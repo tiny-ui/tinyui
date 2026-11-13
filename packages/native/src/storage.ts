@@ -1,5 +1,5 @@
 // docs/native-api.md §7: this package's persistent key-value, read synchronously from memory.
-import { HostError, internal, onCleanup, signal } from "tinyui-core";
+import { effect, HostError, internal, resource, signal, untrack, type ResourceActions } from "tinyui-core";
 
 /** J2: the stored value, or undefined. */
 export function get<T = unknown>(key: string): T | undefined {
@@ -23,45 +23,24 @@ export function clear(): void {
     internal.send("storage.clear", {});
 }
 
-export interface CachedActions {
-    loading: () => boolean;
-    error: () => unknown;
-    refetch: () => void;
-}
+export type CachedActions<T> = ResourceActions<T>;
 
 /**
- * Stale-while-revalidate over [storage]: starts with the stored value, then runs [fetcher]; a success replaces it
- * and is stored, a failure keeps it and sets `error`. Shaped like `resource`.
+ * Stale-while-revalidate over [storage]: `resource` that starts with the stored value and stores each new result.
+ * A fetch that fails keeps what is shown and sets `error`; so does a result that could not be stored (E_QUOTA).
+ * `lazy`, `load()` and `refetch()` are `resource`'s (docs/runtime-api.md §6).
  */
-export function cached<T>(key: string, fetcher: () => Promise<T>): [data: () => T | undefined, actions: CachedActions] {
-    const [data, setData] = signal<T | undefined>(get<T>(key));
-    const [loading, setLoading] = signal(false);
-    const [error, setError] = signal<unknown>(undefined);
-    let disposed = false;
-    let latest = 0;
-    onCleanup(() => { disposed = true; });
-    const run = () => {
-        // only the newest run may settle: an older fetch finishing late must not overwrite it
-        const run = ++latest;
-        const current = () => !disposed && run === latest;
-        setLoading(true);
-        setError(undefined);
-        let pending: Promise<T>;
-        try {
-            pending = fetcher();
-        } catch (e) {
-            pending = Promise.reject(e);
-        }
-        pending.then(
-            (v) => {
-                if (!current()) return;
-                setData(() => v);
-                setLoading(false);
-                try { set(key, v); } catch (e) { setError(e); }
-            },
-            (e: unknown) => { if (!current()) return; setError(e); setLoading(false); },
-        );
-    };
-    run();
-    return [data, { loading, error, refetch: run }];
+export function cached<T>(key: string, fetcher: () => Promise<T>, options: { lazy?: boolean } = {}): [data: () => T | undefined, actions: CachedActions<T>] {
+    const stored = get<T>(key);
+    const [storeError, setStoreError] = signal<unknown>(undefined);
+    const [data, actions] = resource<T>(() => { setStoreError(undefined); return fetcher(); }, { ...options, ...(stored === undefined ? {} : { initial: stored }) });
+    // only the newest fetch writes `data`, so only its result is stored
+    let last: T | undefined = stored;
+    effect(() => {
+        const value = data();
+        if (value === last) return;
+        last = value;
+        try { set(key, value); } catch (e) { untrack(() => setStoreError(e)); }
+    });
+    return [data, { ...actions, error: () => actions.error() ?? storeError() }];
 }

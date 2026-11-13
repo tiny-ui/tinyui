@@ -23,7 +23,7 @@
 | | `Keyed` | 值一换就整块重建 |
 | | `BottomSheet` | 弹层：内容每次打开重建 |
 | 命令 | `ref()` → `Ref`，`ref.cmd(name, args?)` | 对节点发一次性动作 |
-| 异步 | `resource(fetcher)` | 同步期建 signal，异步期写 |
+| 异步 | `resource(fetcher)` / `resource(source, fetcher)` | 同步期建 signal，异步期写；`load()` 可等待 |
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | | `manifest()` | Kotlin 下发的组件 / 能力清单 |
@@ -251,19 +251,39 @@ interface Ref { cmd(name: string, args?: Record<string, string | number | boolea
 ## 6. `resource`
 
 ```ts
-function resource<T>(fetcher: () => Promise<T>): [
-    data: () => T | undefined,
-    { loading: () => boolean; error: () => unknown; refetch: () => void },
-]
+function resource<T>(fetcher: () => Promise<T>, options?: ResourceOptions<T>): [data, actions]
+function resource<S, T>(source: () => S, fetcher: (source: S) => Promise<T>, options?: ResourceOptions<T>): [data, actions]
+
+type data = () => T | undefined
+interface ResourceActions<T> {
+    loading: () => boolean
+    error: () => unknown
+    load: () => Promise<T>
+    refetch: () => Promise<T>
+}
+interface ResourceOptions<T> { lazy?: boolean; initial?: T }
 ```
 
-- 创建时（同步渲染期）建三个 signal 并**立即**调一次 `fetcher`；`loading` 为 true
-- Promise 落定时写 `data` / `error`、`loading` 置 false。落定发生在 K3 之后的微任务排空期，所以写入与随后的 flush 在同一事务
-- 所属 owner 已 dispose 后落定的结果丢弃
-- rejection 写进 `error()`，不抛、不进 E7
-- `refetch()` 再跑一次 `fetcher`；旧请求的结果若后到，按到达顺序覆盖（v1 不做竞态取消）
+```tsx
+const [todos, { loading, error }] = resource(() => api.todos());                       // 进页就取
+const [rules, rulesState] = resource(() => i18n.locale(), () => api.passwordRules());  // 语言变了重取
+const [codes, codesState] = resource(() => api.callingCodes(), { lazy: true });        // 用到才取
 
-数据获取一律走它，不写 `async` 组件（§3.1）。
+const loaded = await rulesState.load();                                                // 提交时等结果
+```
+
+- 创建时（同步渲染期）建三个 signal 并**立即**调一次 `fetcher`，`loading` 为 true；`lazy` 时不调，等第一次 `load()` / `refetch()`
+- Promise 落定时写 `data` / `error`、`loading` 置 false。落定发生在 K3 之后的微任务排空期，所以写入与随后的 flush 在同一事务
+- **只认最新一次**（2026-11-13 改；此前按到达顺序覆盖）：更早的请求后到，结果丢弃，不写 signal
+- `load()`：要数据、需要时才取。已经取到就直接给；有请求在途就并进去，不重复发；没取过或上次失败才发一次。失败以 `error()` 里的那个值 reject。用在 handler 里——点提交时数据可能还没到，`await` 它
+- `refetch()`：不管有没有都重取；落定方式同 `load()`。此前返回 `void`
+- 两者返回的 Promise 跟的是**最新**那次请求：等着一次旧请求的调用方，在它被新请求顶掉后拿到的是新请求的结果
+- `source`：在一个 effect 里读，值与上次 `!==` 就作废已取到的数据并重取，`fetcher` 收到这个值。`lazy` 且还没被要过数据时只作废、不取。它不看真假，「先不取」用 `lazy`
+- `initial`：第一次结果到来之前 `data()` 的值。它不算取到过，`load()` 仍会去取（`cached` 用它放上一次存下的值）
+- 所属 owner 已 dispose 后落定的结果不写 signal；`load()` 的 Promise 照常落定
+- rejection 写进 `error()`；没人 `await` 的失败不进 E7
+
+数据获取一律走它，不写 `async` 组件（§3.1）。业界同类：Solid `createResource(source, fetcher)`、TanStack Query 的 `enabled` 与 `refetch()` / `ensureQueryData()`、SWR 的条件 key、Vue `useAsyncData` 的 `immediate` 与 `execute()`——都有依赖、延迟发起、可等待的重取、只认最新结果这四样。
 
 ## 7. 定时器
 
