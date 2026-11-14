@@ -118,32 +118,21 @@ class Updates internal constructor(
     }
 
     /**
-     * One package; like the check of all of them, a second call while one is running for [pkg] joins it, and its event
-     * keeps the [trigger] of the call that started it. A package is never checked twice at once.
+     * One package; two calls for the same package at once run one after the other. What [status] says of the check is
+     * written under the package lock, so it is true at every instant however the calls overlap.
      */
     suspend fun check(pkg: String, trigger: CheckTrigger = CheckTrigger.MANUAL): CheckResult {
         val p = pkg(pkg)
-        val (run, owner) = checkLock.withLock {
-            p.inFlight?.let { it to false } ?: CompletableDeferred<CheckResult>().also { p.inFlight = it }.let { it to true }
-        }
-        if (!owner) return run.await()
-        change(p) { it.copy(checking = true) }
-        try {
-            val (result, installed) = p.lock.withLock {
-                val result = p.check()
-                result to p.installedManifest.takeIf { result is CheckResult.Installed }
+        return p.lock.withLock {
+            change(p) { it.copy(checking = true) }
+            try {
+                p.check().also { result ->
+                    change(p) { it.copy(lastCheck = result, pending = if (result is CheckResult.Installed) p.installedManifest else it.pending) }
+                }
+            } finally {
+                change(p) { it.copy(checking = false) }
             }
-            change(p) { it.copy(checking = false, lastCheck = result, pending = installed ?: it.pending) }
-            onEvent(result.toEvent(pkg, trigger))
-            run.complete(result)
-            return result
-        } catch (e: Throwable) {
-            change(p) { it.copy(checking = false) }
-            run.completeExceptionally(e)
-            throw e
-        } finally {
-            withContext(NonCancellable) { checkLock.withLock { p.inFlight = null } }
-        }
+        }.also { onEvent(it.toEvent(pkg, trigger)) }
     }
 
     internal fun embedded(pkg: String): Bundle = pkg(pkg).embedded
@@ -205,9 +194,7 @@ class Updates internal constructor(
         /** Written by a rollback outside [lock], read by pages on other threads: they must see embedded at once. */
         @Volatile
         var current: Bundle = embedded
-        /** The check of this package under way, for a second call to join; guarded by `checkLock`. */
-        var inFlight: CompletableDeferred<CheckResult>? = null
-        /** The manifest of what [check] installed last, read under [lock] right after it. */
+        /** The manifest of what [check] installed last; written and read under [lock]. */
         var installedManifest: BuildManifest? = null
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {

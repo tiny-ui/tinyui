@@ -206,7 +206,7 @@ class Updates(
 |---|---|
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
-| `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包；该包已有检查在进行时并入它、拿它的结果，同一个包不会同时查两次（事件只发一次，沿用发起那次的 `trigger`） |
+| `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
 | `val status: StateFlow<Map<String, PackageStatus>>` | 每个包在本进程的状态，给调试面板与 `UpdatesStatusLine` 看（§4.7）；只读，不影响选包 |
 | `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` 默认连同平台前后台一起接上，另有 `onForeground()` / `onBackground()` / `checkNow()`（§4.6） |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, propsJson, locals, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
