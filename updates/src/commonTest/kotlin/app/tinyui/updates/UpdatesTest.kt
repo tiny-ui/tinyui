@@ -5,7 +5,6 @@ import app.tinyui.bundle.Bundle
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -579,26 +578,27 @@ class UpdatesTest {
     }
 
     @Test
-    fun aSecondCheckOfAPackageJoinsTheOneRunning() = runTest {
+    fun statusStaysTrueWhileTwoChecksOfAPackageRunOneAfterTheOther() = runTest {
         upToDate()
-        val gate = CompletableDeferred<Unit>()
-        var fetched = 0
-        val u = Updates(listOf(embedded()), "1", dir, "install-1", { path -> fetched++; gate.await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        val first = CompletableDeferred<Unit>()
+        val second = CompletableDeferred<Unit>()
+        val gates = ArrayDeque(listOf(first, second))
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", { path -> gates.removeFirst().await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
         events.clear()
-        val a = async { u.check("shop", CheckTrigger.STARTUP) }
-        val b = async { u.check("shop", CheckTrigger.MANUAL) }
+        val a = launch { u.check("shop", CheckTrigger.STARTUP) }
+        val b = launch { u.check("shop", CheckTrigger.MANUAL) }
         runCurrent()
         assertTrue(u.status.value.getValue("shop").checking)
-        gate.complete(Unit)
-        assertEquals(CheckResult.UpToDate("v0"), a.await())
-        assertEquals(CheckResult.UpToDate("v0"), b.await())
-        assertEquals(1, fetched, "one check, not two in a row")
-        assertEquals(listOf<UpdateEvent>(UpdateEvent.UpToDate("shop", "v0", CheckTrigger.STARTUP)), events.toList())
-        val status = u.status.value.getValue("shop")
-        assertFalse(status.checking)
-        assertEquals(CheckResult.UpToDate("v0"), status.lastCheck)
-        u.check("shop")
-        assertEquals(2, fetched, "the next one runs again")
+        first.complete(Unit)
+        runCurrent()
+        assertTrue(a.isCompleted && !b.isCompleted)
+        val between = u.status.value.getValue("shop")
+        assertTrue(between.checking, "the second check is running")
+        assertEquals(CheckResult.UpToDate("v0"), between.lastCheck, "and the first one has told its result")
+        second.complete(Unit)
+        b.join()
+        assertFalse(u.status.value.getValue("shop").checking)
+        assertEquals(listOf(CheckTrigger.STARTUP to "ok", CheckTrigger.MANUAL to "ok"), checks())
     }
 
     @Test
