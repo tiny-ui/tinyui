@@ -617,7 +617,8 @@ class UpdatesTest {
         updates(embedded()).check("shop")
         val stuck = object : ForwardingFileSystem(fs) {
             override fun delete(path: Path, mustExist: Boolean) {
-                if (path.toString().replace('\\', '/').contains("installed/v1")) throw IOException("cannot delete $path")
+                val at = path.toString().replace('\\', '/')
+                if (at.contains("installed/v1") || at.contains("tinyui/gone")) throw IOException("cannot delete $path")
                 super.delete(path, mustExist)
             }
         }
@@ -625,6 +626,10 @@ class UpdatesTest {
         publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z"))
         assertEquals(CheckResult.Installed("v2"), u.check("shop"))
         assertEquals("v2", u.status.value.getValue("shop").pending?.version)
-        assertEquals("HOME-v2", pageBytes(updates(embedded()).current("shop")), "and the next start runs it")
+        // and the directory of a package a later App no longer has
+        fs.createDirectories(dir / "gone")
+        fs.write(dir / "gone/state.json") { writeUtf8("{}") }
+        val next = Updates(listOf(embedded()), "1", dir, "install-1", fetch, { events += it }, stuck, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        assertEquals("HOME-v2", pageBytes(next.current("shop")), "and the next start runs it, the old directory still there")
     }
 }

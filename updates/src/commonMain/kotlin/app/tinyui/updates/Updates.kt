@@ -79,8 +79,8 @@ class Updates internal constructor(
         this.packages = byName
         for (p in byName.values) p.unusable.takeIf { it.isNotEmpty() }?.let { onEvent(UpdateEvent.EmbeddedIncompatible(p.name, p.embedded.manifest.version, it)) }
         for (p in byName.values) p.selectAtStartup()
-        // App upgrades drop packages: their directories go too
-        fs.listOrNull(dir)?.filter { it.name !in byName }?.forEach { fs.deleteRecursively(it) }
+        // App upgrades drop packages: their directories go too; one that will not go must not fail the host's startup
+        fs.listOrNull(dir)?.filter { it.name !in byName }?.forEach { runCatching { fs.deleteRecursively(it) } }
         // Running goes out before the bytes are read, so a host tagging its events with it has it on the first one;
         // a corrupted install sends a second Running for embedded, before any page can get this instance
         for (p in byName.values) {
@@ -225,7 +225,8 @@ class Updates internal constructor(
             runCatching { fs.deleteRecursively(root / STAGING) }
             val installedDir = root / INSTALLED
             val keep = installed
-            fs.listOrNull(installedDir)?.filter { it.name != keep }?.forEach { fs.deleteRecursively(it) }
+            // an older version that will not go stays for the next start to try: it is never the one selected
+            fs.listOrNull(installedDir)?.filter { it.name != keep }?.forEach { runCatching { fs.deleteRecursively(it) } }
             if (keep == null) return
             selected = selectInstalled(installedDir / keep)
             if (selected == null) dropInstalled()

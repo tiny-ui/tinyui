@@ -265,7 +265,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包几十到一两百 KB，重算一遍的开销可以忽略。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节直接作为该包 `Bundle` 的来源，进页面不再读磁盘。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。这些清理都是尽力而为：删不掉的目录留到下次启动再试，不让构造失败，也不影响选包（留下的旧版本目录从不会被选中）；`check()` 装上新版本后清理旧目录同理，不算检查失败。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包几十到一两百 KB，重算一遍的开销可以忽略。
 
 `Running` 在按 manifest 选定之后、读页面文件重算 sha256 之前发出：宿主通常拿它给遥测挂「本进程跑哪个版本」，构造又多在后台协程里，等读完整包再发会晚于宿主启动后的第一条事件（Android 的 `ProcessLifecycleOwner` 在首个 Activity 启动时就触发）。installed 损坏时依次发 `Running(installed)`、`Failed(integrity)`、`Running(embedded)`，以最后一次为准；三者都在构造返回前发出，页面拿到 `Updates` 时已经是校验过的包。
 
