@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okio.ByteString.Companion.encodeUtf8
+import okio.ForwardingFileSystem
 import okio.IOException
 import okio.Path
 import kotlin.random.Random
@@ -608,5 +609,22 @@ class UpdatesTest {
         assertEquals("shop · v0 · embedded", mixed.text, "a package published to the wrong place is not fixed by a new app build")
         val custom = BuildManifest.parse(manifest(version = "release-abcdef012345", createdAt = "2026-11-14T07:36:03Z"))
         assertEquals("release-abcdef012345", shortVersion(custom), "a version the host chose is shown as it is")
+    }
+
+    @Test
+    fun anOlderVersionThatCannotBeRemovedDoesNotFailTheInstall() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        val stuck = object : ForwardingFileSystem(fs) {
+            override fun delete(path: Path, mustExist: Boolean) {
+                if (path.toString().replace('\\', '/').contains("installed/v1")) throw IOException("cannot delete $path")
+                super.delete(path, mustExist)
+            }
+        }
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", fetch, { events += it }, stuck, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z"))
+        assertEquals(CheckResult.Installed("v2"), u.check("shop"))
+        assertEquals("v2", u.status.value.getValue("shop").pending?.version)
+        assertEquals("HOME-v2", pageBytes(updates(embedded()).current("shop")), "and the next start runs it")
     }
 }
