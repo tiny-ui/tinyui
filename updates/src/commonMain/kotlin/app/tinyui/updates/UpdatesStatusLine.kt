@@ -73,6 +73,8 @@ fun shortVersion(manifest: BuildManifest): String {
     val at = manifest.createdAt
     val sha = manifest.version.substringAfterLast('-', "")
     if (at.length < 16 || at[10] != 'T' || sha.length != 12 || !sha.all { it in '0'..'9' || it in 'a'..'f' }) return manifest.version
+    // exactly what `tinyui build` derives: a version the host chose is not ours to shorten, whatever it ends with
+    if (manifest.version != "${at.filter { it != '-' && it != ':' }}-$sha") return manifest.version
     return "${at.substring(5, 7)}${at.substring(8, 10)}-${at.substring(11, 13)}${at.substring(14, 16)}Z · ${sha.take(7)}"
 }
 
@@ -89,14 +91,14 @@ internal fun statusLineOf(pkg: String, status: PackageStatus, note: String?, lab
         pending != null -> StatusLine("$running → ${versionLabel(pending)} · ${labels.restart}", true, StatusLineAction.RESTART)
         status.checking -> StatusLine("$running · ${labels.checking}", false, StatusLineAction.NONE)
         last is CheckResult.Failed -> StatusLine("$running · ${labels.failed}", false, StatusLineAction.CHECK)
-        last is CheckResult.Skipped && last.reason == SkipReason.INCOMPATIBLE && last.mismatch.any { it in OTHER_HOST } ->
+        last is CheckResult.Skipped && last.reason == SkipReason.INCOMPATIBLE && last.mismatch.all { it in OTHER_HOST } ->
             StatusLine("$running · ${labels.incompatible}", true, StatusLineAction.CHECK)
         last is CheckResult.Skipped && last.reason == SkipReason.FAILED_BEFORE -> StatusLine("$running · ${labels.failedBefore}", true, StatusLineAction.CHECK)
         else -> StatusLine(running, false, StatusLineAction.CHECK)
     }
 }
 
-/** The package is fine, for another host: a published version that names the wrong package or version is not. */
+/** The package is fine, for another host. One that also names the wrong package or version was published to the wrong place: no app build fixes that. */
 private val OTHER_HOST = setOf(Mismatch.HOST_VERSION, Mismatch.ENGINE, Mismatch.TINYUI)
 private val Scrim = Color(0x99000000)
 private val Highlight = Color(0xFFFFC107)

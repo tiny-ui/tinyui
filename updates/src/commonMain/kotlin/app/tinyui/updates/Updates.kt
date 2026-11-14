@@ -29,7 +29,6 @@ import okio.FileSystem
 import okio.IOException
 import okio.Path
 import wang.harlon.quickjs.QuickJs
-import kotlin.concurrent.Volatile
 
 /**
  * Hot updates for a set of packages (docs/updates.md §4): verifies, stores, selects and rolls back, never
@@ -90,7 +89,7 @@ class Updates internal constructor(
         for (p in byName.values) {
             if (!p.verifyAtStartup()) onEvent(UpdateEvent.Running(p.name, p.embedded.manifest.version, Source.EMBEDDED))
         }
-        for (p in byName.values) tell(p)
+        _status.value = byName.values.associate { it.name to PackageStatus(it.current.manifest, if (it.current === it.embedded) Source.EMBEDDED else Source.INSTALLED) }
     }
 
     /** The bundle every page of [pkg] loads from in this process: chosen at construction, embedded again after a rollback. */
@@ -117,19 +116,32 @@ class Updates internal constructor(
         }
     }
 
-    /** One package; two calls for the same package at once run one after the other. */
+    /**
+     * One package; like the check of all of them, a second call while one is running for [pkg] joins it, and its event
+     * keeps the [trigger] of the call that started it. A package is never checked twice at once.
+     */
     suspend fun check(pkg: String, trigger: CheckTrigger = CheckTrigger.MANUAL): CheckResult {
         val p = pkg(pkg)
-        p.checking = true
-        tell(p)
+        val (run, owner) = checkLock.withLock {
+            p.inFlight?.let { it to false } ?: CompletableDeferred<CheckResult>().also { p.inFlight = it }.let { it to true }
+        }
+        if (!owner) return run.await()
+        change(p) { it.copy(checking = true) }
         try {
-            return p.lock.withLock { p.check() }.also {
-                p.lastCheck = it
-                onEvent(it.toEvent(pkg, trigger))
+            val (result, installed) = p.lock.withLock {
+                val result = p.check()
+                result to p.installedManifest.takeIf { result is CheckResult.Installed }
             }
+            change(p) { it.copy(checking = false, lastCheck = result, pending = installed ?: it.pending) }
+            onEvent(result.toEvent(pkg, trigger))
+            run.complete(result)
+            return result
+        } catch (e: Throwable) {
+            change(p) { it.copy(checking = false) }
+            run.completeExceptionally(e)
+            throw e
         } finally {
-            p.checking = false
-            tell(p)
+            withContext(NonCancellable) { checkLock.withLock { p.inFlight = null } }
         }
     }
 
@@ -147,13 +159,12 @@ class Updates internal constructor(
         val p = pkg(pkg)
         val version = bundle.manifest.version
         p.current = p.embedded
-        tell(p)
+        change(p) { it.copy(running = p.embedded.manifest, source = Source.EMBEDDED) }
         withContext(NonCancellable) {
             p.lock.withLock {
                 if (version !in p.failed) p.failed += version
                 val drop = p.installed == version
                 if (drop) p.installed = null
-                if (p.pending?.version == version) p.pending = null
                 // the blacklist reaches the disk before the files go: a crash in between must not let check() install it again
                 try {
                     p.saveState()
@@ -162,14 +173,13 @@ class Updates internal constructor(
                 }
                 if (drop) runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
             }
-            tell(p)
             onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
         }
     }
 
-    private fun tell(p: Package) {
-        val status = PackageStatus(p.current.manifest, if (p.current === p.embedded) Source.EMBEDDED else Source.INSTALLED, p.pending, p.checking, p.lastCheck)
-        _status.update { it + (p.name to status) }
+    /** [status] is where these facts live: each place changes its own part of the latest value, in one step. */
+    private fun change(p: Package, change: (PackageStatus) -> PackageStatus) {
+        _status.update { all -> all[p.name]?.let { all + (p.name to change(it)) } ?: all }
     }
 
     private fun pkg(name: String): Package = packages[name] ?: throw IllegalArgumentException("no embedded package named $name; have ${packages.keys}")
@@ -191,15 +201,11 @@ class Updates internal constructor(
         val lock = Mutex()
         var installed: String? = null
         val failed = ArrayList<String>()
-        @Volatile
         var current: Bundle = embedded
-        /** Installed by a `check()` of this process: what the next start runs. */
-        @Volatile
-        var pending: BuildManifest? = null
-        @Volatile
-        var checking = false
-        @Volatile
-        var lastCheck: CheckResult? = null
+        /** The check of this package under way, for a second call to join; guarded by `checkLock`. */
+        var inFlight: CompletableDeferred<CheckResult>? = null
+        /** The manifest of what [check] installed last, read under [lock] right after it. */
+        var installedManifest: BuildManifest? = null
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {
             if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
@@ -322,7 +328,7 @@ class Updates internal constructor(
                 discard()
                 installed = version
                 saveState()
-                pending = manifest
+                installedManifest = manifest
                 fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) }
             } catch (e: CancellationException) {
                 discard()

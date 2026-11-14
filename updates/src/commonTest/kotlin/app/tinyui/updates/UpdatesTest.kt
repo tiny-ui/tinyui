@@ -5,6 +5,7 @@ import app.tinyui.bundle.Bundle
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
@@ -514,14 +515,17 @@ class UpdatesTest {
     }
 
     @Test
-    fun statusFollowsARollbackToEmbedded() = runTest {
+    fun aRollbackShowsInStatusAndLeavesWhatWaitsForTheNextStart() = runTest {
         publish(manifest())
         updates(embedded()).check("shop")
         val u = updates(embedded())
+        publish(manifest(version = "v2", createdAt = "2026-09-22T11:00:00Z"))
+        u.check("shop")
+        assertEquals("v1" to "v2", u.status.value.getValue("shop").let { it.running.version to it.pending?.version })
         u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E2", "shop/home", "b1", "boom")))
         val status = u.status.value.getValue("shop")
         assertEquals("v0" to Source.EMBEDDED, status.running.version to status.source)
-        assertEquals(null, status.pending)
+        assertEquals("v2", status.pending?.version, "v1 failed, v2 still waits")
     }
 
     @Test
@@ -544,12 +548,17 @@ class UpdatesTest {
         assertEquals(StatusLineAction.RESTART to true, waiting.action to waiting.highlighted)
 
         assertEquals(StatusLineAction.NONE, line(PackageStatus(v0, Source.EMBEDDED, checking = true)).action)
-        assertTrue(line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Failed(null, FailStage.POINTER, "x"))).text.endsWith(labels.failed))
+        val failed = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Failed(null, FailStage.POINTER, "x")))
+        assertTrue(failed.text.endsWith(labels.failed))
+        assertEquals(StatusLineAction.CHECK, failed.action)
         val otherHost = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.HOST_VERSION))))
         assertTrue(otherHost.highlighted && otherHost.text.endsWith(labels.incompatible))
+        assertEquals(StatusLineAction.CHECK, otherHost.action)
         val wrongDirectory = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME))))
         assertEquals("shop · v0 · embedded", wrongDirectory.text, "a new app build would not help")
-        assertTrue(line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE))).text.endsWith(labels.failedBefore))
+        val failedBefore = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE)))
+        assertTrue(failedBefore.text.endsWith(labels.failedBefore))
+        assertEquals(StatusLineAction.CHECK, failedBefore.action)
         assertEquals("shop · v0 · embedded", line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.ROLLOUT))).text)
     }
 
@@ -566,5 +575,38 @@ class UpdatesTest {
         s.onForeground()
         runCurrent()
         assertEquals(CheckTrigger.FOREGROUND to "POINTER", checks().last())
+    }
+
+    @Test
+    fun aSecondCheckOfAPackageJoinsTheOneRunning() = runTest {
+        upToDate()
+        val gate = CompletableDeferred<Unit>()
+        var fetched = 0
+        val u = Updates(listOf(embedded()), "1", dir, "install-1", { path -> fetched++; gate.await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        events.clear()
+        val a = async { u.check("shop", CheckTrigger.STARTUP) }
+        val b = async { u.check("shop", CheckTrigger.MANUAL) }
+        runCurrent()
+        assertTrue(u.status.value.getValue("shop").checking)
+        gate.complete(Unit)
+        assertEquals(CheckResult.UpToDate("v0"), a.await())
+        assertEquals(CheckResult.UpToDate("v0"), b.await())
+        assertEquals(1, fetched, "one check, not two in a row")
+        assertEquals(listOf<UpdateEvent>(UpdateEvent.UpToDate("shop", "v0", CheckTrigger.STARTUP)), events.toList())
+        val status = u.status.value.getValue("shop")
+        assertFalse(status.checking)
+        assertEquals(CheckResult.UpToDate("v0"), status.lastCheck)
+        u.check("shop")
+        assertEquals(2, fetched, "the next one runs again")
+    }
+
+    @Test
+    fun theStatusLineDoesNotBlameTheAppForAMisplacedPackageNorShortenAVersionTheHostChose() {
+        val labels = UpdatesStatusLineLabels()
+        val v0 = embedded().manifest
+        val mixed = statusLineOf("shop", PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME, Mismatch.HOST_VERSION))), null, labels, ::shortVersion)
+        assertEquals("shop · v0 · embedded", mixed.text, "a package published to the wrong place is not fixed by a new app build")
+        val custom = BuildManifest.parse(manifest(version = "release-abcdef012345", createdAt = "2026-11-14T07:36:03Z"))
+        assertEquals("release-abcdef012345", shortVersion(custom), "a version the host chose is shown as it is")
     }
 }
