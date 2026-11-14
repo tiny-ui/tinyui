@@ -206,7 +206,7 @@ class Updates(
 |---|---|
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
-| `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
+| `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包；该包已有检查在进行时并入它、拿它的结果，同一个包不会同时查两次（事件只发一次，沿用发起那次的 `trigger`） |
 | `val status: StateFlow<Map<String, PackageStatus>>` | 每个包在本进程的状态，给调试面板与 `UpdatesStatusLine` 看（§4.7）；只读，不影响选包 |
 | `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` 默认连同平台前后台一起接上，另有 `onForeground()` / `onBackground()` / `checkNow()`（§4.6） |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, propsJson, locals, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
@@ -334,8 +334,8 @@ scheduler.checkNow()                                       // 切了通道或服
 
 - `onCheck` 通常接 `UpdatesScheduler.checkNow()`；`onRestart` 由宿主实现——结束进程，或在平台允许时重启。库不替宿主做这件事：能不能自行退出是平台与上架规则的事。
 - `note` 放宿主想补充的信息，比如通道不是该构建的默认值时把通道名显示出来。
-- 文案经 `UpdatesStatusLineLabels` 给，默认英文；版本的读法经 `versionLabel` 给，默认 `shortVersion`：`tinyui build` 默认形式的版本显示为 `MMdd-HHmmZ · <git sha 前 7 位>`（时间取 `createdAt`，UTC），其他形式原样显示。要本地时间的宿主自己换。
-- 发到错误目录的包（`NAME` / `VERSION` 不符）与灰度未中不在状态行上提示：换安装包解决不了，测试人员也无从处理。
+- 文案经 `UpdatesStatusLineLabels` 给，默认英文；版本的读法经 `versionLabel` 给，默认 `shortVersion`：版本恰是 `tinyui build` 的默认形式（`createdAt` 的紧凑形式加 12 位 git sha，§1.1）时显示为 `MMdd-HHmmZ · <git sha 前 7 位>`（时间取 `createdAt`，UTC），其他形式原样显示。要本地时间的宿主自己换。
+- 发到错误目录的包（不符的字段里有 `NAME` / `VERSION`，即便同时还有宿主一侧的不符）与灰度未中不在状态行上提示：换安装包解决不了，测试人员也无从处理。
 
 ## 5. 与既有契约的关系
 
