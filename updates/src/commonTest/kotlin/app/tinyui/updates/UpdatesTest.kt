@@ -488,4 +488,83 @@ class UpdatesTest {
         fs.deleteRecursively(dir)
         assertEquals(FailStage.SIGNATURE, (updates(embedded(), verifier = PlatformSignatureVerifier).check("shop") as CheckResult.Failed).stage)
     }
+
+    @Test
+    fun statusTellsWhatRunsAndWhatWaitsForTheNextStart() = runTest {
+        val first = updates(embedded())
+        assertEquals(PackageStatus(first.current("shop").manifest, Source.EMBEDDED), first.status.value["shop"])
+
+        val gate = CompletableDeferred<Unit>()
+        val slow = Updates(listOf(embedded()), "1", dir, "install-1", { path -> gate.await(); fetch(path) }, { events += it }, fs, Fixture.ENGINE, Fixture.TINYUI, lenient)
+        publish(manifest())
+        val check = launch { slow.check("shop") }
+        runCurrent()
+        assertTrue(slow.status.value.getValue("shop").checking)
+        gate.complete(Unit)
+        check.join()
+        val after = slow.status.value.getValue("shop")
+        assertFalse(after.checking)
+        assertEquals("v0", after.running.version, "this process keeps what it started with")
+        assertEquals("v1", after.pending?.version)
+        assertEquals(CheckResult.Installed("v1"), after.lastCheck)
+
+        val next = updates(embedded()).status.value.getValue("shop")
+        assertEquals("v1" to Source.INSTALLED, next.running.version to next.source)
+        assertEquals(null, next.pending, "nothing waits once it runs")
+    }
+
+    @Test
+    fun statusFollowsARollbackToEmbedded() = runTest {
+        publish(manifest())
+        updates(embedded()).check("shop")
+        val u = updates(embedded())
+        u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E2", "shop/home", "b1", "boom")))
+        val status = u.status.value.getValue("shop")
+        assertEquals("v0" to Source.EMBEDDED, status.running.version to status.source)
+        assertEquals(null, status.pending)
+    }
+
+    @Test
+    fun theStatusLineSaysWhatATesterNeedsToKnow() {
+        val labels = UpdatesStatusLineLabels()
+        val v0 = embedded().manifest
+        val v1 = BuildManifest.parse(manifest(version = "20261114T073603Z-2c393a5deb22", createdAt = "2026-11-14T07:36:03Z"))
+        fun line(status: PackageStatus, note: String? = null) = statusLineOf("shop", status, note, labels, ::shortVersion)
+
+        assertEquals("1114-0736Z · 2c393a5", shortVersion(v1))
+        assertEquals("v0", shortVersion(v0), "a version of another form is shown as it is")
+
+        val plain = line(PackageStatus(v1, Source.INSTALLED), note = "production")
+        assertEquals("shop · production · 1114-0736Z · 2c393a5", plain.text)
+        assertEquals(StatusLineAction.CHECK, plain.action)
+        assertEquals("shop · v0 · embedded", line(PackageStatus(v0, Source.EMBEDDED)).text)
+
+        val waiting = line(PackageStatus(v0, Source.EMBEDDED, pending = v1, checking = true, lastCheck = CheckResult.Failed(null, FailStage.POINTER, "x")))
+        assertEquals("shop · v0 · embedded → 1114-0736Z · 2c393a5 · tap to restart", waiting.text)
+        assertEquals(StatusLineAction.RESTART to true, waiting.action to waiting.highlighted)
+
+        assertEquals(StatusLineAction.NONE, line(PackageStatus(v0, Source.EMBEDDED, checking = true)).action)
+        assertTrue(line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Failed(null, FailStage.POINTER, "x"))).text.endsWith(labels.failed))
+        val otherHost = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.HOST_VERSION))))
+        assertTrue(otherHost.highlighted && otherHost.text.endsWith(labels.incompatible))
+        val wrongDirectory = line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.INCOMPATIBLE, setOf(Mismatch.NAME))))
+        assertEquals("shop · v0 · embedded", wrongDirectory.text, "a new app build would not help")
+        assertTrue(line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE))).text.endsWith(labels.failedBefore))
+        assertEquals("shop · v0 · embedded", line(PackageStatus(v0, Source.EMBEDDED, lastCheck = CheckResult.Skipped("v1", SkipReason.ROLLOUT))).text)
+    }
+
+    @Test
+    fun aShortIntervalAlsoShortensTheGapAfterAFailure() = runTest {
+        val s = UpdatesScheduler(updates(embedded()), backgroundScope, interval = 10.seconds, retryAfter = 1.seconds, timeSource = testScheduler.timeSource)
+        s.start(followAppLifecycle = false)
+        advanceTimeBy(5.seconds)
+        runCurrent()
+        s.onForeground()
+        runCurrent()
+        assertEquals(listOf(CheckTrigger.STARTUP to "POINTER"), checks(), "not yet")
+        advanceTimeBy(10.seconds)
+        s.onForeground()
+        runCurrent()
+        assertEquals(CheckTrigger.FOREGROUND to "POINTER", checks().last())
+    }
 }

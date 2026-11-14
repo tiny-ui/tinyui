@@ -207,6 +207,7 @@ class Updates(
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
 | `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
+| `val status: StateFlow<Map<String, PackageStatus>>` | 每个包在本进程的状态，给调试面板与 `UpdatesStatusLine` 看（§4.7）；只读，不影响选包 |
 | `class UpdatesScheduler(updates, scope, interval = 1.hours, retryAfter = 10.seconds)` | 可选：统一的检查时机，`start()` 默认连同平台前后台一起接上，另有 `onForeground()` / `onBackground()` / `checkNow()`（§4.6） |
 | 顶层 `@Composable fun UpdatesPage(updates, name, host, propsJson, locals, modifier, error, onHost)` | 与 `TinyUIPage` 同参外加 `updates`；`name` 是含包名的模块名，第一个 `/` 之前即包，`current(pkg).page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
@@ -292,18 +293,49 @@ scheduler.checkNow()                                       // 切了通道或服
 |---|---|---|
 | `start()` | 每进程一次，重复调用无效 | `STARTUP` |
 | 启动检查失败后 `retryAfter` | 失败在网络阶段（`POINTER` / `MANIFEST` / `DOWNLOAD`），且此刻在前台；只重试一次 | `RETRY` |
-| 回到前台 | 上次检查在网络阶段失败且已过 1 分钟，或上次成功已过 `interval` | `FOREGROUND` |
+| 回到前台 | 上次检查在网络阶段失败且已过 1 分钟（`interval` 更短时取 `interval`），或上次成功已过 `interval` | `FOREGROUND` |
 | `checkNow()` | 无条件 | `MANUAL` |
 
 - 冷启动那几秒网络常常还没就绪，弱网地区尤甚；进程又常常活好几天，只在冷启动检查的话，一次失败要等下次冷启动、进程活着时发的新版本也收不到。
 - 签名、完整性、落盘失败再问也不会好，不重试，也不让前台检查绕过 `interval`。指针或 manifest 解析失败仍算网络阶段：强制门户、代理会拿自己的页面应答。
 - 前台检查装上的版本同样**下次启动生效**（§4.4）；它把下载与冷启动解耦：网络好时先装好，下次冷启动即便没网也直接用上。
-- `interval` 默认 1 小时：每次检查只取一次指针，有新版本才下载；额度紧的宿主调大。`start()` 之前的前台事件不触发检查，第一次检查留给 `STARTUP`。
+- `interval` 默认 1 小时：每次检查只取一次指针，有新版本才下载；额度紧的宿主调大。开发构建可以调到十秒量级，测试人员切回 App 就能拿到刚发布的版本（§4.7）；不要给 0，启动检查与随之而来的前台事件会连查两次。`start()` 之前的前台事件不触发检查，第一次检查留给 `STARTUP`。
 - 各触发串行：一次检查进行中到来的触发，等它结束后按它的结果判断要不要再查；间隔从检查**结束**算起。`scope` 由宿主给、进程级，检查不随页面取消；它并入的一次 `check()` 若随别处调用方的 scope 取消，记为一次失败，照常重试。
 - `start()` 只是发起：页面不等它完成，否则弱网下首屏要等十几秒。§4.1 的约定是发起先于挂载；回滚送达靠这次或随后的检查，进程级崩溃的出口仍是灰度与回滚（ADR-006 §4.3）。
 - 每进程一个 `Updates`、一个 `UpdatesScheduler`，放在进程级的地方（`Application`、单例），不放进会随 Activity 重建的 composition。
 - `onEvent` 不应抛异常；抛了的检查不当作网络失败重试。
 - 前后台：Android 用 `ProcessLifecycleOwner`（依赖 `androidx.lifecycle:lifecycle-process`），iOS 用 `didBecomeActive` / `didEnterBackground`；`start()` 时已在前台的补一次 `onForeground()`，`scope` 一取消就摘除观察者。自己定义前后台的宿主（多窗口、桌面端、测试）用 `start(followAppLifecycle = false)`，再自己调 `onForeground()` / `onBackground()`。
+
+### 4.7 状态与状态行
+
+开发、测试阶段要回答两个问题：这台设备跑的是哪个版本，刚发布的版本到了没有。生效机制不为此另开一套——装上的版本仍然下次启动生效（§4.4）——库只把状态摆出来，由宿主决定给谁看。
+
+`Updates.status` 按包名给出 `PackageStatus`：
+
+| 字段 | 含义 |
+|---|---|
+| `running` / `source` | 本进程页面来自的包的 manifest，与它是内置还是已安装；回退（§4.5）后变回内置 |
+| `pending` | 本进程的 `check()` 装上、等下次启动生效的版本的 manifest；没有则为 `null` |
+| `checking` | 该包的 `check()` 正在进行 |
+| `lastCheck` | 本进程最近一次 `check()` 的 `CheckResult`；还没查完过为 `null` |
+
+它与 `onEvent` 是同一组事实的两种形态：事件给日志与埋点，状态给界面。
+
+`UpdatesStatusLine(updates, pkg, onCheck, onRestart, note, labels, versionLabel)` 是建在它上面的一行状态，给开发构建用，宿主自己决定放在哪里、哪些构建显示：
+
+| 状态 | 显示 | 点击 |
+|---|---|---|
+| 平时 | `<pkg> · <note> · <运行版本>`，内置包再加 `embedded` | `onCheck` |
+| 检查中 | 末尾加 `checking…` | 无 |
+| 有版本等待生效 | `… → <新版本> · tap to restart`，高亮 | `onRestart` |
+| 新版本不兼容本宿主（`HOST_VERSION` / `ENGINE` / `TINYUI`） | 末尾加「需要新的安装包」，高亮 | `onCheck` |
+| 新版本在本机失败过（`FAILED_BEFORE`） | 末尾加「在本机失败过」，高亮 | `onCheck` |
+| 检查失败 | 末尾加「检查失败，点击重试」 | `onCheck` |
+
+- `onCheck` 通常接 `UpdatesScheduler.checkNow()`；`onRestart` 由宿主实现——结束进程，或在平台允许时重启。库不替宿主做这件事：能不能自行退出是平台与上架规则的事。
+- `note` 放宿主想补充的信息，比如通道不是该构建的默认值时把通道名显示出来。
+- 文案经 `UpdatesStatusLineLabels` 给，默认英文；版本的读法经 `versionLabel` 给，默认 `shortVersion`：`tinyui build` 默认形式的版本显示为 `MMdd-HHmmZ · <git sha 前 7 位>`（时间取 `createdAt`，UTC），其他形式原样显示。要本地时间的宿主自己换。
+- 发到错误目录的包（`NAME` / `VERSION` 不符）与灰度未中不在状态行上提示：换安装包解决不了，测试人员也无从处理。
 
 ## 5. 与既有契约的关系
 
