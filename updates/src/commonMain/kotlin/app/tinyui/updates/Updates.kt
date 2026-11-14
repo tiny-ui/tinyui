@@ -29,6 +29,7 @@ import okio.FileSystem
 import okio.IOException
 import okio.Path
 import wang.harlon.quickjs.QuickJs
+import kotlin.concurrent.Volatile
 
 /**
  * Hot updates for a set of packages (docs/updates.md §4): verifies, stores, selects and rolls back, never
@@ -201,6 +202,8 @@ class Updates internal constructor(
         val lock = Mutex()
         var installed: String? = null
         val failed = ArrayList<String>()
+        /** Written by a rollback outside [lock], read by pages on other threads: they must see embedded at once. */
+        @Volatile
         var current: Bundle = embedded
         /** The check of this package under way, for a second call to join; guarded by `checkLock`. */
         var inFlight: CompletableDeferred<CheckResult>? = null
@@ -329,7 +332,8 @@ class Updates internal constructor(
                 installed = version
                 saveState()
                 installedManifest = manifest
-                fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) }
+                // the install is committed: an older directory that will not go is cleaned up at the next start, not a failed check
+                runCatching { fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) } }
             } catch (e: CancellationException) {
                 discard()
                 throw e
