@@ -1,5 +1,7 @@
 package app.tinyui.updates
 
+import app.tinyui.bundle.BuildManifest
+
 /** Where the package a process runs came from. */
 enum class Source { EMBEDDED, INSTALLED }
 
@@ -41,6 +43,22 @@ sealed class UpdateEvent {
     data class Failed(override val pkg: String, val version: String?, val stage: FailStage, val message: String, val trigger: CheckTrigger? = null) : UpdateEvent()
     data class RolledBack(override val pkg: String, val version: String, val page: String, val kind: String, val buildId: String, val message: String) : UpdateEvent()
 }
+
+/**
+ * What one package is doing in this process (docs/updates.md §4.7).
+ *
+ * @param running the package its pages load from: chosen at construction, embedded again after a rollback
+ * @param pending a version a `check()` of this process installed; the next start runs it
+ * @param checking a `check()` of this package is under way
+ * @param lastCheck how the last `check()` of this process ended, null before the first one has
+ */
+data class PackageStatus(
+    val running: BuildManifest,
+    val source: Source,
+    val pending: BuildManifest? = null,
+    val checking: Boolean = false,
+    val lastCheck: CheckResult? = null,
+)
 
 internal fun CheckResult.toEvent(pkg: String, trigger: CheckTrigger): UpdateEvent = when (this) {
     is CheckResult.UpToDate -> UpdateEvent.UpToDate(pkg, version, trigger)

@@ -22,7 +22,8 @@ import kotlinx.coroutines.sync.withLock
 /**
  * When to [Updates.check], the same for every host (docs/updates.md §4.6): once at [start]; once more [retryAfter]
  * later when that failed on the network and the app is in the foreground; and on coming to the foreground when the
- * last check failed on the network (at most once a minute) or the last good one is [interval] old. Installs still take
+ * last check failed on the network (at most once a minute, or once an [interval] when that is shorter) or the last good
+ * one is [interval] old. Installs still take
  * effect at the next start: checking in the foreground only gets the files there before it.
  *
  * [start] follows the app to the foreground by itself; a host with its own idea of it calls [onForeground] /
@@ -90,7 +91,7 @@ class UpdatesScheduler(
     /** Before [start] has run nothing is due: the startup check comes first. */
     private fun due(): Boolean {
         val attempt = lastAttempt ?: return false
-        return if (failed) attempt.elapsedNow() >= FAILED_GAP else lastGood?.let { it.elapsedNow() >= interval } ?: true
+        return if (failed) attempt.elapsedNow() >= minOf(FAILED_GAP, interval) else lastGood?.let { it.elapsedNow() >= interval } ?: true
     }
 
     /**

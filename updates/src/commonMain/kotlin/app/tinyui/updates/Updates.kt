@@ -11,6 +11,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -25,6 +29,7 @@ import okio.FileSystem
 import okio.IOException
 import okio.Path
 import wang.harlon.quickjs.QuickJs
+import kotlin.concurrent.Volatile
 
 /**
  * Hot updates for a set of packages (docs/updates.md §4): verifies, stores, selects and rolls back, never
@@ -55,6 +60,13 @@ class Updates internal constructor(
     private val packages: Map<String, Package>
     private val checkLock = Mutex()
     private var inFlight: CompletableDeferred<Map<String, CheckResult>>? = null
+    private val _status = MutableStateFlow<Map<String, PackageStatus>>(emptyMap())
+
+    /**
+     * What every package is doing in this process, by package name (docs/updates.md §4.7): for a host's debug panel
+     * or [UpdatesStatusLine]. It only tells; what a process runs is still chosen at construction.
+     */
+    val status: StateFlow<Map<String, PackageStatus>> = _status.asStateFlow()
 
     init {
         require(packages.isNotEmpty()) { "Updates needs at least one embedded package" }
@@ -78,6 +90,7 @@ class Updates internal constructor(
         for (p in byName.values) {
             if (!p.verifyAtStartup()) onEvent(UpdateEvent.Running(p.name, p.embedded.manifest.version, Source.EMBEDDED))
         }
+        for (p in byName.values) tell(p)
     }
 
     /** The bundle every page of [pkg] loads from in this process: chosen at construction, embedded again after a rollback. */
@@ -107,7 +120,17 @@ class Updates internal constructor(
     /** One package; two calls for the same package at once run one after the other. */
     suspend fun check(pkg: String, trigger: CheckTrigger = CheckTrigger.MANUAL): CheckResult {
         val p = pkg(pkg)
-        return p.lock.withLock { p.check() }.also { onEvent(it.toEvent(pkg, trigger)) }
+        p.checking = true
+        tell(p)
+        try {
+            return p.lock.withLock { p.check() }.also {
+                p.lastCheck = it
+                onEvent(it.toEvent(pkg, trigger))
+            }
+        } finally {
+            p.checking = false
+            tell(p)
+        }
     }
 
     internal fun embedded(pkg: String): Bundle = pkg(pkg).embedded
@@ -124,11 +147,13 @@ class Updates internal constructor(
         val p = pkg(pkg)
         val version = bundle.manifest.version
         p.current = p.embedded
+        tell(p)
         withContext(NonCancellable) {
             p.lock.withLock {
                 if (version !in p.failed) p.failed += version
                 val drop = p.installed == version
                 if (drop) p.installed = null
+                if (p.pending?.version == version) p.pending = null
                 // the blacklist reaches the disk before the files go: a crash in between must not let check() install it again
                 try {
                     p.saveState()
@@ -137,8 +162,14 @@ class Updates internal constructor(
                 }
                 if (drop) runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
             }
+            tell(p)
             onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
         }
+    }
+
+    private fun tell(p: Package) {
+        val status = PackageStatus(p.current.manifest, if (p.current === p.embedded) Source.EMBEDDED else Source.INSTALLED, p.pending, p.checking, p.lastCheck)
+        _status.update { it + (p.name to status) }
     }
 
     private fun pkg(name: String): Package = packages[name] ?: throw IllegalArgumentException("no embedded package named $name; have ${packages.keys}")
@@ -160,7 +191,15 @@ class Updates internal constructor(
         val lock = Mutex()
         var installed: String? = null
         val failed = ArrayList<String>()
+        @Volatile
         var current: Bundle = embedded
+        /** Installed by a `check()` of this process: what the next start runs. */
+        @Volatile
+        var pending: BuildManifest? = null
+        @Volatile
+        var checking = false
+        @Volatile
+        var lastCheck: CheckResult? = null
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {
             if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
@@ -283,6 +322,7 @@ class Updates internal constructor(
                 discard()
                 installed = version
                 saveState()
+                pending = manifest
                 fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) }
             } catch (e: CancellationException) {
                 discard()

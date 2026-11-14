@@ -72,11 +72,38 @@ final enum class app.tinyui.updates/Source : kotlin/Enum<app.tinyui.updates/Sour
     final fun values(): kotlin/Array<app.tinyui.updates/Source> // app.tinyui.updates/Source.values|values#static(){}[0]
 }
 
+final class app.tinyui.updates/PackageStatus { // app.tinyui.updates/PackageStatus|null[0]
+    constructor <init>(app.tinyui.bundle/BuildManifest, app.tinyui.updates/Source, app.tinyui.bundle/BuildManifest? = ..., kotlin/Boolean = ..., app.tinyui.updates/CheckResult? = ...) // app.tinyui.updates/PackageStatus.<init>|<init>(app.tinyui.bundle.BuildManifest;app.tinyui.updates.Source;app.tinyui.bundle.BuildManifest?;kotlin.Boolean;app.tinyui.updates.CheckResult?){}[0]
+
+    final val checking // app.tinyui.updates/PackageStatus.checking|{}checking[0]
+        final fun <get-checking>(): kotlin/Boolean // app.tinyui.updates/PackageStatus.checking.<get-checking>|<get-checking>(){}[0]
+    final val lastCheck // app.tinyui.updates/PackageStatus.lastCheck|{}lastCheck[0]
+        final fun <get-lastCheck>(): app.tinyui.updates/CheckResult? // app.tinyui.updates/PackageStatus.lastCheck.<get-lastCheck>|<get-lastCheck>(){}[0]
+    final val pending // app.tinyui.updates/PackageStatus.pending|{}pending[0]
+        final fun <get-pending>(): app.tinyui.bundle/BuildManifest? // app.tinyui.updates/PackageStatus.pending.<get-pending>|<get-pending>(){}[0]
+    final val running // app.tinyui.updates/PackageStatus.running|{}running[0]
+        final fun <get-running>(): app.tinyui.bundle/BuildManifest // app.tinyui.updates/PackageStatus.running.<get-running>|<get-running>(){}[0]
+    final val source // app.tinyui.updates/PackageStatus.source|{}source[0]
+        final fun <get-source>(): app.tinyui.updates/Source // app.tinyui.updates/PackageStatus.source.<get-source>|<get-source>(){}[0]
+
+    final fun component1(): app.tinyui.bundle/BuildManifest // app.tinyui.updates/PackageStatus.component1|component1(){}[0]
+    final fun component2(): app.tinyui.updates/Source // app.tinyui.updates/PackageStatus.component2|component2(){}[0]
+    final fun component3(): app.tinyui.bundle/BuildManifest? // app.tinyui.updates/PackageStatus.component3|component3(){}[0]
+    final fun component4(): kotlin/Boolean // app.tinyui.updates/PackageStatus.component4|component4(){}[0]
+    final fun component5(): app.tinyui.updates/CheckResult? // app.tinyui.updates/PackageStatus.component5|component5(){}[0]
+    final fun copy(app.tinyui.bundle/BuildManifest = ..., app.tinyui.updates/Source = ..., app.tinyui.bundle/BuildManifest? = ..., kotlin/Boolean = ..., app.tinyui.updates/CheckResult? = ...): app.tinyui.updates/PackageStatus // app.tinyui.updates/PackageStatus.copy|copy(app.tinyui.bundle.BuildManifest;app.tinyui.updates.Source;app.tinyui.bundle.BuildManifest?;kotlin.Boolean;app.tinyui.updates.CheckResult?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // app.tinyui.updates/PackageStatus.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // app.tinyui.updates/PackageStatus.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // app.tinyui.updates/PackageStatus.toString|toString(){}[0]
+}
+
 final class app.tinyui.updates/Updates { // app.tinyui.updates/Updates|null[0]
     constructor <init>(kotlin.collections/List<app.tinyui.bundle/Bundle>, kotlin/String, okio/Path, kotlin/String, kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray>, kotlin/Function1<app.tinyui.updates/UpdateEvent, kotlin/Unit> = ...) // app.tinyui.updates/Updates.<init>|<init>(kotlin.collections.List<app.tinyui.bundle.Bundle>;kotlin.String;okio.Path;kotlin.String;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.ByteArray>;kotlin.Function1<app.tinyui.updates.UpdateEvent,kotlin.Unit>){}[0]
 
     final val hostVersion // app.tinyui.updates/Updates.hostVersion|{}hostVersion[0]
         final fun <get-hostVersion>(): kotlin/String // app.tinyui.updates/Updates.hostVersion.<get-hostVersion>|<get-hostVersion>(){}[0]
+    final val status // app.tinyui.updates/Updates.status|{}status[0]
+        final fun <get-status>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, app.tinyui.updates/PackageStatus>> // app.tinyui.updates/Updates.status.<get-status>|<get-status>(){}[0]
 
     final fun current(kotlin/String): app.tinyui.bundle/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
     final suspend fun check(app.tinyui.updates/CheckTrigger = ...): kotlin.collections/Map<kotlin/String, app.tinyui.updates/CheckResult> // app.tinyui.updates/Updates.check|check(app.tinyui.updates.CheckTrigger){}[0]
@@ -90,6 +117,23 @@ final class app.tinyui.updates/UpdatesScheduler { // app.tinyui.updates/UpdatesS
     final fun onBackground() // app.tinyui.updates/UpdatesScheduler.onBackground|onBackground(){}[0]
     final fun onForeground() // app.tinyui.updates/UpdatesScheduler.onForeground|onForeground(){}[0]
     final fun start(kotlin/Boolean = ...) // app.tinyui.updates/UpdatesScheduler.start|start(kotlin.Boolean){}[0]
+}
+
+final class app.tinyui.updates/UpdatesStatusLineLabels { // app.tinyui.updates/UpdatesStatusLineLabels|null[0]
+    constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...) // app.tinyui.updates/UpdatesStatusLineLabels.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
+
+    final val checking // app.tinyui.updates/UpdatesStatusLineLabels.checking|{}checking[0]
+        final fun <get-checking>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.checking.<get-checking>|<get-checking>(){}[0]
+    final val embedded // app.tinyui.updates/UpdatesStatusLineLabels.embedded|{}embedded[0]
+        final fun <get-embedded>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.embedded.<get-embedded>|<get-embedded>(){}[0]
+    final val failed // app.tinyui.updates/UpdatesStatusLineLabels.failed|{}failed[0]
+        final fun <get-failed>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.failed.<get-failed>|<get-failed>(){}[0]
+    final val failedBefore // app.tinyui.updates/UpdatesStatusLineLabels.failedBefore|{}failedBefore[0]
+        final fun <get-failedBefore>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.failedBefore.<get-failedBefore>|<get-failedBefore>(){}[0]
+    final val incompatible // app.tinyui.updates/UpdatesStatusLineLabels.incompatible|{}incompatible[0]
+        final fun <get-incompatible>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.incompatible.<get-incompatible>|<get-incompatible>(){}[0]
+    final val restart // app.tinyui.updates/UpdatesStatusLineLabels.restart|{}restart[0]
+        final fun <get-restart>(): kotlin/String // app.tinyui.updates/UpdatesStatusLineLabels.restart.<get-restart>|<get-restart>(){}[0]
 }
 
 sealed class app.tinyui.updates/CheckResult { // app.tinyui.updates/CheckResult|null[0]
@@ -322,6 +366,7 @@ final val app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop //
 final val app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop|#static{}app_tinyui_updates_CheckResult_Installed$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop|#static{}app_tinyui_updates_CheckResult_Skipped$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop // app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop|#static{}app_tinyui_updates_CheckResult_UpToDate$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_PackageStatus$stableprop // app.tinyui.updates/app_tinyui_updates_PackageStatus$stableprop|#static{}app_tinyui_updates_PackageStatus$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop|#static{}app_tinyui_updates_UpdateEvent$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop|#static{}app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop|#static{}app_tinyui_updates_UpdateEvent_Failed$stableprop[0]
@@ -332,14 +377,17 @@ final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop /
 final val app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop // app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop|#static{}app_tinyui_updates_UpdateEvent_UpToDate$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_Updates$stableprop // app.tinyui.updates/app_tinyui_updates_Updates$stableprop|#static{}app_tinyui_updates_Updates$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop // app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop|#static{}app_tinyui_updates_UpdatesScheduler$stableprop[0]
+final val app.tinyui.updates/app_tinyui_updates_UpdatesStatusLineLabels$stableprop // app.tinyui.updates/app_tinyui_updates_UpdatesStatusLineLabels$stableprop|#static{}app_tinyui_updates_UpdatesStatusLineLabels$stableprop[0]
 final val app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop // app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop|#static{}app_tinyui_updates_Updates_State_$serializer$stableprop[0]
 
 final fun app.tinyui.updates/UpdatesPage(app.tinyui.updates/Updates, kotlin/String, app.tinyui/TinyUIHost, kotlin/String?, kotlin.collections/List<app.tinyui/PageLocalValue<*>>?, androidx.compose.ui/Modifier?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui.updates/UpdatesPage|UpdatesPage(app.tinyui.updates.Updates;kotlin.String;app.tinyui.TinyUIHost;kotlin.String?;kotlin.collections.List<app.tinyui.PageLocalValue<*>>?;androidx.compose.ui.Modifier?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun app.tinyui.updates/UpdatesStatusLine(app.tinyui.updates/Updates, kotlin/String, kotlin/Function0<kotlin/Unit>, kotlin/Function0<kotlin/Unit>, androidx.compose.ui/Modifier?, kotlin/String?, app.tinyui.updates/UpdatesStatusLineLabels?, kotlin/Function1<app.tinyui.bundle/BuildManifest, kotlin/String>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui.updates/UpdatesStatusLine|UpdatesStatusLine(app.tinyui.updates.Updates;kotlin.String;kotlin.Function0<kotlin.Unit>;kotlin.Function0<kotlin.Unit>;androidx.compose.ui.Modifier?;kotlin.String?;app.tinyui.updates.UpdatesStatusLineLabels?;kotlin.Function1<app.tinyui.bundle.BuildManifest,kotlin.String>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult$stableprop_getter|app_tinyui_updates_CheckResult$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Failed$stableprop_getter|app_tinyui_updates_CheckResult_Failed$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Installed$stableprop_getter|app_tinyui_updates_CheckResult_Installed$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_Skipped$stableprop_getter|app_tinyui_updates_CheckResult_Skipped$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_CheckResult_UpToDate$stableprop_getter|app_tinyui_updates_CheckResult_UpToDate$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_PackageStatus$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_PackageStatus$stableprop_getter|app_tinyui_updates_PackageStatus$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent$stableprop_getter|app_tinyui_updates_UpdateEvent$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop_getter|app_tinyui_updates_UpdateEvent_EmbeddedIncompatible$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_Failed$stableprop_getter|app_tinyui_updates_UpdateEvent_Failed$stableprop_getter(){}[0]
@@ -350,5 +398,7 @@ final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_Skipped$stableprop_g
 final fun app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter|app_tinyui_updates_UpdateEvent_UpToDate$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_Updates$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_Updates$stableprop_getter|app_tinyui_updates_Updates$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdatesScheduler$stableprop_getter|app_tinyui_updates_UpdatesScheduler$stableprop_getter(){}[0]
+final fun app.tinyui.updates/app_tinyui_updates_UpdatesStatusLineLabels$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_UpdatesStatusLineLabels$stableprop_getter|app_tinyui_updates_UpdatesStatusLineLabels$stableprop_getter(){}[0]
 final fun app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop_getter(): kotlin/Int // app.tinyui.updates/app_tinyui_updates_Updates_State_$serializer$stableprop_getter|app_tinyui_updates_Updates_State_$serializer$stableprop_getter(){}[0]
 final fun app.tinyui.updates/ktorFetch(io.ktor.client/HttpClient, kotlin/Function0<kotlin/String>): kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/ByteArray> // app.tinyui.updates/ktorFetch|ktorFetch(io.ktor.client.HttpClient;kotlin.Function0<kotlin.String>){}[0]
+final fun app.tinyui.updates/shortVersion(app.tinyui.bundle/BuildManifest): kotlin/String // app.tinyui.updates/shortVersion|shortVersion(app.tinyui.bundle.BuildManifest){}[0]
