@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
+- 状态：已定（2026-09-18；2026-11-18 加 §8 包下线；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -457,3 +457,12 @@ CLI：`tinyui hosts upload <file> --host-version <n> [--app <app>]`（宿主 mai
   4. 用新钥 `bundle` / `publish` 到新 `hostVersion`，宿主 `tinyui pull --accept-key <新公钥>` 刷新内置包，随 App 发版
 
   旧 App 停在冻结的版本上，升级 App 后恢复更新。私钥泄露时先做 `rotate-key`（服务端即刻拒收旧钥签名，冻结点就是当时的指针），再走其余步骤。不中断旧 App 的轮换（预置备用钥）见 roadmap.md D 组
+
+## 8. 包下线
+
+一个包的页面全部迁出 TinyUI，或并进别的包时，宿主把它从 App 里移除。协议不为此加任何东西，原则：
+
+- **只在宿主侧下线**：新版本宿主不再内置、不再检查这个包；旧版本宿主照常请求它，服务端的包与指针保留——删掉指针只会让旧宿主每次检查都报 `Failed(pointer)`、从此收不到回滚，没有收益。旧版本还发不发新内容，由包的发布方定
+- **设备侧不写迁移**：`Updates` 构造时删掉 `<dir>` 下不属于任何内置包的子目录（§4.4），已下载的这个包随 App 升级自动清掉
+- **`hostVersion` 按宿主契约判断**：只移除包不改宿主对页面的承诺，不加；连带撤掉了只给它用的宿主组件、能力或网络通道，才按 §4.1 加 1。此后 `hostVersion` 加 1 时，已下线的包不用在新版本下发布
+- **口径以宿主版本为界**：宿主按包上报的版本信息（如埋点里每包一个的版本属性）随包一起去掉，说明里写明从哪个 App 版本起不再带，而不是日期
