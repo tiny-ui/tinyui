@@ -54,6 +54,27 @@ fun UpdatesStatusLine(
         StatusLineAction.RESTART -> onRestart
         StatusLineAction.NONE -> null
     }
+    StatusLineText(line, tap, modifier)
+}
+
+/**
+ * The same line where no [Updates] runs, because the build has not enabled it or it failed to start: pages run from
+ * the embedded package, so the line names its [manifest] (the package is `manifest.name`) and says `embedded`. Nothing
+ * to check, so no tap; [note] is the place for why, when the host knows.
+ */
+@Composable
+fun UpdatesStatusLine(
+    manifest: BuildManifest,
+    modifier: Modifier = Modifier,
+    note: String? = null,
+    labels: UpdatesStatusLineLabels = UpdatesStatusLineLabels(),
+    versionLabel: (BuildManifest) -> String = ::shortVersion,
+) {
+    StatusLineText(embeddedLineOf(manifest, note, labels, versionLabel), null, modifier)
+}
+
+@Composable
+private fun StatusLineText(line: StatusLine, tap: (() -> Unit)?, modifier: Modifier) {
     BasicText(
         text = line.text,
         style = TextStyle(color = if (line.highlighted) Highlight else Color.White, fontSize = 10.sp),
@@ -83,7 +104,7 @@ internal enum class StatusLineAction { NONE, CHECK, RESTART }
 internal class StatusLine(val text: String, val highlighted: Boolean, val action: StatusLineAction)
 
 internal fun statusLineOf(pkg: String, status: PackageStatus, note: String?, labels: UpdatesStatusLineLabels, versionLabel: (BuildManifest) -> String): StatusLine {
-    val running = listOfNotNull(pkg, note, versionLabel(status.running), labels.embedded.takeIf { status.source == Source.EMBEDDED }).joinToString(" · ")
+    val running = runningOf(pkg, note, versionLabel(status.running), labels.embedded.takeIf { status.source == Source.EMBEDDED })
     val pending = status.pending
     val last = status.lastCheck
     return when {
@@ -97,6 +118,11 @@ internal fun statusLineOf(pkg: String, status: PackageStatus, note: String?, lab
         else -> StatusLine(running, false, StatusLineAction.CHECK)
     }
 }
+
+internal fun embeddedLineOf(manifest: BuildManifest, note: String?, labels: UpdatesStatusLineLabels, versionLabel: (BuildManifest) -> String): StatusLine =
+    StatusLine(runningOf(manifest.name, note, versionLabel(manifest), labels.embedded), false, StatusLineAction.NONE)
+
+private fun runningOf(pkg: String, note: String?, version: String, embedded: String?): String = listOfNotNull(pkg, note, version, embedded).joinToString(" · ")
 
 /** The package is fine, for another host. One that also names the wrong package or version was published to the wrong place: no app build fixes that. */
 private val OTHER_HOST = setOf(Mismatch.HOST_VERSION, Mismatch.ENGINE, Mismatch.TINYUI)

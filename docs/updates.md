@@ -335,6 +335,7 @@ scheduler.checkNow()                                       // 切了通道或服
 - `onCheck` 通常接 `UpdatesScheduler.checkNow()`；`onRestart` 由宿主实现——结束进程，或在平台允许时重启。库不替宿主做这件事：能不能自行退出是平台与上架规则的事。
 - `note` 放宿主想补充的信息，比如通道不是该构建的默认值时把通道名显示出来。
 - 文案经 `UpdatesStatusLineLabels` 给，默认英文；版本的读法经 `versionLabel` 给，默认 `shortVersion`：版本恰是 `tinyui build` 的默认形式（`createdAt` 的紧凑形式加 12 位 git sha，§1.1）时显示为 `MMdd-HHmmZ · <git sha 前 7 位>`（时间取 `createdAt`，UTC），其他形式原样显示。要本地时间的宿主自己换。
+- 没有 `Updates` 在跑时（构建没启用热下发，或它构造失败），页面跑内置包，状态行同样有用：另一个重载 `UpdatesStatusLine(manifest, modifier, note = …, labels = …, versionLabel = …)` 直接给内置包的 manifest（包名取 `manifest.name`），显示 `<pkg> · <note> · <内置版本> · embedded`，不可点击（没有检查可发起）。`note` 适合写为什么没在跑，比如未启用、构造失败。
 - 发到错误目录的包（不符的字段里有 `NAME` / `VERSION`，即便同时还有宿主一侧的不符）与灰度未中不在状态行上提示：换安装包解决不了，测试人员也无从处理。
 
 ## 5. 与既有契约的关系
