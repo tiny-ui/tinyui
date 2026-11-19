@@ -59,19 +59,18 @@ fun UpdatesStatusLine(
 
 /**
  * The same line where no [Updates] runs, because the build has not enabled it or it failed to start: pages run from
- * the embedded package, so the line names its [manifest] and says `embedded`. Nothing to check, so no tap; [note] is
- * the place for why, when the host knows.
+ * the embedded package, so the line names its [manifest] (the package is `manifest.name`) and says `embedded`. Nothing
+ * to check, so no tap; [note] is the place for why, when the host knows.
  */
 @Composable
 fun UpdatesStatusLine(
     manifest: BuildManifest,
-    pkg: String,
     modifier: Modifier = Modifier,
     note: String? = null,
     labels: UpdatesStatusLineLabels = UpdatesStatusLineLabels(),
     versionLabel: (BuildManifest) -> String = ::shortVersion,
 ) {
-    StatusLineText(embeddedLineOf(pkg, manifest, note, labels, versionLabel), null, modifier)
+    StatusLineText(embeddedLineOf(manifest, note, labels, versionLabel), null, modifier)
 }
 
 @Composable
@@ -120,8 +119,8 @@ internal fun statusLineOf(pkg: String, status: PackageStatus, note: String?, lab
     }
 }
 
-internal fun embeddedLineOf(pkg: String, manifest: BuildManifest, note: String?, labels: UpdatesStatusLineLabels, versionLabel: (BuildManifest) -> String): StatusLine =
-    StatusLine(runningOf(pkg, note, versionLabel(manifest), labels.embedded), false, StatusLineAction.NONE)
+internal fun embeddedLineOf(manifest: BuildManifest, note: String?, labels: UpdatesStatusLineLabels, versionLabel: (BuildManifest) -> String): StatusLine =
+    StatusLine(runningOf(manifest.name, note, versionLabel(manifest), labels.embedded), false, StatusLineAction.NONE)
 
 private fun runningOf(pkg: String, note: String?, version: String, embedded: String?): String = listOfNotNull(pkg, note, version, embedded).joinToString(" · ")
 

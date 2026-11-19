@@ -566,10 +566,10 @@ class UpdatesTest {
     fun withoutUpdatesTheStatusLineStillNamesTheEmbeddedVersion() {
         val labels = UpdatesStatusLineLabels()
         val v1 = BuildManifest.parse(manifest(version = "20261114T073603Z-2c393a5deb22", createdAt = "2026-11-14T07:36:03Z"))
-        val line = embeddedLineOf("shop", v1, "updates off", labels, ::shortVersion)
+        val line = embeddedLineOf(v1, "updates off", labels, ::shortVersion)
         assertEquals("shop · updates off · 1114-0736Z · 2c393a5 · embedded", line.text)
         assertEquals(StatusLineAction.NONE to false, line.action to line.highlighted, "nothing to check, nothing to restart")
-        assertEquals("shop · v0 · embedded", embeddedLineOf("shop", embedded().manifest, null, labels, ::shortVersion).text)
+        assertEquals("shop · v0 · embedded", embeddedLineOf(embedded().manifest, null, labels, ::shortVersion).text)
     }
 
     @Test
