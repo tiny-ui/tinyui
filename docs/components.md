@@ -291,3 +291,9 @@ CompositionLocalProvider(LocalTinyUIDefaults provides TinyUIDefaults(textField =
 }
 ```
 
+**最佳实践**：
+
+- 页面按角色取色和文字样式（主色、错误色、次级文字、标题），不按具体色值；值是什么由宿主的主题决定
+- 字面量留给本来就不随主题变的颜色（品牌色、图表色）；一个颜色如果将来要跟着深浅或宿主变，就值得成为主题的一部分
+- 同一个角色在各页面用同一个 token，页面之间的一致性由主题保证，不靠各页面对色值
+
