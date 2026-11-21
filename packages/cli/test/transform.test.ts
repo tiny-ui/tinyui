@@ -6,18 +6,22 @@ const t = (jsx: string) => transformJsx("page.tsx", `export default () => ${jsx}
 
 describe("thunk wrapping", () => {
     it("wraps calls and member access, leaves identifiers and literals", () => {
-        assert.match(t(`<Text text={"n: " + count()} />`), /text=\{thunk\(\(\) => "n: " \+ count\(\)\)\}/);
-        assert.match(t(`<Text text={props.title} />`), /thunk\(\(\) => props\.title\)/);
-        assert.match(t(`<Text text={items()!} />`), /thunk\(\(\) => items\(\)!\)/);
+        assert.match(t(`<Text text={"n: " + count()} />`), /text=\{thunk\(\(\) => \("n: " \+ count\(\)\)\)\}/);
+        assert.match(t(`<Text text={props.title} />`), /thunk\(\(\) => \(props\.title\)\)/);
+        assert.match(t(`<Text text={items()!} />`), /thunk\(\(\) => \(items\(\)!\)\)/);
         assert.doesNotMatch(t(`<Text text={label} size={14} flag={a && b} />`), /thunk/);
         assert.doesNotMatch(t("<Text text={`${a} / ${b}`} />"), /thunk/);
     });
     it("descends into conditionals, templates and object literals but not function bodies", () => {
         assert.match(t(`<Text text={ok ? a() : "b"} />`), /thunk/);
         assert.match(t("<Text text={`${x()}`} />"), /thunk/);
-        assert.match(t(`<Row style={{ padding: gap() }} />`), /style=\{thunk\(\(\) => \{ padding: gap\(\) \}\)\}/);
+        assert.match(t(`<Row style={{ padding: gap() }} />`), /style=\{thunk\(\(\) => \(\{ padding: gap\(\) \}\)\)\}/);
         assert.doesNotMatch(t(`<Row style={{ padding: 8 }} />`), /thunk/);
         assert.doesNotMatch(t(`<Row format={(n) => fmt(n)} />`), /thunk/);
+    });
+    it("keeps an object literal an expression, not the arrow's block body", () => {
+        const code = t(`<Row style={{ padding: gap(), margin: 4 } as Style} />`);
+        assert.match(code, /thunk\(\(\) => \(\{ padding: gap\(\), margin: 4 \} as Style\)\)/);
     });
     it("never wraps ref, key, children and on* attributes", () => {
         const code = t(`<For each={items()} key={(it) => it.id} ref={r()} onClick={handlers.get()} />`);
@@ -25,7 +29,7 @@ describe("thunk wrapping", () => {
         assert.doesNotMatch(code, /key=\{thunk|ref=\{thunk|onClick=\{thunk/);
     });
     it("applies to components the same way", () => {
-        assert.match(t(`<TodoRow todo={todo()} />`), /todo=\{thunk\(\(\) => todo\(\)\)\}/);
+        assert.match(t(`<TodoRow todo={todo()} />`), /todo=\{thunk\(\(\) => \(todo\(\)\)\)\}/);
     });
 });
 
