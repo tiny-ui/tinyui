@@ -2,6 +2,7 @@ package app.tinyui.updates
 
 import app.tinyui.bundle.BuildManifest
 import app.tinyui.bundle.Bundle
+import app.tinyui.bundle.Presentation
 import app.tinyui.PageError
 import app.tinyui.PageFailure
 import kotlinx.coroutines.CompletableDeferred
@@ -22,6 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
@@ -81,6 +83,14 @@ class UpdatesTest {
         Updates(bundles.toList(), hostVersion, dir, installId, fetch, { events += it }, fs, engine, tinyui, verifier)
 
     private suspend fun pageBytes(bundle: Bundle) = bundle.page("shop/home").module.bytecode.decodeToString()
+
+    @Test
+    fun pageInfoIsNullForAPageOrAPackageTheAppDoesNotHave() = runTest {
+        val u = updates(embedded())
+        assertEquals(Presentation.Screen, u.pageInfo("shop/home")!!.presentation)
+        assertNull(u.pageInfo("shop/gone"))
+        assertNull(u.pageInfo("other/home"))
+    }
 
     @Test
     fun installsAValidUpdateAndRunsItFromTheNextStart() = runTest {

@@ -30,7 +30,8 @@ class BundleTest {
           "createdAt": "2026-09-22T09:00:00Z",
           "engine": "04be246001599f5995fa2f2d8c91a0f198d3f34c",
           "tinyui": "0.5.0",
-          "hashes": { "shop/home": "02", "shop/cart": "03" }
+          "hashes": { "shop/home": "02", "shop/cart": "03" },
+          "presentation": { "shop/cart": "sheet" }
         }
     """.trimIndent()
 
@@ -42,6 +43,15 @@ class BundleTest {
             *extra,
         ),
     )
+
+    @Test
+    fun aPageIsShownAsItDeclaresAndIsAScreenOtherwise() = runTest {
+        val manifest = Bundle.load(files()).manifest
+        assertEquals(Presentation.Sheet, manifest.pageInfo("shop/cart")!!.presentation)
+        assertEquals(Presentation.Screen, manifest.pageInfo("shop/home")!!.presentation, "said nothing")
+        assertNull(manifest.pageInfo("shop/gone"), "no such page")
+        assertEquals(Presentation.Screen, Presentation.of("popover"), "a value from a newer CLI still opens, full screen")
+    }
 
     @Test
     fun loadParsesTheManifestAndPagesCarryTheirModule() = runTest {

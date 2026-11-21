@@ -106,6 +106,7 @@ final class app.tinyui.updates/Updates { // app.tinyui.updates/Updates|null[0]
         final fun <get-status>(): kotlinx.coroutines.flow/StateFlow<kotlin.collections/Map<kotlin/String, app.tinyui.updates/PackageStatus>> // app.tinyui.updates/Updates.status.<get-status>|<get-status>(){}[0]
 
     final fun current(kotlin/String): app.tinyui.bundle/Bundle // app.tinyui.updates/Updates.current|current(kotlin.String){}[0]
+    final fun pageInfo(kotlin/String): app.tinyui.bundle/PageInfo? // app.tinyui.updates/Updates.pageInfo|pageInfo(kotlin.String){}[0]
     final suspend fun check(app.tinyui.updates/CheckTrigger = ...): kotlin.collections/Map<kotlin/String, app.tinyui.updates/CheckResult> // app.tinyui.updates/Updates.check|check(app.tinyui.updates.CheckTrigger){}[0]
     final suspend fun check(kotlin/String, app.tinyui.updates/CheckTrigger = ...): app.tinyui.updates/CheckResult // app.tinyui.updates/Updates.check|check(kotlin.String;app.tinyui.updates.CheckTrigger){}[0]
 }
