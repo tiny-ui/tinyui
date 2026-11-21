@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -57,6 +58,7 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
             }
             J2.I18nT -> JsonPrimitive(translate(a.str("key") ?: "")).toString()
             J2.I18nLocale -> JsonPrimitive(host.currentLocale()).toString()
+            J2.I18nLocales -> JsonArray(host.locale?.available.orEmpty().map(::JsonPrimitive)).toString()
             J2.I18nTimeZone -> JsonPrimitive(host.currentTimeZone()).toString()
             J2.I18nZoneOffset -> JsonPrimitive(zoneOffset(a["ms"]?.jsonPrimitive?.doubleOrNull ?: 0.0)).toString()
             J2.SessionGet -> sessionJson(host.session?.state?.value ?: Session.LoggedOut)
