@@ -78,11 +78,18 @@ function visitChildren(ctx: Ctx, children: AnyNode[]) {
         } else if (child.type === "JSXExpressionContainer") {
             const expr = child["expression"] as AnyNode;
             if (expr.type === "JSXEmptyExpression") continue;
-            if (expr.type !== "ArrowFunctionExpression" && expr.type !== "FunctionExpression") {
-                fail(ctx, child, "dynamic children are not supported; use <Show> for conditions, <For> for lists, and a text prop for text");
+            if (expr.type !== "ArrowFunctionExpression" && expr.type !== "FunctionExpression" && !isForwardedChildren(expr)) {
+                fail(ctx, child, "dynamic children are not supported; use <Show> for conditions, <For> for lists, and a text prop for text ({props.children} is the one expression allowed)");
             }
         }
     }
+}
+
+/** `props.children` (any object, the property named `children`): a component handing its children on. */
+function isForwardedChildren(expr: AnyNode): boolean {
+    if (expr.type !== "MemberExpression" || expr["computed"] === true) return false;
+    const property = expr["property"] as AnyNode;
+    return property.type === "Identifier" && property["name"] === "children";
 }
 
 function attributeName(attr: AnyNode): string {
