@@ -1,6 +1,12 @@
 // docs/native-api.md §3; the host implements Navigator (docs/app-model.md).
 import { internal } from "tinyui-core";
 
+/**
+ * How the host shows a page (docs/native-api.md §3). A page that is not a plain screen says so itself, as a string
+ * literal the build reads: `export const presentation: Presentation = "sheet";`. Whoever opens it need not know.
+ */
+export type Presentation = "screen" | "sheet";
+
 /** What crosses to a page of another package or to a native route: flat, JSON. */
 export type Params = Record<string, string | number | boolean | null>;
 

@@ -25,7 +25,12 @@ class BuildManifest(
     val hostVersion: String? = null,
     /** The package's strings (docs/updates.md §1.1); null when it has none. */
     val i18n: I18nFiles? = null,
+    /** Page module name → how the page asks to be shown, as written; only pages that are not a plain screen. Read it through [pageInfo]. */
+    val presentation: Map<String, String> = emptyMap(),
 ) {
+    /** What [page] declares about itself; null when the package has no such page. */
+    fun pageInfo(page: String): PageInfo? = if (page in pages) PageInfo(Presentation.of(presentation[page])) else null
+
     /** Every file of the package besides the manifest, as (path, key into [hashes]). */
     val payload: List<Pair<String, String>>
         get() = pages.map { file(it) + ".jsb" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList())
@@ -66,6 +71,7 @@ class BuildManifest(
                     )
                 } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
+                presentation = strings("presentation"),
                 i18n = root["i18n"]?.jsonObject?.let { i ->
                     I18nFiles(
                         defaultLocale = i["default"]?.jsonPrimitive?.contentOrNull ?: "",
@@ -76,6 +82,25 @@ class BuildManifest(
         }
     }
 }
+
+/**
+ * How a page asks to be shown (docs/native-api.md §3): the page declares it, `tinyui build` writes it into the
+ * manifest, and the host reads it before opening the page, whoever asked for it. A value this library does not know
+ * (a package built with a newer CLI) is a [Screen]: the page still works, full screen.
+ */
+enum class Presentation {
+    /** A page of its own in the stack; what a page is unless it says otherwise. */
+    Screen,
+    /** A bottom sheet over what opened it, as tall as its content. */
+    Sheet;
+
+    companion object {
+        fun of(declared: String?): Presentation = if (declared == "sheet") Sheet else Screen
+    }
+}
+
+/** What a page declares about itself in the manifest, for a host deciding whether and how to open it. */
+class PageInfo(val presentation: Presentation)
 
 /** Dotted host components, capability names (`host.call`, `session.signIn`) and http channels one page uses. */
 class PageRequires(val components: List<String>, val capabilities: List<String>, val channels: List<String> = emptyList())

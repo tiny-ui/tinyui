@@ -87,6 +87,7 @@ describe("tinyui build", () => {
     it("lists everything in manifest.json", async () => {
         const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
         assert.equal("runtime" in manifest, false);
+        assert.deepEqual(manifest.presentation, { "fixture/nested/detail": "sheet" }, "only pages that are not a plain screen");
         assert.deepEqual(manifest.pages, ["fixture/home", "fixture/nested/detail"]);
         assert.deepEqual(Object.keys(manifest.buildIds), manifest.pages);
         assert.deepEqual(manifest.files, {

@@ -7,6 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
+import { DeclarationError, pageDeclarations, type Presentation } from "./declarations.ts";
 import { loadI18n } from "./i18n.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { analyzePage, RequiresError, type PageRequires } from "./requires.ts";
@@ -65,6 +66,8 @@ export interface Manifest {
     hashes: Record<string, string>;
     /** Page module name → the host capabilities, http channels and host components it uses (docs/updates.md §1.3). */
     requires: Record<string, PageRequires>;
+    /** Page module name → how the host shows it, for pages that are not a plain `screen` (docs/build-chain.md §11); absent when every page is one. */
+    presentation?: Record<string, Presentation>;
     /** The package's strings: the default language and each language's file (docs/build-chain.md §8); absent without strings. */
     i18n?: { default: string; files: Record<string, string> };
 }
@@ -87,6 +90,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     // stale outputs would otherwise be packaged along with the current pages
     await rm(join(out, "pages"), { recursive: true, force: true });
     await rm(join(out, "i18n"), { recursive: true, force: true });
+    const presentation = await pagePresentations(pageNames);
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
     const requires = await pageRequires(pages);
     await finish(root, pages, qjsc);
@@ -115,6 +119,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         tinyui: await tinyuiVersion(root),
         hashes,
         requires,
+        ...(Object.keys(presentation).length > 0 && { presentation }),
         ...(i18n && { i18n: { default: i18n.defaultLocale, files: Object.fromEntries(i18n.paths) } }),
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
@@ -145,6 +150,23 @@ async function finish(root: string, modules: BuiltModule[], qjsc: string | undef
         m.bin = m.js.replace(/\.js$/, ".jsb");
         await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
     }
+}
+
+/** What each page declares about how it is shown; every page is read before failing, as with [pageRequires]. */
+async function pagePresentations(pages: Map<string, string>): Promise<Record<string, Presentation>> {
+    const presentation: Record<string, Presentation> = {};
+    const failures: string[] = [];
+    for (const [name, file] of pages) {
+        try {
+            const declared = pageDeclarations(file, await readFile(file, "utf8")).presentation;
+            if (declared !== "screen") presentation[name] = declared;
+        } catch (e) {
+            if (!(e instanceof DeclarationError)) throw e;
+            failures.push(e.message);
+        }
+    }
+    if (failures.length) throw new DeclarationError(failures.join("\n"));
+    return presentation;
 }
 
 /** Every page's host usage; all pages are checked before failing, so one build reports every violation. */
