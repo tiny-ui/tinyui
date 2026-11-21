@@ -30,10 +30,10 @@ describe("host requirements of a page", () => {
         const core = JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")) as { version: string };
         assert.equal(manifest.tinyui, core.version, "the tinyui-core the runtime modules came from");
         assert.deepEqual(manifest.requires, {
-            "shop/plain": { components: [], capabilities: [], channels: [] },
+            "shop/plain": { components: [], capabilities: [], channels: [], routes: [] },
             // ta.Badge through the local PlanCard, ta.Loading through a hand-written h() choosing between two;
             // ta.Unused is in the generated object but never rendered
-            "shop/shop": { components: ["ta.Badge", "ta.Icon", "ta.Loading"], capabilities: ["billing.prices", "checkout.start"], channels: [] },
+            "shop/shop": { components: ["ta.Badge", "ta.Icon", "ta.Loading"], capabilities: ["billing.prices", "checkout.start"], channels: [], routes: [] },
         });
     });
 
@@ -51,6 +51,15 @@ describe("host requirements of a page", () => {
             assert.match(e.message, /must be a string literal/);
             return true;
         });
+    });
+
+    it("lists the page names outside the package that a page navigates to by a written-out name", () => {
+        const NAV = `import { navigation } from "tinyui-native";\n`;
+        const routes = (code: string) => analyzePage("shop/home", NAV + code).routes;
+        assert.deepEqual(routes(`navigation.push("shop/detail", { id: 1 }); navigation.replace("account/choose", {}, { since: "shop/home" });`), ["account/choose"], "its own pages are not listed");
+        assert.deepEqual(routes(`navigation.push(vip ? "wallet/home" : "shop/cart");`), ["wallet/home"]);
+        assert.deepEqual(routes(`const page = pick(); navigation.push(page); navigation.pop(); navigation.onResult(() => {});`), [], "a name built at run time is not listed");
+        assert.deepEqual(analyzePage("shop/home", `import * as native from "tinyui-native";\nnative.navigation.push("settings");`).routes, ["settings"]);
     });
 
     it("lists http.client channels and a session.signIn, and nothing it cannot follow", () => {

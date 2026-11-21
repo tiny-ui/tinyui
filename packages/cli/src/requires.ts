@@ -8,6 +8,11 @@ export interface PageRequires {
     capabilities: string[];
     /** `http.client` channel names; the built-in `default` is not listed. */
     channels: string[];
+    /**
+     * Page names outside this package that the page navigates to with a name written out: native routes of the host,
+     * or pages of another package. A name built at run time is not listed.
+     */
+    routes: string[];
 }
 
 export class RequiresError extends Error {}
@@ -37,6 +42,8 @@ export function analyzePage(page: string, code: string): PageRequires {
     const components = new Set<string>();
     const capabilities = new Set<string>();
     const channels = new Set<string>();
+    const routes = new Set<string>();
+    const own = `${page.split("/")[0]}/`;
     const problem = (node: AnyNode, message: string) => problems.push(`  ${origin(code, node.start)}: ${snippet(code, node)}\n    ${message}`);
 
     const useHost = (ref: AnyNode) => {
@@ -75,6 +82,14 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (!member) return problem(ref, "i18n may only be used as i18n.<member> (docs/build-chain.md §5.1)");
         if (member.name === "setLocale") capabilities.add("i18n.setLocale");
     };
+    /** [ref] is `navigation` (or `native.navigation`): `push` / `replace` to a name written out, outside this package. */
+    const useNavigation = (ref: AnyNode) => {
+        const member = memberOf(ref, parentOf(ref));
+        if (!member || (member.name !== "push" && member.name !== "replace")) return;
+        const call = parentOf(member.node);
+        if (call?.type !== "CallExpression" || call["callee"] !== member.node) return;
+        for (const name of pageNames((call["arguments"] as AnyNode[])[0])) if (!name.startsWith(own)) routes.add(name);
+    };
     const useH = (ref: AnyNode) => {
         const call = (ref as AnyNode & { parentNode?: AnyNode })["parentNode"];
         if (call?.type !== "CallExpression" || call["callee"] !== ref) return problem(ref, "h may only be called, not passed around (docs/build-chain.md §5.1)");
@@ -101,6 +116,7 @@ export function analyzePage(page: string, code: string): PageRequires {
         if (binding?.kind === "native" && binding.imported === "http") return useHttp(node);
         if (binding?.kind === "native" && binding.imported === "session") return useSession(node);
         if (binding?.kind === "native" && binding.imported === "i18n") return useI18n(node);
+        if (binding?.kind === "native" && binding.imported === "navigation") return useNavigation(node);
         if (binding?.kind === "core" && binding.imported === "h") return useH(node);
         if ((binding?.kind === "native" || binding?.kind === "core") && binding.imported === "*") {
             // a namespace import is followed through its members, and only there: passed whole it could reach host or h unseen
@@ -112,11 +128,22 @@ export function analyzePage(page: string, code: string): PageRequires {
             if (binding.kind === "native" && member === "http") return useHttp(parent);
             if (binding.kind === "native" && member === "session") return useSession(parent);
             if (binding.kind === "native" && member === "i18n") return useI18n(parent);
+            if (binding.kind === "native" && member === "navigation") return useNavigation(parent);
             if (binding.kind === "core" && member === "h") return useH(parent);
         }
     });
     if (problems.length) throw new RequiresError(`${page} uses its host in a way tinyui build cannot follow:\n${problems.join("\n")}`);
-    return { components: [...components].sort(), capabilities: [...capabilities].sort(), channels: [...channels].sort() };
+    return { components: [...components].sort(), capabilities: [...capabilities].sort(), channels: [...channels].sort(), routes: [...routes].sort() };
+}
+
+/** The page names an argument can be when they are written out: a string, or a choice between strings. */
+function pageNames(node: AnyNode | undefined): string[] {
+    if (!node) return [];
+    const text = literal(node);
+    if (text !== undefined) return [text];
+    if (node.type === "ConditionalExpression") return [...pageNames(node["consequent"] as AnyNode), ...pageNames(node["alternate"] as AnyNode)];
+    if (node.type === "ParenthesizedExpression") return pageNames(node["expression"] as AnyNode);
+    return [];
 }
 
 function isRuntimeImport(binding: Binding): boolean {

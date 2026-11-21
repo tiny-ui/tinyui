@@ -1,7 +1,10 @@
+import type { Schema } from "./contracts.ts";
 import { compareVersions } from "./version.ts";
 
 /** The tinyui that added the `channels` section; older frozen snapshots lack it. */
 const CHANNELS_SINCE = "0.8.0";
+/** The tinyui that added the `routes` section. */
+const ROUTES_SINCE = "0.14.0-alpha04";
 
 /** A host snapshot as `tinyui-host/<hostVersion>.txt` holds it (docs/updates.md §6.4). */
 export interface HostSnapshot {
@@ -11,12 +14,15 @@ export interface HostSnapshot {
     components: Set<string>;
     capabilities: Set<string>;
     channels: Set<string>;
+    /** Native route name → the shape of its params (docs/updates.md §6.4). */
+    routes: Map<string, Schema>;
 }
 
 /**
- * Two header lines, then `components`, `capabilities` and `channels` sections with one two-space-indented item per line.
- * A snapshot frozen before channels existed has no `channels` section and provides none.
- * The first word of an item is its name; the rest is for people and for the host's own check, not for this parser.
+ * Two header lines, then `components`, `capabilities`, `channels` and `routes` sections with one two-space-indented
+ * item per line. A snapshot frozen before channels or routes existed lacks that section and provides none.
+ * The first word of an item is its name; the rest is for people and for the host's own check, not for this parser,
+ * except under `routes`, where it is the params' shape as JSON: page projects generate their types from it.
  */
 export function parseHostSnapshot(text: string): HostSnapshot {
     const lines = text.split(/\r?\n/);
@@ -25,23 +31,30 @@ export function parseHostSnapshot(text: string): HostSnapshot {
         if (!match) throw new Error(`host snapshot line ${index + 1} must be "${key} <value>", got "${lines[index] ?? ""}"`);
         return match[1]!;
     };
-    const snapshot: HostSnapshot = { hostVersion: header(0, "hostVersion"), tinyui: header(1, "tinyui"), components: new Set(), capabilities: new Set(), channels: new Set() };
+    const snapshot: HostSnapshot = { hostVersion: header(0, "hostVersion"), tinyui: header(1, "tinyui"), components: new Set(), capabilities: new Set(), channels: new Set(), routes: new Map() };
     // every section, once each, in order: a missing one would read as "provides nothing" and a check would pass on it
-    const order = ["components", "capabilities", "channels"] as const;
+    const order = ["components", "capabilities", "channels", "routes"] as const;
     let seen = 0;
-    let section: Set<string> | undefined;
+    let section: (typeof order)[number] | undefined;
     lines.slice(2).forEach((line, i) => {
         if (line.trim() === "") return;
         if (line === order[seen]) {
-            section = snapshot[line];
+            section = line;
             seen++;
-        } else if (line.startsWith("  ") && section) {
-            section.add(line.trim().split(/\s+/)[0]!);
+        } else if (line.startsWith("  ") && section === "routes") {
+            const [, name, shape] = /^(\S+)\s+(.+)$/.exec(line.trim()) ?? [];
+            let schema: unknown;
+            try { schema = JSON.parse(shape ?? ""); } catch { schema = undefined; }
+            if (!name || typeof schema !== "object" || schema === null) throw new Error(`host snapshot line ${i + 3}: a route is "<name>  <params shape as JSON>", got "${line.trim()}"`);
+            snapshot.routes.set(name, schema as Schema);
+        } else if (line.startsWith("  ") && section && section !== "routes") {
+            snapshot[section].add(line.trim().split(/\s+/)[0]!);
         } else {
             throw new Error(`host snapshot line ${i + 3}: expected ${seen < order.length ? `the "${order[seen]}" section` : "an item"}${section ? " or an indented item" : ""}, got "${line}"`);
         }
     });
     if (seen === 2 && compareVersions(snapshot.tinyui, CHANNELS_SINCE) < 0) return snapshot;
+    if (seen === 3 && compareVersions(snapshot.tinyui, ROUTES_SINCE) < 0) return snapshot;
     if (seen < order.length) throw new Error(`host snapshot has no "${order[seen]}" section; write it even when empty`);
     return snapshot;
 }

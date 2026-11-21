@@ -4,10 +4,12 @@ import app.tinyui.TinyUI
 import app.tinyui.TinyUIHost
 import app.tinyui.components.registerBuiltins
 import app.tinyui.CapabilityRegistry
+import app.tinyui.NativeRoute
 import app.tinyui.PageError
 import app.tinyui.PageSink
 import app.tinyui.components.ComponentRegistry
 import app.tinyui.components.ComponentSchema
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import wang.harlon.quickjs.QuickJs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -59,6 +61,20 @@ class PackageCheckTest {
                 "shop/home calls coupon.apply, which the host does not provide",
             ),
             problems,
+        )
+    }
+
+    @Test
+    fun aPageMayNavigateOnlyToANativeRouteOrAPageOfAnotherPackage() {
+        val navigating = manifest(requires = mapOf("shop/home" to PageRequires(emptyList(), emptyList(), routes = listOf("account/choose", "wallet/home", "gone/page"))))
+        val withRoute = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, routes = listOf(NativeRoute("account/choose", buildClassSerialDescriptor("P"))))
+        val wallet = BuildManifest(
+            pages = listOf("wallet/home"), files = emptyMap(), buildIds = emptyMap(), name = "wallet", publicKey = "k", version = "v1",
+            createdAt = "2026-09-24T00:00:00Z", engine = QuickJs.upstreamCommit, hashes = emptyMap(), tinyui = TinyUI.version,
+        )
+        assertEquals(
+            listOf("shop/home navigates to gone/page, which is neither a native route of the host nor a page of another package of the App"),
+            PackageCheck.problems(navigating, withRoute, others = listOf(wallet)),
         )
     }
 

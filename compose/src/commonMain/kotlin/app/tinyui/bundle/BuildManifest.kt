@@ -70,6 +70,7 @@ class BuildManifest(
                         components = page["components"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                         capabilities = page["capabilities"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                         channels = page["channels"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
+                        routes = page["routes"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
                     )
                 } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
@@ -108,8 +109,16 @@ enum class Presentation {
  */
 class PageInfo(val presentation: Presentation, val contract: PageContract? = null)
 
-/** Dotted host components, capability names (`host.call`, `session.signIn`) and http channels one page uses. */
-class PageRequires(val components: List<String>, val capabilities: List<String>, val channels: List<String> = emptyList())
+/**
+ * Dotted host components, capability names (`host.call`, `session.signIn`) and http channels one page uses, and the
+ * page names outside its own package it navigates to ([routes]: native routes, or pages of another package).
+ */
+class PageRequires(
+    val components: List<String>,
+    val capabilities: List<String>,
+    val channels: List<String> = emptyList(),
+    val routes: List<String> = emptyList(),
+)
 
 /** `manifest.i18n`: the default language and each language's file inside the package. */
 class I18nFiles(val defaultLocale: String, val files: Map<String, String>)

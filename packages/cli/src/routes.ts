@@ -1,14 +1,22 @@
 // `tinyui routes`: types navigation against the package's own pages (docs/build-chain.md §10).
 import { dirname, relative, sep } from "node:path";
+import type { Schema } from "./contracts.ts";
 
 /**
  * The declaration that makes `navigation.push` / `replace` know this package's pages: each page name with the props
  * of that page, read off its default export by the type checker rather than parsed here. [out] is where the file
  * will live; the pages are imported relative to it, without extension. [results] are the pages that export a type
  * named `Result` (what they pop with): the one thing read from the source, since a type export cannot be probed
- * from the type level without an error where it is missing.
+ * from the type level without an error where it is missing. [hostRoutes] are the native routes of the host the
+ * package is written for, from its snapshot (docs/updates.md §6.4): name → the shape of the params.
  */
-export function routesTypes(pkg: string, pages: Map<string, string>, out: string, results: ReadonlySet<string> = new Set()): string {
+export function routesTypes(
+    pkg: string,
+    pages: Map<string, string>,
+    out: string,
+    results: ReadonlySet<string> = new Set(),
+    hostRoutes: ReadonlyMap<string, Schema> = new Map(),
+): string {
     const importOf = (file: string) => {
         let path = relative(dirname(out), file).split(sep).join("/").replace(/\.tsx?$/, "");
         if (!path.startsWith(".")) path = `./${path}`;
@@ -30,7 +38,32 @@ export function routesTypes(pkg: string, pages: Map<string, string>, out: string
         "    interface RouteResults {",
         ...resultLines,
         "    }",
+        "    interface HostRoutes {",
+        ...[...hostRoutes].sort(([a], [b]) => (a < b ? -1 : 1)).map(([name, schema]) => `        ${JSON.stringify(name)}: ${schemaType(schema)};`),
+        "    }",
         "}",
         "",
     ].join("\n");
+}
+
+/** A shape as the TypeScript type of the values that fit it; a keyword this CLI does not know reads as `unknown`. */
+export function schemaType(schema: Schema): string {
+    const s = schema as Record<string, unknown>;
+    if ("const" in s) return JSON.stringify(s["const"]);
+    if (Array.isArray(s["enum"])) return s["enum"].map((v) => JSON.stringify(v)).join(" | ");
+    if (Array.isArray(s["anyOf"])) return (s["anyOf"] as Schema[]).map((branch) => { const t = schemaType(branch); return t.includes(" | ") ? `(${t})` : t; }).join(" | ");
+    switch (s["type"]) {
+        case "string": case "number": case "boolean": case "null": return s["type"];
+        case "array": { const item = schemaType(s["items"] as Schema); return item.includes(" | ") ? `(${item})[]` : `${item}[]`; }
+        case "object": {
+            if (s["additionalProperties"]) return `Record<string, ${schemaType(s["additionalProperties"] as Schema)}>`;
+            const required = new Set((s["required"] as string[] | undefined) ?? []);
+            const fields = Object.entries((s["properties"] as Record<string, Schema> | undefined) ?? {}).map(([name, property]) => {
+                const key = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
+                return `${key}${required.has(name) ? "" : "?"}: ${schemaType(property)}`;
+            });
+            return fields.length ? `{ ${fields.join("; ")} }` : "{}";
+        }
+        default: return "unknown";
+    }
 }
