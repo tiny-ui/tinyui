@@ -12,7 +12,7 @@ export type Schema =
     | { const: string | number | boolean }
     | { enum: (string | number | boolean)[] }
     | { type: "array"; items: Schema }
-    | { type: "object"; properties: Record<string, Schema>; required: string[] }
+    | { type: "object"; properties: Record<string, Schema>; required: string[]; additionalProperties?: Schema }
     | { type: "object"; additionalProperties: Schema }
     | { anyOf: Schema[] };
 
@@ -165,18 +165,21 @@ function converter(ts: TsModule, project: TsProject): (type: TsType | null, at: 
         if (checker.getSignaturesOfType(type, ts.SignatureKind["Call"]!).length > 0) return fail(at, "is a function: functions do not cross to another page");
         const properties = checker.getPropertiesOfType(type);
         const index = checker.getIndexInfosOfType(type).find((i) => has(i.keyType, "String"));
-        if (properties.length === 0 && index) return { type: "object", additionalProperties: convert(index.valueType, `${at}[key]`, inside) };
+        // keys the type does not name are held to its index signature; without one they are free
+        const others = index ? convert(index.valueType, `${at}[key]`, inside) : undefined;
+        if (properties.length === 0 && others) return { type: "object", additionalProperties: others };
         const shape: Record<string, Schema> = {};
         const required: string[] = [];
         for (const property of properties) {
             const propertyType = checker.getTypeOfSymbol(property);
             if (!propertyType) return fail(`${at}.${property.name}`, "has no type");
-            shape[property.name] = convert(propertyType, `${at}.${property.name}`, inside);
+            // defined, not assigned: a field named `__proto__` is a field like any other
+            Object.defineProperty(shape, property.name, { value: convert(propertyType, `${at}.${property.name}`, inside), enumerable: true, writable: true, configurable: true });
             // a field that may be undefined cannot be told from a missing one once it is JSON
             const maybeUndefined = has(propertyType, "Union") && (propertyType.getTypes?.() ?? []).some((m) => has(m, "Undefined"));
             if (!(property.flags & ts.SymbolFlags["Optional"]!) && !maybeUndefined) required.push(property.name);
         }
-        return { type: "object", properties: shape, required };
+        return { type: "object", properties: shape, required, ...(others && { additionalProperties: others }) };
     }
 
     return (type, at) => (type === null ? { type: "object", properties: {}, required: [] } : convert(type, at, []));

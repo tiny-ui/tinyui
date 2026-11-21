@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
 import { execFile } from "node:child_process";
@@ -36,7 +36,7 @@ describe("tinyui routes --schema", () => {
         await page("verify", `
             import type { Option, Result } from "../types";
             export type { Result };
-            interface Props { token: string; options: Option[]; retries?: number; strict: boolean; note: string | null; extra?: Record<string, string>; kind: "a" | 1 | boolean }
+            interface Props { token: string; options: Option[]; retries?: number; strict: boolean; note: string | null; extra?: Record<string, string>; kind: "a" | 1 | boolean; tagged: { id: string; ["__proto__"]: number; [other: string]: string | number } }
             export default function Verify(props: Props) { return props.options.length; }
         `);
         const all = await contracts(["shop/verify"]);
@@ -51,8 +51,14 @@ describe("tinyui routes --schema", () => {
                 note: { anyOf: [{ type: "null" }, { type: "string" }] },
                 extra: { type: "object", additionalProperties: { type: "string" } },
                 kind: { anyOf: [{ const: "a" }, { const: 1 }, { type: "boolean" }] },
+                tagged: {
+                    type: "object",
+                    properties: Object.defineProperty({ id: { type: "string" } }, "__proto__", { value: { type: "number" }, enumerable: true, writable: true, configurable: true }),
+                    required: ["id", "__proto__"],
+                    additionalProperties: { anyOf: [{ type: "number" }, { type: "string" }] },
+                },
             },
-            required: ["token", "options", "strict", "note", "kind"],
+            required: ["token", "options", "strict", "note", "kind", "tagged"],
         } satisfies PageContract["params"]);
         assert.deepEqual(all["shop/verify"]!.result, {
             anyOf: [
@@ -82,7 +88,7 @@ describe("tinyui routes --schema", () => {
         await tinyui("routes", "--root", root, "--ts", ts, "--schema", schema);
         const written = JSON.parse(await readFile(schema, "utf8"));
         assert.deepEqual(Object.keys(written), ["shop/home", "shop/verify"]);
-        assert.ok(written["shop/verify"].result, "the Result export was found without being told");
+        assert.deepEqual(written["shop/verify"].result.anyOf.map((s: { properties: { status: unknown } }) => s.properties.status), [{ const: "expired" }, { const: "passed" }], "the Result export was found without being told");
         await tinyui("routes", "--root", root, "--ts", ts, "--schema", schema, "--check");
 
         const out = join(root, "dist");
@@ -91,7 +97,12 @@ describe("tinyui routes --schema", () => {
 
         await page("home", `export default function Home(props: { tab?: string }) { return 0; }`);
         await assert.rejects(tinyui("routes", "--root", root, "--ts", ts, "--schema", schema, "--check"), /routes\.json is out of date/);
+        assert.deepEqual(JSON.parse(await readFile(schema, "utf8")), written, "--check writes nothing");
         await page("extra", `export default function Extra() { return 0; }`);
         await assert.rejects(build({ root, out, jsOnly: true }), /contracts: .*out of date \(no shop\/extra\)/);
+        await access(join(out, "pages", "home.js")); // refused before the previous output was touched
+        await rm(join(root, "src/pages/extra.ts"));
+        await writeFile(schema, JSON.stringify({ ...written, "shop/home": { params: { type: "object", properties: { tab: { anyOf: {} } }, required: [] } } }));
+        await assert.rejects(build({ root, out, jsOnly: true }), /not what tinyui routes --schema writes \(shop\/home params\.properties\.tab\.anyOf: not a list of shapes\)/);
     });
 });

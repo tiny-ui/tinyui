@@ -229,7 +229,9 @@ describe("tinyui-native", () => {
         // a close without a result arrives as null; a named handler hears only its page
         tinyui().emit("navigation.result", JSON.stringify({ result: null, from: "pages/x" }));
         tinyui().emit("navigation.result", JSON.stringify({ result: 7, from: "pages/y" }));
-        assert.deepEqual(named, [42, null]);
+        tinyui().emit("navigation.result", JSON.stringify({ result: null, from: "pages/y" }));
+        assert.deepEqual(named, [42, null], "another page's close, with or without a result, is not this handler's");
+        assert.deepEqual(seen, [{ online: true }, 42, null, 7, null], "the unnamed handler hears every close, null included");
         navigation.push("pages/detail", { id: 1 });
         assert.deepEqual(bridge.sent.at(-1), { name: "navigation.push", args: { page: "pages/detail", params: { id: 1 } } });
         navigation.replace("pages/next");

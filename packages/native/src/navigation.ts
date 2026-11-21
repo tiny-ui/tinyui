@@ -83,9 +83,11 @@ export function pop(result: unknown = null, options: Since = {}): void {
  *
  * Every close arrives, with or without a result: `result` is what the page popped with, `null` when it popped with
  * nothing or the user closed it (system back, a sheet swiped away). Naming the `page` keeps the others out and types
- * the result as the `Result` that page exports; a flow that went on by `replace` reports under its last page.
+ * the result as the `Result` that page exports (a page of another package: `unknown`); a flow that went on by
+ * `replace` reports under its last page.
  */
 export function onResult<K extends OwnPage>(page: K, fn: (result: ResultOf<K> | null) => void): void;
+export function onResult<P extends string>(page: Foreign<P>, fn: (result: unknown) => void): void;
 export function onResult(fn: (result: unknown, from: string) => void): void;
 export function onResult(a: string | ((result: unknown, from: string) => void), b?: (result: never) => void): void {
     const fn = typeof a === "function" ? a : (result: unknown, from: string) => { if (from === a) (b as (result: unknown) => void)(result); };

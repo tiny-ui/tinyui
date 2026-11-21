@@ -110,6 +110,37 @@ class HostSizesTest {
         }
     }
 
+    /** A floating label adds to the field's height: the stretched row follows the field, it is not cut down to the bare box. */
+    @Test
+    fun aLabelledSelectKeepsItsHeightInAStretchedRow() {
+        render(
+            compact,
+            """[["c",1,"Row"],["p",1,"width",360],["p",1,"align","stretch"],""" +
+                """["c",2,"Select"],["p",2,"weight",1],["p",2,"label","Method"],["p",2,"value","sms"],["c",4,"Option"],["p",4,"value","sms"],["p",4,"text","SMS"],""" +
+                """["c",3,"Button"],["p",3,"text","Resend"],["p",3,"variant","outlined"],["i",0,1,0],["i",1,2,0],["i",2,4,0],["i",1,3,1]]""",
+        ) {
+            // the bare box would be the host's 48dp; with the label on its border the field is taller, and so is the row
+            assertTrue(height("Resend") > 50.dp, "button ${height("Resend")}")
+        }
+    }
+
+    /** The page starts listening for the tap while the menu is open: the menu goes, the choices are the page's to show now. */
+    @Test
+    fun anOpenMenuClosesWhenThePageTakesTheTapOver() {
+        render(
+            compact,
+            """[["c",1,"Select"],["p",1,"width",240],["p",1,"value","sms"],""" +
+                """["c",2,"Option"],["p",2,"value","sms"],["p",2,"text","SMS"],["c",3,"Option"],["p",3,"value","email"],["p",3,"text","Email"],["i",0,1,0],["i",1,2,0],["i",1,3,1]]""",
+        ) {
+            onNodeWithText("SMS").performClick()
+            waitForIdle()
+            assertTrue(onAllNodes(androidx.compose.ui.test.hasText("Email")).fetchSemanticsNodes().isNotEmpty(), "the menu is open")
+            runOnUiThread { tree.apply("""[["p",1,"onClick",true]]""") }
+            waitForIdle()
+            assertTrue(onAllNodes(androidx.compose.ui.test.hasText("Email")).fetchSemanticsNodes().isEmpty(), "taken over: the menu is gone")
+        }
+    }
+
     @Test
     fun aSelectWithOnClickHandsTheTapToThePage() {
         render(

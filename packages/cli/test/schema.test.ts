@@ -14,6 +14,8 @@ describe("schema generator", () => {
         assert.match(host, /import type \{ Children, ColorValue, Ref \} from "tinyui-core"/);
         assert.match(host, /tint\?: ColorValue;/);
         assert.doesNotMatch(host, /export type ColorValue/);
+        assert.doesNotMatch(host, /children\?:/, "a component without children declares none");
+        assert.match(generateTs([defineComponent("acme.Panel", { children: true })]), /children\?: Children;/, "what a component forwards is what a built-in takes");
         const core = generateTs([card], "../node.ts");
         assert.match(core, /export type ColorValue = `#\$\{string\}` \| ColorToken;/);
         assert.match(core, /export type ColorToken = "primary" \|/);

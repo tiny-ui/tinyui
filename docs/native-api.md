@@ -103,7 +103,7 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
 - `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方，并记一条日志
 - 呈现方式（2026-11-21 加）：页面用 `export const presentation = "sheet"` 说自己是底部弹层（build-chain.md §11），不说就是普通的一页。宿主打开页面前用 `updates.pageInfo(page)`（不用 `Updates` 的宿主读 `bundle.manifest.pageInfo(page)`）拿到它，据此决定导航条目怎么展示；返回 null 说明 App 里没有这一页，不打开并经 `PageSink` 上报。这样页面名不用在宿主里逐个登记：能不能开、怎么开都从清单来，新加的页面热下发后旧宿主也能打开
-- 参数校验（2026-11-21 加）：包带了契约（manifest 的 `contracts`，build-chain.md §10）时，页面挂载前框架拿 props 对一遍形状。缺必填字段、类型不对就**不挂载**，按页面失败处理（错误页 + `PageSink`，错误类别 E8），报错只说哪个字段、该是什么，不带值——props 里有 token。多出来的字段放行。页面是照着某个形状写的，形状不对时让它跑起来只会在里面某处报一个看不出原因的错；宿主的原生代码打开页面、而内置包落后于宿主时就是这种情况。E8 不触发 `Updates` 的回退：错的可能是调用方，换回内置包不一定更对
+- 参数校验（2026-11-21 加）：包带了契约（manifest 的 `contracts`，build-chain.md §10）时，页面挂载前框架拿 props 对一遍形状。缺必填字段、类型不对就**不挂载**（可选字段要么不传、要么符合它的类型：页面类型里没有 `null` 的字段传 `null` 也算不对，Kotlin 调用方用 `explicitNulls = false` 编码），按页面失败处理（错误页 + `PageSink`，错误类别 E8），报错只说哪个字段、该是什么，不带值——props 里有 token。多出来的字段放行。页面是照着某个形状写的，形状不对时让它跑起来只会在里面某处报一个看不出原因的错；宿主的原生代码打开页面、而内置包落后于宿主时就是这种情况。E8 不触发 `Updates` 的回退：错的可能是调用方，换回内置包不一定更对
     - 宿主想在发版前就知道：`updates.pageInfo(page)?.contract?.problems(paramsJson)` 返回同一份问题清单，放进宿主的测试里校验自己构造的参数；页面带回的结果用 `resultProblems(resultJson)`
 - `push` 从不在栈顶的页面发起时由宿主定，通常忽略并记一条日志：被盖住的页面不该把用户带去别处
 - 缺省 `Navigator.None`（调用无效果）。`push` 是 J4，页面拿不到结果，宿主认不出的页面名由它忽略
@@ -220,7 +220,7 @@ i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2
 - 当前语言：`TinyUIHost.locale`（`LocaleSource`）的 `state`，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 改语言（2026-11-13 加）：`i18n.setLocale(tag)` 是 J3，交给 `LocaleSource.set`（在主线程调用）。语言的真值在宿主，页面只是请求：宿主改了 `state`，页面经上一条跟上，`setLocale` 自己不改任何东西。宿主不认识的语言由 `set` 抛 `HostException("E_INVALID")`；没给 `set`（只读，或根本没给 `locale`）时以 `E_UNSUPPORTED` reject。此前页面里的语言切换只能靠宿主自定一个 `host.call` 能力，每个有这个入口的宿主都要造一遍
 
-- 有哪些语言可选（2026-11-21 加）：`i18n.locales()` 是 J2，返回 `LocaleSource.available`，顺序即宿主给的顺序；宿主没给就是空数组。App 支持哪些语言只有宿主知道，页面里的语言菜单从它来，不自己再写一份清单——否则页面可以先于宿主热下发一种宿主不认的语言，点了被 `E_INVALID` 拒绝。页面只留各语言的显示名：菜单项是 `locales()` 里页面有显示名的那些。这份清单在 App 的一次运行里不变，所以不是 accessor
+- 有哪些语言可选（2026-11-21 加）：`i18n.locales()` 是 J2，返回 `LocaleSource.available`，顺序即宿主给的顺序；宿主没给就是空数组。给了清单的宿主，`setLocale` 只放行清单里的语言，别的不调 `set` 直接答 `E_INVALID`——菜单上有的和能切的是同一份。App 支持哪些语言只有宿主知道，页面里的语言菜单从它来，不自己再写一份清单——否则页面可以先于宿主热下发一种宿主不认的语言，点了被 `E_INVALID` 拒绝。页面只留各语言的显示名：菜单项是 `locales()` 里页面有显示名的那些。这份清单在 App 的一次运行里不变，所以不是 accessor
 
 ```kotlin
 class LocaleSource(

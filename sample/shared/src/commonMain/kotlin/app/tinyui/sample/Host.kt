@@ -44,7 +44,7 @@ internal fun sampleHost(dataDir: Path? = null) = TinyUIHost(
     },
     channels = mapOf("todos" to fakeTodos),
     // read-only for pages: the language button is the App's own (letting pages set it would be a new capability in the host snapshot)
-    locale = LocaleSource(sampleLocale),
+    locale = LocaleSource(sampleLocale, available = listOf("en", "zh")),
     session = SessionSource(signedIn) { delay(500); signedIn.value = Session(true, "demo") },
     // tabs, no stack: a page closing itself (navigation.pop, top bar back) only shows up in the log
     navigator = object : Navigator {

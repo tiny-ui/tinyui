@@ -6,7 +6,7 @@ export type Node = number & { readonly __tinyuiNode: unique symbol };
 
 export type Scalar = string | number | boolean | null | undefined;
 export type Props = Record<string, unknown>;
-export type Child = Node | Slot | Node[] | Slot[] | null | undefined | false;
+export type Child = Node | Slot | null | undefined | false | Child[];
 /**
  * What a component receives as `props.children` and hands on to a built-in: `<Column>{props.children}</Column>`.
  * The nodes are already built; forwarding places them, it does not render them again.

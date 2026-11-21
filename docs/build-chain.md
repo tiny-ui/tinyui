@@ -153,7 +153,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - `tinyui routes --ts <file>` 扫描页面目录，生成对 `tinyui-native` 的模块扩充：`RoutePackage`（包名）与 `Routes`（每个页面名 → 它的 props）。props 不靠解析源码，写成 `PageProps<typeof import("<页面文件>")>`，由类型检查器从默认导出上读，页面用 `interface` 还是 `type` 声明都行
 - 页面导出了名为 `Result` 的类型时（它 `pop` 带回的东西，§11），再生成一张 `RouteResults`（页面名 → `import("<页面文件>").Result`），`navigation.onResult("<页面名>", fn)` 的 `result` 据此有类型。有没有这个导出是用 `oxc-parser` 从源文件看的：类型导出不存在时，类型层面没有办法探测而不报错
 - `--schema <file>`（2026-11-21 加）再导出一份 JSON：每个页面的 props 形状（`params`），导出了 `Result` 的再加 `result`。它是给**页面工程之外**的一方用的——宿主的原生代码打开页面、收它的结果，两边不在一次编译里，TS 类型帮不上。`tinyui.config.json` 的 `contracts` 指向这个文件后，`tinyui build` 把它原样并进 manifest 的 `contracts`（[updates.md](./updates.md) §1.1），页面挂载时框架据此校验 props（native-api.md §3）
-    - 形状是 JSON Schema 的一个小子集：`{type: "string" | "number" | "boolean" | "null"}`、`{const}`、`{enum}`（全是字面量的联合）、`{type: "array", items}`、`{type: "object", properties, required}`、`{type: "object", additionalProperties}`（`Record<string, T>`）、`{anyOf}`。对象没列出的字段一律放行，调用方可以比页面新；可选字段与可能是 `undefined` 的字段都不进 `required`
+    - 形状是 JSON Schema 的一个小子集：`{type: "string" | "number" | "boolean" | "null"}`、`{const}`、`{enum}`（全是字面量的联合）、`{type: "array", items}`、`{type: "object", properties, required}`、`{type: "object", additionalProperties}`（`Record<string, T>`）、`{anyOf}`。既有具名字段又有索引签名的对象两样都写。没有索引签名的对象，没列出的字段一律放行，调用方可以比页面新；可选字段与可能是 `undefined` 的字段都不进 `required`
     - JSON 带不过去、或宿主没法校验的类型直接报错，指出页面和字段：函数、`unknown` / `any`、元组、`bigint`、引用自己的递归类型。props 里有这些的页面先把类型收紧
     - 读类型要类型检查器，用的是**页面工程自己装的 TypeScript**（7 及以上，它的 `typescript/unstable/sync`）和工程自己的 `tsconfig.json`，所以一个类型在这里的含义和 `tsc` 看到的一致。`typescript` 是 `tinyui-cli` 的可选 peer 依赖，只有 `--schema` 用到；`tinyui build` 仍然只用 esbuild，不碰类型，它只核对这份文件说的是不是当前这些页面，props 改了没重新生成由 `routes --check` 拦。这个 API 上游标的是 unstable：升 TypeScript 后 `--schema` 报错，先看这里
     - 联合类型的成员按文本排序后写出，检查器给的顺序不稳定，否则 `--check` 会无故失败
@@ -173,6 +173,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | `presentation` | `export const presentation = "sheet";` | manifest `presentation`：宿主怎么呈现这一页（native-api.md §3） |
 | `Result` | `export type Result = …;`（或 `interface`、`export type { Result }`） | `tinyui routes` 的 `RouteResults`：这一页 `pop` 带回什么（§10） |
 
-- `presentation` 必须是页面文件里的 `const` 字符串字面量（可以带类型标注、`as const`、`satisfies`）：变量、模板字符串、从别处再导出的，构建时报错并指出文件，不猜
+- `presentation` 必须是页面文件里的 `const` 字符串字面量（可以带类型标注、`as const`、`satisfies`）：变量、模板字符串、从别处再导出的、解构出来的、同名的函数或类，构建时报错并指出文件，不猜。唯一跟不到的是 `export * from`：它导出了什么要解析别的模块才知道，所以不要这样导出 `presentation`
+- 这些声明在清掉上一次的输出之前读：声明或契约文件被拒绝时，输出目录保持原样
 - 取值 `"screen"`（缺省，不用写）、`"sheet"`；其他值构建失败。manifest 只列不是 `screen` 的页面
 - 由页面自己声明而不是打开它的一方传：页面的内容是按某种呈现画的（弹层自带标题栏、高度随内容），从哪里打开都该是那个样子，原生代码打开它时也不用知道

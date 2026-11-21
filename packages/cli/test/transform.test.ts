@@ -50,6 +50,9 @@ describe("rejected shapes", () => {
         assert.doesNotThrow(() => t(`<Column><Text text="a" />{props.children}</Column>`));
         rejects(`<Column>{props["children"]}</Column>`, /dynamic children/);
         rejects(`<Column>{props.children ?? <A />}</Column>`, /dynamic children/);
+        rejects(`<Column>{makeProps().children}</Column>`, /dynamic children/);
+        rejects(`<Column>{(a ? p1 : p2).children}</Column>`, /dynamic children/);
+        rejects(`<Column>{props.slots.children}</Column>`, /dynamic children/);
     });
     it("reports the location", () => {
         try { transformJsx("p.tsx", "const a = 1;\nconst b = <Text>hi</Text>;"); assert.fail(); }
