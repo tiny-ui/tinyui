@@ -21,8 +21,11 @@ import kotlinx.serialization.serializer
  * its own entry and reads it back here, within the call: `locals` follow the page's latest composition, and a read
  * after hopping threads may see a newer value.
  *
- * - [pop] closes the caller, wherever it is in its stack, and hands `resultJson` (when there is one) to the page
- *   below it, as Android's `finish()` or SwiftUI's `dismiss` do
+ * - [pop] closes the caller, wherever it is in its stack, and tells the page below it, as Android's `finish()` or
+ *   SwiftUI's `dismiss` do: that page gets `navigation.result` with `resultJson`, or with `null` when there is none
+ *   (a `pop()` without a result arrives here as a null `resultJson`). The host does the same when it closes a page
+ *   itself (system back, a sheet swiped away): every close is told, so a page waiting for a result learns that
+ *   none is coming
  * - [replace] closes the caller and opens `page` where it stood, as one change of the stack
  * - `since`, on both, widens what closes to a run of pages: from the nearest page of that name at or below the
  *   caller in its stack, up to the caller. That is how a flow drops its finished steps or leaves as a whole; the

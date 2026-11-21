@@ -13,6 +13,9 @@ export type Params = Record<string, string | number | boolean | null>;
 /** Augmented by `tinyui routes --ts`: each page of this package and the props it takes (docs/build-chain.md §10). */
 export interface Routes {}
 
+/** Augmented by `tinyui routes --ts`: each page of this package that exports a type named `Result`, and that type. */
+export interface RouteResults {}
+
 /** Augmented by `tinyui routes --ts`: `{ name: "<package>" }`. */
 export interface RoutePackage {}
 
@@ -23,6 +26,8 @@ type OwnPage = [keyof Routes] extends [never] ? string : keyof Routes & string;
 type OwnName = RoutePackage extends { name: infer N extends string } ? `${N}/${string}` : never;
 /** A page name outside this package: another package's page or a route the host's `Navigator` knows. */
 type Foreign<P extends string> = P extends OwnName ? never : P;
+/** What `page` closes with: its `Result`, nothing but `null` for a page that declares none, anything before `tinyui routes` ran. */
+type ResultOf<K> = [keyof Routes] extends [never] ? unknown : K extends keyof RouteResults ? RouteResults[K] : never;
 type RouteArgs<K extends keyof Routes> = {} extends Routes[K] ? [params?: Routes[K]] : [params: Routes[K]];
 
 export interface Since {
@@ -51,12 +56,25 @@ export function replace(page: string, params: object = {}, options: Since = {}):
     internal.send("navigation.replace", { page, params, ...(options.since === undefined ? {} : { since: options.since }) });
 }
 
-/** J4: closes this page (or the run from `since` up to it); `result` reaches the page below through `onResult`. */
+/**
+ * J4: closes this page (or the run from `since` up to it); `result` reaches the page below through `onResult`, as
+ * `null` when there is none. A page that hands something back exports its type as `Result`, which is what the
+ * receiving side is typed with: `export type Result = …; const close = (result: Result) => navigation.pop(result);`.
+ */
 export function pop(result: unknown = null, options: Since = {}): void {
     internal.send("navigation.pop", { result, ...(options.since === undefined ? {} : { since: options.since }) });
 }
 
-/** K5 `navigation.result`: the page that was pushed from here popped with a result. Call during render. */
-export function onResult(fn: (result: unknown, from: string) => void): void {
-    internal.onEmit("navigation.result", (p) => { const r = p as { result: unknown; from: string }; fn(r.result, r.from); });
+/**
+ * K5 `navigation.result`: a page opened from here closed. Call during render.
+ *
+ * Every close arrives, with or without a result: `result` is what the page popped with, `null` when it popped with
+ * nothing or the user closed it (system back, a sheet swiped away). Naming the `page` keeps the others out and types
+ * the result as the `Result` that page exports; a flow that went on by `replace` reports under its last page.
+ */
+export function onResult<K extends OwnPage>(page: K, fn: (result: ResultOf<K> | null) => void): void;
+export function onResult(fn: (result: unknown, from: string) => void): void;
+export function onResult(a: string | ((result: unknown, from: string) => void), b?: (result: never) => void): void {
+    const fn = typeof a === "function" ? a : (result: unknown, from: string) => { if (from === a) (b as (result: unknown) => void)(result); };
+    internal.onEmit("navigation.result", (p) => { const r = p as { result: unknown; from: string }; fn(r.result ?? null, r.from); });
 }
