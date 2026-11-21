@@ -1,4 +1,4 @@
-package app.tinyui.bundle
+package app.tinyui
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -8,8 +8,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 
 /**
  * What one page takes and hands back, as `tinyui routes --schema` read it off the page's types and `tinyui build`
@@ -27,8 +25,10 @@ class PageContract internal constructor(private val params: JsonObject, private 
     /**
      * Where [paramsJson] does not fit the page's props, one line per place (`$.options[0].method: expected one of …`);
      * empty when it fits. A missing required field or a value of the wrong kind is a problem; a field the page does
-     * not list is not, so a newer caller may send more than an older page reads. The lines name paths and kinds,
-     * never values: props carry tokens.
+     * not list is not, so a newer caller may send more than an older page reads. An optional field is left out,
+     * not sent as `null`, unless the page's type allows null: the page would receive a value outside its type
+     * (a Kotlin caller encodes with `explicitNulls = false`). The lines name paths and kinds, never values: props
+     * carry tokens.
      */
     fun problems(paramsJson: String): List<String> = check(params, paramsJson)
 
@@ -54,17 +54,20 @@ class PageContract internal constructor(private val params: JsonObject, private 
             operator fun plusAssign(line: String) { lines += line }
         }
 
-        /** The checks of the schema subset the CLI writes; a keyword this library does not know (a newer CLI) passes. */
+        /**
+         * The checks of the schema subset the CLI writes. A keyword this library does not know (a newer CLI) passes,
+         * and so does a keyword whose value is not of the kind it should be: a manifest is never a reason to throw.
+         */
         private fun problems(schema: JsonObject, value: JsonElement, path: String, out: Misfits) {
             schema["const"]?.let { if (!same(it, value)) { out += "$path: expected ${it}"; out.literals++ }; return }
-            schema["enum"]?.let { options ->
-                if (options.jsonArray.none { same(it, value) }) { out += "$path: expected one of ${options.jsonArray.joinToString(", ")}"; out.literals++ }
+            (schema["enum"] as? JsonArray)?.let { options ->
+                if (options.none { same(it, value) }) { out += "$path: expected one of ${options.joinToString(", ")}"; out.literals++ }
                 return
             }
-            schema["anyOf"]?.let { branches ->
+            (schema["anyOf"] as? JsonArray)?.let { branches ->
                 // the closest shape says what is wrong. A union is told apart by a field with a fixed value (`status`),
                 // so the shape whose fixed values all match is the one meant, however much else is wrong with it
-                val tries = branches.jsonArray.map { branch -> Misfits().also { problems(branch.jsonObject, value, path, it) } }
+                val tries = branches.mapNotNull { it as? JsonObject }.map { branch -> Misfits().also { problems(branch, value, path, it) } }
                 val best = tries.minWithOrNull(compareBy({ it.literals }, { it.lines.size })) ?: return
                 out.lines += best.lines
                 out.literals += best.literals
@@ -82,14 +85,16 @@ class PageContract internal constructor(private val params: JsonObject, private 
                 }
                 "object" -> {
                     if (value !is JsonObject) { out += "$path: expected an object"; return }
-                    (schema["additionalProperties"] as? JsonObject)?.let { each -> for ((k, v) in value) problems(each, v, "$path.$k", out) }
-                    val properties = schema["properties"] as? JsonObject ?: return
-                    val required = (schema["required"] as? JsonArray)?.map { (it as JsonPrimitive).content }?.toSet() ?: emptySet()
-                    for ((name, property) in properties) {
+                    val properties = schema["properties"] as? JsonObject
+                    val required = (schema["required"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }?.toSet() ?: emptySet()
+                    properties?.forEach { (name, property) ->
                         val field = value[name]
-                        // an explicit null in an optional field is how a serializer writes "absent"
-                        if (field == null || (field is JsonNull && name !in required)) { if (name in required) out += "$path.$name: missing"; continue }
-                        problems(property.jsonObject, field, "$path.$name", out)
+                        if (field == null) { if (name in required) out += "$path.$name: missing" }
+                        else (property as? JsonObject)?.let { problems(it, field, "$path.$name", out) }
+                    }
+                    // the keys the shape does not name are held to its index signature, when it has one
+                    (schema["additionalProperties"] as? JsonObject)?.let { each ->
+                        for ((key, field) in value) if (properties == null || key !in properties) problems(each, field, "$path.$key", out)
                     }
                 }
             }

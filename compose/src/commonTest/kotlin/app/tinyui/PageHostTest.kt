@@ -1,6 +1,5 @@
 package app.tinyui
 
-import app.tinyui.bundle.PageContract
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -232,6 +231,28 @@ class PageHostTest {
         delay(200)
         assertEquals("E6", host.failure!!.kind)
         assertEquals(emptyList(), navigated)
+        host.close()
+    }
+
+    @Test
+    fun aHostThatListsItsLanguagesIsOnlyAskedForThose() = runTest {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        val asked = mutableListOf<String>()
+        val flow = MutableStateFlow("en")
+        val listing = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, locale = LocaleSource(flow, available = listOf("en", "zh")) { asked += it; flow.value = it })
+        val host = host(app = listing)
+        try {
+            host.start()
+            host.await { host.tree.root.children.isNotEmpty() }
+            host.dispatch(2, "onSetLocale", "{}") // zh, then fr, then none
+            host.await { (host.tree.node(1)!!.props["text"] as String).count { it == ';' } == 2 }
+        } finally {
+            Dispatchers.resetMain()
+        }
+        val text = host.tree.node(1)!!.props["text"] as String
+        assertTrue(text.contains("ok 31"), text)
+        assertTrue(text.contains("rejected 32") && text.contains("does not offer fr"), text)
+        assertEquals(listOf("zh"), asked, "fr never reached the host's setter")
         host.close()
     }
 

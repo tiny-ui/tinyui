@@ -31,8 +31,11 @@ class NativeRoute(val name: String, val params: SerialDescriptor) {
         require(name.matches(Regex("[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*"))) { "native route \"$name\" must be path segments of [A-Za-z0-9._-], as page names are" }
     }
 
-    /** The params as the shape pages are checked against: the schema subset of docs/build-chain.md §10. */
-    val schema: JsonObject by lazy { schemaOf(params, name) }
+    /**
+     * The params as the shape pages are checked against: the schema subset of docs/build-chain.md §10. Worked out
+     * now, so params that cannot be described stop the host where it is built, not where a snapshot is rendered.
+     */
+    val schema: JsonObject = schemaOf(params, name)
 }
 
 /**

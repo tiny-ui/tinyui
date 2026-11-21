@@ -75,7 +75,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 ## 3. 内置组件
 
-容器 `Box` / `Column` / `Row` / `SectionHeader` 与 `Text` 都有 `onClick`；`LazyColumn`、`TopAppBar`、`Select`、`Tabs` 没有。事件的 payload 字段、命令的参数字段见 `schema/components/*.ts`，这里只列名字。
+容器 `Box` / `Column` / `Row` / `SectionHeader` 与 `Text` 都有 `onClick`；`Select` 的 `onClick` 是另一回事：给了就由页面接管点击、菜单不展开（§3）；`LazyColumn`、`TopAppBar`、`Tabs` 没有。事件的 payload 字段、命令的参数字段见 `schema/components/*.ts`，这里只列名字。
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|

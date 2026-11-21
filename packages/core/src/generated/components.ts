@@ -345,14 +345,14 @@ export interface PopoverProps {
     children?: Children;
 }
 
-/** M3 top app bar at the top of the page; children go in its trailing actions slot. It pads itself below the status bar; `height` is the bar's own height, the status bar not included. Its back button sends a system back: an enabled `BackHandler` or the host's navigation takes it; in a host without a back dispatcher it does nothing. */
+/** M3 top app bar at the top of the page; children go in its trailing actions slot. It pads itself below the status bar; `height` is the bar's own height, the status bar not included; unset, the host's (`TinyUIDefaults.topAppBar`), else M3's 64dp. Its back button sends a system back: an enabled `BackHandler` or the host's navigation takes it; in a host without a back dispatcher it does nothing. */
 export interface TopAppBarProps extends LayoutProps {
     title?: string;
     /** shows a back button with this icon; unset, no back button (the first page of a flow) */
     backIcon?: string;
     /** what a screen reader says for the back button */
     backLabel?: string;
-    /** size of the back icon; unset, the icon's own size (24dp for a packaged icon). The button stays a 48dp touch target */
+    /** size of the back icon; unset, the host's (`TinyUIDefaults.topAppBar`), else the icon's own size (24dp for a packaged icon). The button stays a 48dp touch target */
     backIconSize?: number;
     children?: Children;
 }

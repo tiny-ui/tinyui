@@ -85,11 +85,11 @@ function visitChildren(ctx: Ctx, children: AnyNode[]) {
     }
 }
 
-/** `props.children` (any object, the property named `children`): a component handing its children on. */
+/** `props.children`, a plain name and the property `children`: a component handing its children on. Nothing computed gets through. */
 function isForwardedChildren(expr: AnyNode): boolean {
     if (expr.type !== "MemberExpression" || expr["computed"] === true) return false;
     const property = expr["property"] as AnyNode;
-    return property.type === "Identifier" && property["name"] === "children";
+    return (expr["object"] as AnyNode).type === "Identifier" && property.type === "Identifier" && property["name"] === "children";
 }
 
 function attributeName(attr: AnyNode): string {

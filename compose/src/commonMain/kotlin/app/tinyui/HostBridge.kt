@@ -95,6 +95,9 @@ internal class HostBridge(private val pageHost: PageHost, private val page: Page
             J3.I18nSetLocale -> settle(cbId) {
                 val set = host.locale?.set ?: throw HostException("E_UNSUPPORTED", "the host does not let pages set the language")
                 val locale = a.str("locale")?.takeIf { it.isNotBlank() } ?: throw HostException("E_INVALID", "i18n.setLocale needs a locale")
+                // one list for what a picker shows and what may be set: a language the host did not offer is not passed on
+                val offered = host.locale?.available.orEmpty()
+                if (offered.isNotEmpty() && locale !in offered) throw HostException("E_INVALID", "the App does not offer $locale (i18n.locales() lists what it does)")
                 withContext(Dispatchers.Main) { set(locale) }
                 ""
             }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { drain, mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { action, actionLock, type ActionLock, Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
+import { action, actionLock, type ActionLock, Column, h, HostError, Show, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
 const { call, query, onEmit } = internal;;
 import * as timers from "../src/timers.ts";
 
@@ -40,21 +40,22 @@ describe("action", () => {
     });
 
     it("is free again after fn throws, and the caller gets the error", async () => {
+        const boom = new Error("boom"), now = new Error("now");
         let run!: () => Promise<void | undefined>, running!: () => boolean;
         mount(() => {
-            [run, running] = action(async () => { throw new Error("boom"); });
+            [run, running] = action(async () => { throw boom; });
             return h(Column, null);
         });
-        await assert.rejects(run(), /boom/);
+        await assert.rejects(run(), (e) => e === boom, "the very error fn threw");
         assert.equal(running(), false);
         // a synchronous throw is the same
         let sync!: () => Promise<undefined>;
         unmount();
         mount(() => {
-            [sync] = action((): undefined => { throw new Error("now"); });
+            [sync] = action((): undefined => { throw now; });
             return h(Column, null);
         });
-        await assert.rejects(sync(), /now/);
+        await assert.rejects(sync(), (e) => e === now);
         unmount();
     });
 
@@ -62,10 +63,11 @@ describe("action", () => {
         const gate = deferred<void>();
         let a!: () => Promise<string | undefined>, b!: () => Promise<string | undefined>, c!: () => Promise<string | undefined>;
         let lock!: ActionLock, aRunning!: () => boolean, bRunning!: () => boolean;
+        let bCalls = 0;
         mount(() => {
             lock = actionLock();
             [a, aRunning] = action(() => gate.promise.then(() => "a"), { lock });
-            [b, bRunning] = action(async () => "b", { lock });
+            [b, bRunning] = action(async () => { bCalls++; return "b"; }, { lock });
             [c] = action(async () => "c");
             return h(Column, null);
         });
@@ -73,11 +75,37 @@ describe("action", () => {
         assert.equal(lock.held(), true);
         assert.deepEqual([aRunning(), bRunning()], [true, false]);
         assert.equal(await b(), undefined);
+        assert.equal(bCalls, 0, "dropped: its fn never ran");
         assert.equal(await c(), "c");
         gate.resolve();
         assert.equal(await first, "a");
         assert.equal(lock.held(), false);
         assert.equal(await b(), "b");
+        assert.equal(bCalls, 1);
+        unmount();
+    });
+
+    it("a lock outlives the action that held it; a lock that was not made by actionLock is refused", async () => {
+        const gate = deferred<void>();
+        let lock!: ActionLock, inner!: () => Promise<void | undefined>, setShown!: (v: boolean) => void;
+        mount(() => {
+            lock = actionLock();
+            const [shown, set] = signal(true);
+            setShown = set;
+            return h(Column, null, h(Show, { when: thunk(() => shown()) }, () => {
+                [inner] = action(() => gate.promise, { lock });
+                return h(Text, { text: "inner" });
+            }));
+        });
+        const pending = inner();
+        assert.equal(lock.held(), true);
+        transaction(() => setShown(false)); // the branch that owns the action is gone, the lock is the page's
+        gate.resolve();
+        await pending;
+        assert.equal(lock.held(), false, "freed for the page that still shows it");
+        assert.equal(await inner(), undefined, "a call after its scope is gone starts nothing");
+        unmount();
+        assert.throws(() => mount(() => { action(async () => {}, { lock: { held: () => false } }); return h(Column, null); }), /must come from actionLock\(\)/);
         unmount();
     });
 

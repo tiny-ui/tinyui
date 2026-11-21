@@ -1,5 +1,6 @@
 package app.tinyui.bundle
 
+import app.tinyui.PageContract
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray

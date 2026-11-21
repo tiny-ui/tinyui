@@ -11,24 +11,28 @@ export interface ActionOptions {
     lock?: ActionLock;
 }
 
-/** Takes the lock, or answers null when it is held; `release(quiet)` leaves the signal alone, for a page that is gone. */
-const take = new WeakMap<ActionLock, () => ((quiet: boolean) => void) | null>();
+/** Takes the lock, or answers null when it is held. */
+const take = new WeakMap<ActionLock, () => (() => void) | null>();
 
 /**
  * A lock several actions share (docs/runtime-api.md §6.1): a page whose three ways to sign in must not overlap gives
- * all three the same lock, and disables its buttons on `held()`.
+ * all three the same lock, and disables its buttons on `held()`. Created during render, it stops writing `held` once
+ * its own scope is gone, whichever action was holding it.
  */
 export function actionLock(): ActionLock {
     const [held, setHeld] = signal(false);
     let taken = false;
+    let disposed = false;
+    if (insideRender()) onCleanup(() => { disposed = true; });
     const lock: ActionLock = { held };
     take.set(lock, () => {
         if (taken) return null;
         taken = true;
-        setHeld(true);
-        return (quiet) => {
+        if (!disposed) setHeld(true);
+        return () => {
             taken = false;
-            if (!quiet) setHeld(false);
+            // the lock's scope decides, not the action's: a lock outliving the action that held it must read free again
+            if (!disposed) setHeld(false);
         };
     });
     return lock;
@@ -46,19 +50,22 @@ export function action<A extends unknown[], T>(
 ): [run: (...args: A) => Promise<T | undefined>, running: () => boolean] {
     if (!insideRender()) throw new Error("action() called outside a synchronous render period");
     const [running, setRunning] = signal(false);
-    const acquire = take.get(options.lock ?? actionLock())!;
+    const acquire = take.get(options.lock ?? actionLock());
+    if (!acquire) throw new Error("action(): `lock` must come from actionLock()");
     let disposed = false;
     onCleanup(() => { disposed = true; });
 
     async function run(...args: A): Promise<T | undefined> {
-        const release = acquire();
+        // a call that outlives the page (a kept reference, a late timer) starts nothing
+        if (disposed) return undefined;
+        const release = acquire!();
         if (release === null) return undefined;
         setRunning(true);
         try {
             return await fn(...args);
         } finally {
+            release();
             // the page may be gone by now; its signals are nobody's to write
-            release(disposed);
             if (!disposed) setRunning(false);
         }
     }

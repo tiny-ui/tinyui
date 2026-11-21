@@ -56,12 +56,13 @@ export function schemaType(schema: Schema): string {
         case "string": case "number": case "boolean": case "null": return s["type"];
         case "array": { const item = schemaType(s["items"] as Schema); return item.includes(" | ") ? `(${item})[]` : `${item}[]`; }
         case "object": {
-            if (s["additionalProperties"]) return `Record<string, ${schemaType(s["additionalProperties"] as Schema)}>`;
+            if (s["additionalProperties"] && !s["properties"]) return `Record<string, ${schemaType(s["additionalProperties"] as Schema)}>`;
             const required = new Set((s["required"] as string[] | undefined) ?? []);
             const fields = Object.entries((s["properties"] as Record<string, Schema> | undefined) ?? {}).map(([name, property]) => {
                 const key = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
                 return `${key}${required.has(name) ? "" : "?"}: ${schemaType(property)}`;
             });
+            if (s["additionalProperties"]) fields.push(`[key: string]: ${[...new Set([schemaType(s["additionalProperties"] as Schema), ...Object.values((s["properties"] as Record<string, Schema> | undefined) ?? {}).map(schemaType), "undefined"])].join(" | ")}`);
             return fields.length ? `{ ${fields.join("; ")} }` : "{}";
         }
         default: return "unknown";

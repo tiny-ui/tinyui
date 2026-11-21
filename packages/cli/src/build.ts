@@ -90,11 +90,12 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         throw new Error("qjsc-kmp not found: the qjsc-kmp npm package has no binary for this machine or was installed without optional dependencies; pass --qjsc, set TINYUI_QJSC, or put it on PATH (or use --js-only)");
     }
 
+    // read first: a declaration or a contracts file that is refused must leave the previous output as it was
+    const presentation = await pagePresentations(pageNames);
+    const contracts = config.contracts === undefined ? undefined : await loadContracts(join(root, config.contracts), [...pageNames.keys()]);
     // stale outputs would otherwise be packaged along with the current pages
     await rm(join(out, "pages"), { recursive: true, force: true });
     await rm(join(out, "i18n"), { recursive: true, force: true });
-    const presentation = await pagePresentations(pageNames);
-    const contracts = config.contracts === undefined ? undefined : await loadContracts(join(root, config.contracts), [...pageNames.keys()]);
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
     const requires = await pageRequires(pages);
     await finish(root, pages, qjsc);
@@ -175,7 +176,39 @@ async function loadContracts(file: string, pages: string[]): Promise<Record<stri
     if (missing.length || gone.length) {
         throw new Error(`contracts: ${file} is out of date (${[...missing.map((p) => `no ${p}`), ...gone.map((p) => `${p} is not a page`)].join(", ")}); ${hint}`);
     }
+    for (const page of pages) {
+        const { params, result } = contracts[page]!;
+        const bad = (params === undefined ? "params: missing" : schemaProblem(params, "params")) ?? (result === undefined ? undefined : schemaProblem(result, "result"));
+        if (bad) throw new Error(`contracts: ${file} is not what tinyui routes --schema writes (${page} ${bad}); ${hint}`);
+    }
     return Object.fromEntries(pages.map((p) => [p, contracts[p]!]));
+}
+
+/** Where [schema] is not of the shapes docs/build-chain.md §10 lists; undefined when it is. A hand-edited file is caught here, not on a device. */
+function schemaProblem(schema: unknown, at: string): string | undefined {
+    if (typeof schema !== "object" || schema === null || Array.isArray(schema)) return `${at}: not a shape`;
+    const s = schema as Record<string, unknown>;
+    const scalar = (v: unknown) => typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+    if ("const" in s) return scalar(s["const"]) ? undefined : `${at}.const: not a string, number or boolean`;
+    if ("enum" in s) return Array.isArray(s["enum"]) && s["enum"].every(scalar) ? undefined : `${at}.enum: not a list of strings, numbers or booleans`;
+    if ("anyOf" in s) {
+        if (!Array.isArray(s["anyOf"]) || s["anyOf"].length === 0) return `${at}.anyOf: not a list of shapes`;
+        for (const [i, branch] of s["anyOf"].entries()) { const bad = schemaProblem(branch, `${at}.anyOf[${i}]`); if (bad) return bad; }
+        return undefined;
+    }
+    switch (s["type"]) {
+        case "string": case "number": case "boolean": case "null": return undefined;
+        case "array": return schemaProblem(s["items"], `${at}.items`);
+        case "object": {
+            if (s["additionalProperties"] !== undefined) { const bad = schemaProblem(s["additionalProperties"], `${at}.additionalProperties`); if (bad) return bad; }
+            if (s["properties"] === undefined) return s["additionalProperties"] === undefined ? `${at}: an object needs properties or additionalProperties` : undefined;
+            if (typeof s["properties"] !== "object" || s["properties"] === null || Array.isArray(s["properties"])) return `${at}.properties: not an object`;
+            if (!Array.isArray(s["required"]) || !s["required"].every((r) => typeof r === "string")) return `${at}.required: not a list of names`;
+            for (const [name, property] of Object.entries(s["properties"])) { const bad = schemaProblem(property, `${at}.properties.${name}`); if (bad) return bad; }
+            return undefined;
+        }
+        default: return `${at}.type: ${JSON.stringify(s["type"])} is not a type`;
+    }
 }
 
 /** What each page declares about how it is shown; every page is read before failing, as with [pageRequires]. */

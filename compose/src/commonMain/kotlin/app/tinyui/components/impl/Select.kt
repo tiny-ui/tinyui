@@ -30,11 +30,14 @@ internal fun SelectComponent(scope: NodeScope) {
     val selected = scope.get<String>("value")
     val enabled = scope.get<Boolean>("enabled") ?: true
     var expanded by remember { mutableStateOf(false) }
-    // disabled while open: the menu goes, so nothing can be picked from it any more
-    if (!enabled && expanded) expanded = false
+    // the tap is the page's once it listens for it: the menu is not this component's to show
+    val pageOpens = scope.has("onClick")
+    // disabled, or taken over by the page, while open: the menu goes, so nothing can be picked from it any more
+    if ((!enabled || pageOpens) && expanded) expanded = false
     val chosen = options.firstOrNull { it.first == selected }?.second ?: ""
     val style = textFieldStyle()
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!enabled) Unit else if (scope.has("onClick")) scope.dispatch("onClick") else expanded = it }, modifier = scope.modifier(clickable = false)) {
+    val label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!enabled) Unit else if (pageOpens) scope.dispatch("onClick") else expanded = it }, modifier = scope.modifier(clickable = false)) {
         OutlinedTextField(
             // read-only: the text is the choice, so a new choice is a new state
             state = remember(chosen) { TextFieldState(chosen) },
@@ -43,10 +46,11 @@ internal fun SelectComponent(scope: NodeScope) {
             contentPadding = style.contentPadding,
             enabled = enabled,
             lineLimits = TextFieldLineLimits.SingleLine,
-            label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+            label = label?.let { { Text(it) } },
             placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth().fieldMinHeight(style, singleLine = true),
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)// a floating label sits on the top border and adds to the height, so the box is no longer one line and its padding
+                .fillMaxWidth().fieldMinHeight(style, singleLine = label == null),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for ((value, text) in options) {
