@@ -24,6 +24,8 @@
 | | `BottomSheet` | 弹层：内容每次打开重建 |
 | 命令 | `ref()` → `Ref`，`ref.cmd(name, args?)` | 对节点发一次性动作 |
 | 异步 | `resource(fetcher)` / `resource(source, fetcher)` | 同步期建 signal，异步期写；`load()` 可等待 |
+| | `action(fn)` → `[run, running]` | 不会和自己重叠的操作：在途时再调用直接丢弃 |
+| | `actionLock()` | 几个 `action` 共用的一把锁 |
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | | `manifest()` | Kotlin 下发的组件 / 能力清单 |
@@ -287,6 +289,40 @@ const loaded = await rulesState.load();                                         
 - rejection 写进 `error()`；没人 `await` 的失败不进 E7
 
 数据获取一律走它，不写 `async` 组件（§3.1）。业界同类：Solid `createResource(source, fetcher)`、TanStack Query 的 `enabled` 与 `refetch()` / `ensureQueryData()`、SWR 的条件 key、Vue `useAsyncData` 的 `immediate` 与 `execute()`——都有依赖、延迟发起、可等待的重取、只认最新结果这四样。
+
+### 6.1 `action`
+
+`resource` 管读，`action` 管写：按钮点下去做的那件事（提交、发验证码），同一时间只该有一次在跑。
+
+```ts
+function action<A extends unknown[], T>(fn: (...args: A) => Promise<T> | T, options?: { lock?: ActionLock }): [run, running]
+
+type run = (...args: A) => Promise<T | undefined>
+type running = () => boolean
+
+function actionLock(): ActionLock
+interface ActionLock { held: () => boolean }
+```
+
+```tsx
+const [submit, submitting] = action(async () => {
+    const r = await api.register(form());
+    if (!r.ok) return toast(r);
+    navigation.replace("signup/done");
+});
+
+<Button enabled={!submitting()} onClick={() => void submit()} />
+```
+
+- `run(...)` 调用时**同步**判断：没有在途的就调 `fn`，`running()` 置 true；有在途的，这次调用直接丢弃，不调 `fn`、不并入在途的那次，返回的 Promise 以 `undefined` 落定。连点两下第二下落空靠的是这个判断，不是按钮的 `enabled`（置灰要等下一次 flush 才到界面）
+- `fn` 落定后复位，正常返回和抛错都一样；`fn` 的返回值是 `run` 的结果，抛出的错误原样交给 `run` 的调用方（同步抛出的也是）。不存 `error` 状态：失败怎么提示由 `fn` 自己定
+- 前置校验写在 `fn` 里靠前的位置即可，不通过就 `return`
+- **共用一把锁**：几个操作不该同时进行时（登录页的三种登录方式），`const busy = actionLock()`，各自 `action(fn, { lock: busy })`。其中一个在跑时，另外几个的调用同样被丢弃；`busy.held()` 是「有任何一个在跑」，`running()` 仍只说自己。不给 `lock` 就是一个操作一把锁，互不影响
+- 所属 owner 已 dispose 后落定：不再写 signal，`run` 的 Promise 照常落定
+- 只能在同步渲染期创建，同 `resource`
+- 不做重试、超时、乐观更新，也不和 `Button` 自动绑定
+
+业界同类：TanStack Query `useMutation` 的 `isPending`、React `useTransition` / `useActionState` 的 pending、Solid Router `action` + `useSubmission`、VueUse `useAsyncState`。它们多数允许并发调用、只报告状态；这里把「在途时丢弃」做成默认，因为页面上要的几乎总是它。
 
 ## 7. 定时器
 

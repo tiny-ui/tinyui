@@ -2,12 +2,89 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { drain, mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
+import { action, actionLock, type ActionLock, Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
 const { call, query, onEmit } = internal;;
 import * as timers from "../src/timers.ts";
 
 const g = globalThis as Record<string, unknown>;
 afterEach(() => unmount());
+
+describe("action", () => {
+    function deferred<T>() {
+        let resolve!: (v: T) => void, reject!: (e: unknown) => void;
+        const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+        return { promise, resolve, reject };
+    }
+
+    it("drops a call while one is on its way, and is free again once it settles", async () => {
+        const gate = deferred<number>();
+        let calls = 0;
+        let save!: (n: number) => Promise<number | undefined>;
+        mount(() => {
+            const [run, running] = action((n: number) => { calls++; return gate.promise.then((v) => v + n); });
+            save = run;
+            return h(Column, null, h(Text, { text: thunk(() => running() ? "saving" : "idle") }));
+        });
+        let first!: Promise<number | undefined>, second!: Promise<number | undefined>;
+        const ops = transaction(() => { first = save(1); second = save(2); });
+        assert.deepEqual(ops, [["p", 1, "text", "saving"]]);
+        assert.equal(calls, 1, "the second call never reached fn");
+        assert.equal(await second, undefined);
+        gate.resolve(10);
+        assert.equal(await first, 11);
+        const before = bridge.applied.length;
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.slice(before).flat(), [["p", 1, "text", "idle"]]);
+        assert.equal(await save(5), 15);
+        unmount();
+    });
+
+    it("is free again after fn throws, and the caller gets the error", async () => {
+        let run!: () => Promise<void | undefined>, running!: () => boolean;
+        mount(() => {
+            [run, running] = action(async () => { throw new Error("boom"); });
+            return h(Column, null);
+        });
+        await assert.rejects(run(), /boom/);
+        assert.equal(running(), false);
+        // a synchronous throw is the same
+        let sync!: () => Promise<undefined>;
+        unmount();
+        mount(() => {
+            [sync] = action((): undefined => { throw new Error("now"); });
+            return h(Column, null);
+        });
+        await assert.rejects(sync(), /now/);
+        unmount();
+    });
+
+    it("actions sharing a lock exclude each other; without one they do not", async () => {
+        const gate = deferred<void>();
+        let a!: () => Promise<string | undefined>, b!: () => Promise<string | undefined>, c!: () => Promise<string | undefined>;
+        let lock!: ActionLock, aRunning!: () => boolean, bRunning!: () => boolean;
+        mount(() => {
+            lock = actionLock();
+            [a, aRunning] = action(() => gate.promise.then(() => "a"), { lock });
+            [b, bRunning] = action(async () => "b", { lock });
+            [c] = action(async () => "c");
+            return h(Column, null);
+        });
+        const first = a();
+        assert.equal(lock.held(), true);
+        assert.deepEqual([aRunning(), bRunning()], [true, false]);
+        assert.equal(await b(), undefined);
+        assert.equal(await c(), "c");
+        gate.resolve();
+        assert.equal(await first, "a");
+        assert.equal(lock.held(), false);
+        assert.equal(await b(), "b");
+        unmount();
+    });
+
+    it("must be created during render", () => {
+        assert.throws(() => action(async () => {}), /outside a synchronous render period/);
+    });
+});
 
 describe("resource + K3", () => {
     it("fires the host call at creation and writes signals when resolved", async () => {
