@@ -13,8 +13,10 @@
 ```
 
 ```js
-h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.primary), onClick: () => inc() })
+h(Text, { text: thunk(() => ("Count: " + count())), color: thunk(() => (theme.primary)), onClick: () => inc() })
 ```
+
+箭头函数体一律加括号：对象字面量 `style={{ padding: gap() }}` 不加括号会被当成语句块。
 
 `thunk` 与 `h` / `Fragment` 一样由 CLI 注入 import（`tinyui-core`），业务文件里不出现。类型层面 `thunk<T>(fn: () => T): T`，所以 `.d.ts` 里 prop 类型按值声明（`text: string`），业务与组件作者都看不到包装。
 

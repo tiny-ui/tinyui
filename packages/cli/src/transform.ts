@@ -64,8 +64,9 @@ function visitAttribute(ctx: Ctx, attr: AnyNode) {
     if (expr.type === "JSXEmptyExpression") return;
     if (NEVER_WRAP.test(name)) return;
     if (!isDynamic(expr)) return;
-    ctx.ms.prependLeft(expr.start, "thunk(() => ");
-    ctx.ms.appendRight(expr.end, ")");
+    // parenthesised: an object literal would otherwise read as the arrow's block body, a sequence as two arguments
+    ctx.ms.prependLeft(expr.start, "thunk(() => (");
+    ctx.ms.appendRight(expr.end, "))");
 }
 
 function visitChildren(ctx: Ctx, children: AnyNode[]) {
