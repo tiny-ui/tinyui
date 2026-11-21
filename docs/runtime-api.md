@@ -112,6 +112,7 @@ function unwrap<T>(value: T): T
 type Node = /* 不透明句柄 */
 function h(type: string | Component, props: Props | null, ...children: Child[]): Node
 type Child = Node | Node[] | null | undefined | false
+type Children = Node | undefined | Children[]    // 组件收到的 props.children
 ```
 
 `type` 为字符串时是内置 / 宿主组件（`"Text"`、`"acme.ProductCard"`），为函数时是业务组件。
@@ -135,6 +136,7 @@ children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序�
 - 读 `props.title` 拿到的是实时值（getter），在 effect 里读会订阅；组件不该把它解构成常量再用
 - 必须同步返回一个 `Node`。返回 Promise（`async` 组件）、数组、`null` 抛 E2；多根用 `Fragment` 时只能作为 children，不能作为组件 / 行 / 分支的根
 - 不开作用域：组件本身在运行时不留任何东西
+- 收到的 children 可以原样转交给内置节点：`<Column>{props.children}</Column>`，类型写 `children: Children`。这些节点在组件函数运行之前已经建好，转交只决定它们放在哪，不会再建一遍；所以同一份 children 只能放一处，要按条件显示就在外面包 `Show`
 
 ### 3.2 事件
 

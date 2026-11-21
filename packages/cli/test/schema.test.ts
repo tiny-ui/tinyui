@@ -11,7 +11,7 @@ const card = defineComponent("acme.Card", {
 describe("schema generator", () => {
     it("types color props as ColorValue; host packages import it from core, core defines it", () => {
         const host = generateTs([card]);
-        assert.match(host, /import type \{ ColorValue, Node, Ref \} from "tinyui-core"/);
+        assert.match(host, /import type \{ Children, ColorValue, Ref \} from "tinyui-core"/);
         assert.match(host, /tint\?: ColorValue;/);
         assert.doesNotMatch(host, /export type ColorValue/);
         const core = generateTs([card], "../node.ts");

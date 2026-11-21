@@ -46,6 +46,11 @@ describe("rejected shapes", () => {
     it("allows a render function child and whitespace", () => {
         assert.doesNotThrow(() => t(`<Show when={x()}>\n    {() => <A />}\n</Show>`));
     });
+    it("allows a component to hand its children on", () => {
+        assert.doesNotThrow(() => t(`<Column><Text text="a" />{props.children}</Column>`));
+        rejects(`<Column>{props["children"]}</Column>`, /dynamic children/);
+        rejects(`<Column>{props.children ?? <A />}</Column>`, /dynamic children/);
+    });
     it("reports the location", () => {
         try { transformJsx("p.tsx", "const a = 1;\nconst b = <Text>hi</Text>;"); assert.fail(); }
         catch (e) { assert.equal((e as TransformError).message.slice(0, 9), "p.tsx:2:1"); }

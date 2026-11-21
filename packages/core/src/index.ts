@@ -4,7 +4,7 @@ export type { HostManifest } from "./page.ts";
 export { signal, memo, effect, onCleanup, untrack } from "./reactive.ts";
 export { observable, unwrap } from "./observable.ts";
 export { h, Fragment, thunk, ref } from "./node.ts";
-export type { Node, Ref, Component } from "./node.ts";
+export type { Node, Children, Ref, Component } from "./node.ts";
 export { For, Keyed, Show } from "./control.ts";
 export type { ForProps, KeyedProps, ShowProps, Truthy } from "./control.ts";
 export { resource } from "./resource.ts";
