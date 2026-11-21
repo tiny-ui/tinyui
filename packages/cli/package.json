@@ -37,6 +37,14 @@
     "qjsc-kmp": "0.1.4",
     "undici": "7.30.0"
   },
+  "peerDependencies": {
+    "typescript": ">=7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "tinyui-core": "workspace:*",
     "tinyui-native": "workspace:*",

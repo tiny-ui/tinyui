@@ -9,6 +9,7 @@ import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
 import { i18nTypes, loadI18n } from "./i18n.ts";
+import { contractsFile, pageContracts } from "./contracts.ts";
 import { pageDeclarations } from "./declarations.ts";
 import { routesTypes } from "./routes.ts";
 import { generateKeyPair } from "./keys.ts";
@@ -23,7 +24,7 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui embed --out <dir> [--root <dir>] [--dist <dir>] [--maps] [--qjsc <path>]
        tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui i18n --ts <file> [--root <dir>] [--check]
-       tinyui routes --ts <file> [--root <dir>] [--check]
+       tinyui routes --ts <file> [--schema <file>] [--root <dir>] [--check]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -67,7 +68,8 @@ i18n       type i18n.t from the package's strings (docs/build-chain.md §8); bui
 routes     type navigation.push / replace from the package's pages (docs/build-chain.md §10)
   --root     project root (default: cwd)
   --ts       write the tinyui-native type augmentation here (I18nKeys for i18n, Routes for routes)
-  --check    exit 1 if --ts is not already up to date, write nothing
+  --schema   routes only: also write what each page takes and hands back, as JSON (set "contracts" in tinyui.config.json to it and the build puts it into the manifest); reads types with the project's typescript
+  --check    exit 1 if --ts (and --schema) is not already up to date, write nothing
 
 keys generate
   --out      where to write the private key (default: ./tinyui-signing-key.pem); the public key is printed
@@ -156,10 +158,11 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     routes: {
-        options: { root: { type: "string" }, ts: { type: "string" }, check: { type: "boolean", default: false } },
+        options: { root: { type: "string" }, ts: { type: "string" }, schema: { type: "string" }, check: { type: "boolean", default: false } },
         run: async (v) => {
             const root = resolve((v["root"] as string | undefined) ?? process.cwd());
             const ts = v["ts"] as string | undefined;
+            const schema = v["schema"] as string | undefined;
             if (!ts) throw new Error("routes: --ts is required");
             const out = resolve(ts);
             const config = await loadConfig(root);
@@ -168,14 +171,22 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const results = new Set<string>();
             for (const [name, file] of pages) if (pageDeclarations(file, await readFile(file, "utf8")).result) results.add(name);
             const text = routesTypes(config.name, pages, out, results);
+            const again = `run tinyui routes --ts ${ts}${schema ? ` --schema ${schema}` : ""}`;
+            const contracts = schema ? contractsFile(await pageContracts(root, pages, results)) : undefined;
             if (v["check"]) {
                 const current = await readFile(out, "utf8").catch(() => "");
-                if (current !== text) throw new Error(`${ts} is out of date; run tinyui routes --ts ${ts}`);
+                if (current !== text) throw new Error(`${ts} is out of date; ${again}`);
+                if (schema && (await readFile(resolve(schema), "utf8").catch(() => "")) !== contracts) throw new Error(`${schema} is out of date; ${again}`);
                 return 0;
             }
             await mkdir(dirname(out), { recursive: true });
             await writeFile(out, text);
             process.stdout.write(`${ts}\n`);
+            if (schema && contracts !== undefined) {
+                await mkdir(dirname(resolve(schema)), { recursive: true });
+                await writeFile(resolve(schema), contracts);
+                process.stdout.write(`${schema}\n`);
+            }
             return 0;
         },
     },

@@ -26,6 +26,9 @@ importers:
       qjsc-kmp:
         specifier: 0.1.4
         version: 0.1.4
+      typescript:
+        specifier: '>=7.0.0'
+        version: 7.0.2
       undici:
         specifier: 7.30.0
         version: 7.30.0

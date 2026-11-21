@@ -12,6 +12,7 @@
 > - K0 改为"注册运行时模块（`tinyui-core` / `tinyui-native`）→ 求值页面模块（Promise，排空后取 namespace）→ 调 `default` 导出挂载"；"每引擎一个程序"的硬限制消失
 > - Promise 原生，J3 / K3 的对接不再需要 polyfill
 > - **sink 的形态（2026-09-17）**：七类错误统一为一个 `PageError`（kind / 页面 / buildId / message / 入口 / 原始栈 / 映射后的帧 / op）经 `PageSink.error()` 交出，`log()` 只收 `console.*`；栈经 source map 回映射到 `.tsx`，dev 进包实时映射、release 离线，见 build-chain.md §7
+> - **新增 E8：props 不符合页面的契约**（2026-11-21）——挂载前由 Kotlin 对照 manifest 的 `contracts` 校验，不符即页面失败，引擎不启动；不触发热更新回退（native-api.md §3）
 > - **新增 E7：未处理的 Promise rejection**——业务 `async` 里抛出且无人 catch，既不经入口 catch（非 E1）也非宿主失败（非 E3）；由 quickjs-kmp 接 `JS_SetHostPromiseRejectionTracker` 上报，页面继续。**E6 增加栈溢出**：`JS_SetMaxStackSize` 触发归入引擎级失败
 
 

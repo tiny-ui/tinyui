@@ -10,6 +10,8 @@ export { loadConfig, requireName, isPackageName, CONFIG_FILE } from "./config.ts
 export type { TinyUIConfig } from "./config.ts";
 export { generateKeyPair, publicKeyOf, isPublicKey, sign, verify } from "./keys.ts";
 export type { KeyPair } from "./keys.ts";
+export { pageContracts, contractsFile, ContractError } from "./contracts.ts";
+export type { PageContract, Schema } from "./contracts.ts";
 export { pageDeclarations, DeclarationError, PRESENTATIONS } from "./declarations.ts";
 export type { PageDeclarations, Presentation } from "./declarations.ts";
 export { publish } from "./publish.ts";

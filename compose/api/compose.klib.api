@@ -176,10 +176,12 @@ final class <#A: kotlin/Any> app.tinyui/PageLocalValue { // app.tinyui/PageLocal
 }
 
 final class app.tinyui.bundle/BuildManifest { // app.tinyui.bundle/BuildManifest|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String = ..., kotlin.collections/Map<kotlin/String, app.tinyui.bundle/PageRequires> = ..., kotlin/String? = ..., app.tinyui.bundle/I18nFiles? = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // app.tinyui.bundle/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.bundle.PageRequires>;kotlin.String?;app.tinyui.bundle.I18nFiles?;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin/String = ..., kotlin.collections/Map<kotlin/String, app.tinyui.bundle/PageRequires> = ..., kotlin/String? = ..., app.tinyui.bundle/I18nFiles? = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, app.tinyui.bundle/PageContract> = ...) // app.tinyui.bundle/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.String;kotlin.collections.Map<kotlin.String,app.tinyui.bundle.PageRequires>;kotlin.String?;app.tinyui.bundle.I18nFiles?;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,app.tinyui.bundle.PageContract>){}[0]
 
     final val buildIds // app.tinyui.bundle/BuildManifest.buildIds|{}buildIds[0]
         final fun <get-buildIds>(): kotlin.collections/Map<kotlin/String, kotlin/String> // app.tinyui.bundle/BuildManifest.buildIds.<get-buildIds>|<get-buildIds>(){}[0]
+    final val contracts // app.tinyui.bundle/BuildManifest.contracts|{}contracts[0]
+        final fun <get-contracts>(): kotlin.collections/Map<kotlin/String, app.tinyui.bundle/PageContract> // app.tinyui.bundle/BuildManifest.contracts.<get-contracts>|<get-contracts>(){}[0]
     final val createdAt // app.tinyui.bundle/BuildManifest.createdAt|{}createdAt[0]
         final fun <get-createdAt>(): kotlin/String // app.tinyui.bundle/BuildManifest.createdAt.<get-createdAt>|<get-createdAt>(){}[0]
     final val engine // app.tinyui.bundle/BuildManifest.engine|{}engine[0]
@@ -253,9 +255,23 @@ final class app.tinyui.bundle/LoadedPage { // app.tinyui.bundle/LoadedPage|null[
         final fun <get-sourceMaps>(): app.tinyui/SourceMaps // app.tinyui.bundle/LoadedPage.sourceMaps.<get-sourceMaps>|<get-sourceMaps>(){}[0]
 }
 
-final class app.tinyui.bundle/PageInfo { // app.tinyui.bundle/PageInfo|null[0]
-    constructor <init>(app.tinyui.bundle/Presentation) // app.tinyui.bundle/PageInfo.<init>|<init>(app.tinyui.bundle.Presentation){}[0]
+final class app.tinyui.bundle/PageContract { // app.tinyui.bundle/PageContract|null[0]
+    final val hasResult // app.tinyui.bundle/PageContract.hasResult|{}hasResult[0]
+        final fun <get-hasResult>(): kotlin/Boolean // app.tinyui.bundle/PageContract.hasResult.<get-hasResult>|<get-hasResult>(){}[0]
 
+    final fun problems(kotlin/String): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageContract.problems|problems(kotlin.String){}[0]
+    final fun resultProblems(kotlin/String): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageContract.resultProblems|resultProblems(kotlin.String){}[0]
+
+    final object Companion { // app.tinyui.bundle/PageContract.Companion|null[0]
+        final fun parse(kotlinx.serialization.json/JsonElement): app.tinyui.bundle/PageContract? // app.tinyui.bundle/PageContract.Companion.parse|parse(kotlinx.serialization.json.JsonElement){}[0]
+    }
+}
+
+final class app.tinyui.bundle/PageInfo { // app.tinyui.bundle/PageInfo|null[0]
+    constructor <init>(app.tinyui.bundle/Presentation, app.tinyui.bundle/PageContract? = ...) // app.tinyui.bundle/PageInfo.<init>|<init>(app.tinyui.bundle.Presentation;app.tinyui.bundle.PageContract?){}[0]
+
+    final val contract // app.tinyui.bundle/PageInfo.contract|{}contract[0]
+        final fun <get-contract>(): app.tinyui.bundle/PageContract? // app.tinyui.bundle/PageInfo.contract.<get-contract>|<get-contract>(){}[0]
     final val presentation // app.tinyui.bundle/PageInfo.presentation|{}presentation[0]
         final fun <get-presentation>(): app.tinyui.bundle/Presentation // app.tinyui.bundle/PageInfo.presentation.<get-presentation>|<get-presentation>(){}[0]
 }
@@ -540,12 +556,14 @@ final class app.tinyui/PageHost { // app.tinyui/PageHost|null[0]
 }
 
 final class app.tinyui/PageModule { // app.tinyui/PageModule|null[0]
-    constructor <init>(kotlin/String, kotlin/ByteArray, kotlin/String = ..., app.tinyui/PackageI18n = ...) // app.tinyui/PageModule.<init>|<init>(kotlin.String;kotlin.ByteArray;kotlin.String;app.tinyui.PackageI18n){}[0]
+    constructor <init>(kotlin/String, kotlin/ByteArray, kotlin/String = ..., app.tinyui/PackageI18n = ..., app.tinyui.bundle/PageContract? = ...) // app.tinyui/PageModule.<init>|<init>(kotlin.String;kotlin.ByteArray;kotlin.String;app.tinyui.PackageI18n;app.tinyui.bundle.PageContract?){}[0]
 
     final val buildId // app.tinyui/PageModule.buildId|{}buildId[0]
         final fun <get-buildId>(): kotlin/String // app.tinyui/PageModule.buildId.<get-buildId>|<get-buildId>(){}[0]
     final val bytecode // app.tinyui/PageModule.bytecode|{}bytecode[0]
         final fun <get-bytecode>(): kotlin/ByteArray // app.tinyui/PageModule.bytecode.<get-bytecode>|<get-bytecode>(){}[0]
+    final val contract // app.tinyui/PageModule.contract|{}contract[0]
+        final fun <get-contract>(): app.tinyui.bundle/PageContract? // app.tinyui/PageModule.contract.<get-contract>|<get-contract>(){}[0]
     final val i18n // app.tinyui/PageModule.i18n|{}i18n[0]
         final fun <get-i18n>(): app.tinyui/PackageI18n // app.tinyui/PageModule.i18n.<get-i18n>|<get-i18n>(){}[0]
     final val name // app.tinyui/PageModule.name|{}name[0]
@@ -849,6 +867,7 @@ final val app.tinyui.bundle/app_tinyui_bundle_HostSnapshot$stableprop // app.tin
 final val app.tinyui.bundle/app_tinyui_bundle_I18nFiles$stableprop // app.tinyui.bundle/app_tinyui_bundle_I18nFiles$stableprop|#static{}app_tinyui_bundle_I18nFiles$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop // app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop|#static{}app_tinyui_bundle_LoadedPage$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop // app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop|#static{}app_tinyui_bundle_PackageCheck$stableprop[0]
+final val app.tinyui.bundle/app_tinyui_bundle_PageContract$stableprop // app.tinyui.bundle/app_tinyui_bundle_PageContract$stableprop|#static{}app_tinyui_bundle_PageContract$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_PageInfo$stableprop // app.tinyui.bundle/app_tinyui_bundle_PageInfo$stableprop|#static{}app_tinyui_bundle_PageInfo$stableprop[0]
 final val app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop // app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop|#static{}app_tinyui_bundle_PageRequires$stableprop[0]
 final val app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop|#static{}app_tinyui_components_generated_BuiltinSchemas$stableprop[0]
@@ -916,6 +935,7 @@ final fun app.tinyui.bundle/app_tinyui_bundle_HostSnapshot$stableprop_getter(): 
 final fun app.tinyui.bundle/app_tinyui_bundle_I18nFiles$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_I18nFiles$stableprop_getter|app_tinyui_bundle_I18nFiles$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_LoadedPage$stableprop_getter|app_tinyui_bundle_LoadedPage$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PackageCheck$stableprop_getter|app_tinyui_bundle_PackageCheck$stableprop_getter(){}[0]
+final fun app.tinyui.bundle/app_tinyui_bundle_PageContract$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PageContract$stableprop_getter|app_tinyui_bundle_PageContract$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_PageInfo$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PageInfo$stableprop_getter|app_tinyui_bundle_PageInfo$stableprop_getter(){}[0]
 final fun app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter(): kotlin/Int // app.tinyui.bundle/app_tinyui_bundle_PageRequires$stableprop_getter|app_tinyui_bundle_PageRequires$stableprop_getter(){}[0]
 final fun app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(): kotlin/Int // app.tinyui.components.generated/app_tinyui_components_generated_BuiltinSchemas$stableprop_getter|app_tinyui_components_generated_BuiltinSchemas$stableprop_getter(){}[0]
