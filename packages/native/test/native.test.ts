@@ -110,6 +110,13 @@ describe("tinyui-native", () => {
         assert.equal(actions!.error(), undefined);
     });
 
+    it("i18n.locales is the host's list, empty when it has none", () => {
+        assert.deepEqual(i18n.locales(), []);
+        bridge.queries["i18n.locales"] = ["en", "zh"];
+        assert.deepEqual(i18n.locales(), ["en", "zh"]);
+        delete bridge.queries["i18n.locales"];
+    });
+
     // one engine per page, so i18n subscribes once per module: everything that relies on its K5 topics is in this one test
     it("i18n.t and i18n.formatDate re-run bindings when the locale or the time zone changes", () => {
         bridge.queries["i18n.locale"] = "zh";

@@ -53,7 +53,7 @@ class PageHostTest {
                 if (event === "onCapability") { __host_call("checkout.start", 11, JSON.stringify({ plan: "annual" })); __host_call("checkout.start", 12, JSON.stringify({ plan: "weekly" })); __host_call("nobody.home", 13, "{}"); }
                 if (event === "onSubscribe") { __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); patches.push(["p",1,"text","subscribed"]); }
                 if (event === "onSet") __host_send("store.set", JSON.stringify({ key: "cart", value: payloadJson }));
-                if (event === "onQueries") patches.push(["p",1,"text", [__host_query("i18n.locale", "{}"), __host_query("i18n.t", JSON.stringify({ key: "missing" })), __host_query("session.get", "{}"), __host_query("storage.set", JSON.stringify({ key: "k", value: "1" }))].join("|")]);
+                if (event === "onQueries") patches.push(["p",1,"text", [__host_query("i18n.locale", "{}"), __host_query("i18n.locales", "{}"), __host_query("i18n.t", JSON.stringify({ key: "missing" })), __host_query("session.get", "{}"), __host_query("storage.set", JSON.stringify({ key: "k", value: "1" }))].join("|")]);
                 if (event === "onFramework") {
                     __host_send("analytics.track", JSON.stringify({ name: "tap", props: { n: 2, ok: true, s: "x" } }));
                     __host_call("http.request", 14, JSON.stringify({ channel: "app", method: "GET", url: "/gone" }));
@@ -360,7 +360,7 @@ class PageHostTest {
         val text = { host.tree.node(1)!!.props["text"] as? String }
         host.dispatch(2, "onQueries", "{}")
         host.await { text()?.startsWith("\"en\"") == true }
-        assertEquals(""""en"|"missing"|{"loggedIn":false,"userId":null}|"E_UNSUPPORTED"""", text(), "no session, no data directory")
+        assertEquals(""""en"|[]|"missing"|{"loggedIn":false,"userId":null}|"E_UNSUPPORTED"""", text(), "no session, no data directory")
         host.close()
     }
 

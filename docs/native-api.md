@@ -40,6 +40,7 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 | `storage.set` | `null`，或错误码 `"E_QUOTA"`；`tinyui-native` 收到错误码即抛 `HostError`（§7） |
 | `i18n.t` | 字符串（§8） |
 | `i18n.locale` | 字符串（§8） |
+| `i18n.locales` | 字符串数组：App 可以切换到的语言（§8） |
 | `i18n.timeZone` | 字符串，IANA 时区 id（§8） |
 | `i18n.zoneOffset` | 数字：当前时区在参数 `ms` 那一刻领先 UTC 的分钟数，含夏令时（§8） |
 | `session.get` | `{ loggedIn, userId }`（§9） |
@@ -189,6 +190,7 @@ const [paywall] = cached("paywall.v1", () => api.get("/api/app-config").then((r)
 i18n.t("subscription.title")
 i18n.t("subscription.savings", { percent: "43%" })
 i18n.locale()   // accessor，如 "zh"
+i18n.locales()  // App 可以切换到的语言，如 ["en", "zh"]
 await i18n.setLocale("zh")   // 请求宿主切换 App 的语言
 i18n.timeZone() // accessor，如 "Asia/Shanghai"
 i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2026-01-01 08:00:00"
@@ -199,8 +201,14 @@ i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2
 - 当前语言：`TinyUIHost.locale`（`LocaleSource`）的 `state`，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 改语言（2026-11-13 加）：`i18n.setLocale(tag)` 是 J3，交给 `LocaleSource.set`（在主线程调用）。语言的真值在宿主，页面只是请求：宿主改了 `state`，页面经上一条跟上，`setLocale` 自己不改任何东西。宿主不认识的语言由 `set` 抛 `HostException("E_INVALID")`；没给 `set`（只读，或根本没给 `locale`）时以 `E_UNSUPPORTED` reject。此前页面里的语言切换只能靠宿主自定一个 `host.call` 能力，每个有这个入口的宿主都要造一遍
 
+- 有哪些语言可选（2026-11-21 加）：`i18n.locales()` 是 J2，返回 `LocaleSource.available`，顺序即宿主给的顺序；宿主没给就是空数组。App 支持哪些语言只有宿主知道，页面里的语言菜单从它来，不自己再写一份清单——否则页面可以先于宿主热下发一种宿主不认的语言，点了被 `E_INVALID` 拒绝。页面只留各语言的显示名：菜单项是 `locales()` 里页面有显示名的那些。这份清单在 App 的一次运行里不变，所以不是 accessor
+
 ```kotlin
-class LocaleSource(val state: StateFlow<String>, val set: (suspend (locale: String) -> Unit)? = null)
+class LocaleSource(
+    val state: StateFlow<String>,
+    val available: List<String> = emptyList(),
+    val set: (suspend (locale: String) -> Unit)? = null,
+)
 ```
 
 - 读写放在一个参数里（此前 `locale` 就是那个 `StateFlow`，2026-11-13 改，破坏性）：与 `SessionSource` 同形，也不会出现「能改却读不到」的组合。给了 `set` 的宿主，快照的能力段多一行 `i18n.setLocale`；调用了它的页面把它记进 `requires`，发布前照能力名核对，与 `session.signIn` 同理（§9）。`host.call` 注册同名能力在 `register` 时报错

@@ -30,6 +30,15 @@ export function locale(): string {
 }
 
 /**
+ * The languages the App can be set to (BCP 47), in the host's order; empty when the host names none. They are the
+ * host's to decide: a language picker lists the ones among these that the package has a name for.
+ */
+export function locales(): string[] {
+    // a host older than this query answers null
+    return internal.query<string[] | null>("i18n.locales") ?? [];
+}
+
+/**
  * J3: asks the host to change the App's language; once it has, [locale] and every `t()` binding follow. Rejects
  * with E_UNSUPPORTED when the host does not let pages set it, E_INVALID for a language the App does not have.
  */

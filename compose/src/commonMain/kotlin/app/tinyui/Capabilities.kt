@@ -33,7 +33,7 @@ fun interface HostCapability {
 /** J2: answered at once, inside the entry that asks. */
 internal enum class J2(val wire: String) {
     DeviceInfo("device.info"), StoreGet("store.get"), StorageGet("storage.get"), StorageSet("storage.set"),
-    I18nT("i18n.t"), I18nLocale("i18n.locale"), I18nTimeZone("i18n.timeZone"), I18nZoneOffset("i18n.zoneOffset"), SessionGet("session.get");
+    I18nT("i18n.t"), I18nLocale("i18n.locale"), I18nLocales("i18n.locales"), I18nTimeZone("i18n.timeZone"), I18nZoneOffset("i18n.zoneOffset"), SessionGet("session.get");
 
     companion object {
         private val byWire = entries.associateBy { it.wire }
