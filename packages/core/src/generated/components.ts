@@ -310,7 +310,10 @@ export interface SelectSelectPayload {
     value: string;
 }
 
-/** M3 exposed dropdown; the choices are its `Option` children. The selection is the page's: `onSelect` reports the pick, `value` shows it. */
+export interface SelectClickPayload {
+}
+
+/** M3 exposed dropdown; the choices are its `Option` children. The selection is the page's: `onSelect` reports the pick, `value` shows it. With `onClick` a tap is the page's too: the menu does not open, the page shows the choices its own way (a sheet) and sets `value`. */
 export interface SelectProps extends LayoutProps {
     /** value of the chosen Option; unset or unmatched shows the placeholder (not `selected`, the common selectable-container prop) */
     value?: string;
@@ -318,6 +321,7 @@ export interface SelectProps extends LayoutProps {
     label?: string;
     enabled?: boolean;
     onSelect?: (e: SelectSelectPayload) => void;
+    onClick?: (e: SelectClickPayload) => void;
     children?: Children;
 }
 

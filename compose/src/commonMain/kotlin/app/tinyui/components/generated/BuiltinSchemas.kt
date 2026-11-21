@@ -294,6 +294,7 @@ object BuiltinSchemas {
         ),
         events = mapOf(
             "onSelect" to mapOf("value" to FieldSpec.Str),
+            "onClick" to emptyMap(),
         ),
         commands = mapOf(
         ),

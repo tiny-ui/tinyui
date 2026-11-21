@@ -46,6 +46,19 @@ class TinyUIDefaults(
     val textLinks: TextLinkStyles? = null,
     /** The look of `BottomSheet`: the colour of its container and of the content on it. */
     val bottomSheet: BottomSheetStyle? = null,
+    /** The size of `TopAppBar`: the bar's height and its back icon. */
+    val topAppBar: TopAppBarStyle? = null,
+)
+
+/**
+ * What a host may set on a `TopAppBar`: sizes a design system fixes for every page and M3 does not take from the
+ * theme. [height] is the bar's own height, the status bar not included (M3: 64dp); [backIconSize] is the glyph of the
+ * back button, whose 48dp touch target stays (null: the icon's own size). A page that sets `height` or `backIconSize`
+ * itself still wins.
+ */
+class TopAppBarStyle(
+    val height: Dp? = null,
+    val backIconSize: Dp? = null,
 )
 
 /**
@@ -91,7 +104,9 @@ class CheckboxStyle(
 /**
  * What a host may set on a `Button` variant, in M3's own types — the parameters of M3's `Button` / `OutlinedButton` /
  * `TextButton` that `MaterialTheme` does not drive. Null keeps M3's default for that piece; [disabledBorder] null keeps
- * M3's disabled border (an outlined button's outline at 12%), not [border].
+ * M3's disabled border (an outlined button's outline at 12%), not [border]. [minHeight] is the least a button of this
+ * variant is tall (M3: 40dp), the counterpart of [TextFieldStyle.minHeight] for a design system whose buttons and
+ * fields share a height; a page that sets `height` still wins.
  */
 class ButtonStyle(
     val colors: ButtonColors? = null,
@@ -99,6 +114,7 @@ class ButtonStyle(
     val disabledBorder: BorderStroke? = null,
     val shape: Shape? = null,
     val contentPadding: PaddingValues? = null,
+    val minHeight: Dp? = null,
 )
 
 /** The host's [TinyUIDefaults]; the M3 defaults when the host sets none. */
@@ -133,7 +149,14 @@ internal fun checkboxStyle(): ResolvedCheckboxStyle {
 }
 
 /** A `Button` variant's look with every piece settled: the host's where set, else M3's for that variant. */
-internal class ResolvedButtonStyle(val colors: ButtonColors, val border: BorderStroke?, val shape: Shape, val contentPadding: PaddingValues)
+internal class ResolvedButtonStyle(
+    val colors: ButtonColors,
+    val border: BorderStroke?,
+    val shape: Shape,
+    val contentPadding: PaddingValues,
+    /** Null leaves the minimum to M3. */
+    val minHeight: Dp?,
+)
 
 @Composable
 internal fun buttonStyle(variant: String?, enabled: Boolean): ResolvedButtonStyle {
@@ -152,6 +175,7 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
     border = (if (enabled) this?.border else this?.disabledBorder) ?: border,
     shape = this?.shape ?: shape,
     contentPadding = this?.contentPadding ?: contentPadding,
+    minHeight = this?.minHeight,
 )
 
 /** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
