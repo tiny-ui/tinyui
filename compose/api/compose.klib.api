@@ -256,7 +256,7 @@ final class app.tinyui.components/BottomSheetStyle { // app.tinyui.components/Bo
 }
 
 final class app.tinyui.components/ButtonStyle { // app.tinyui.components/ButtonStyle|null[0]
-    constructor <init>(androidx.compose.material3/ButtonColors? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.ui.graphics/Shape? = ..., androidx.compose.foundation.layout/PaddingValues? = ...) // app.tinyui.components/ButtonStyle.<init>|<init>(androidx.compose.material3.ButtonColors?;androidx.compose.foundation.BorderStroke?;androidx.compose.foundation.BorderStroke?;androidx.compose.ui.graphics.Shape?;androidx.compose.foundation.layout.PaddingValues?){}[0]
+    constructor <init>(androidx.compose.material3/ButtonColors? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.foundation/BorderStroke? = ..., androidx.compose.ui.graphics/Shape? = ..., androidx.compose.foundation.layout/PaddingValues? = ..., androidx.compose.ui.unit/Dp? = ...) // app.tinyui.components/ButtonStyle.<init>|<init>(androidx.compose.material3.ButtonColors?;androidx.compose.foundation.BorderStroke?;androidx.compose.foundation.BorderStroke?;androidx.compose.ui.graphics.Shape?;androidx.compose.foundation.layout.PaddingValues?;androidx.compose.ui.unit.Dp?){}[0]
 
     final val border // app.tinyui.components/ButtonStyle.border|{}border[0]
         final fun <get-border>(): androidx.compose.foundation/BorderStroke? // app.tinyui.components/ButtonStyle.border.<get-border>|<get-border>(){}[0]
@@ -266,6 +266,8 @@ final class app.tinyui.components/ButtonStyle { // app.tinyui.components/ButtonS
         final fun <get-contentPadding>(): androidx.compose.foundation.layout/PaddingValues? // app.tinyui.components/ButtonStyle.contentPadding.<get-contentPadding>|<get-contentPadding>(){}[0]
     final val disabledBorder // app.tinyui.components/ButtonStyle.disabledBorder|{}disabledBorder[0]
         final fun <get-disabledBorder>(): androidx.compose.foundation/BorderStroke? // app.tinyui.components/ButtonStyle.disabledBorder.<get-disabledBorder>|<get-disabledBorder>(){}[0]
+    final val minHeight // app.tinyui.components/ButtonStyle.minHeight|{}minHeight[0]
+        final fun <get-minHeight>(): androidx.compose.ui.unit/Dp? // app.tinyui.components/ButtonStyle.minHeight.<get-minHeight>|<get-minHeight>(){}[0]
     final val shape // app.tinyui.components/ButtonStyle.shape|{}shape[0]
         final fun <get-shape>(): androidx.compose.ui.graphics/Shape? // app.tinyui.components/ButtonStyle.shape.<get-shape>|<get-shape>(){}[0]
 }
@@ -335,7 +337,7 @@ final class app.tinyui.components/TextFieldStyle { // app.tinyui.components/Text
 }
 
 final class app.tinyui.components/TinyUIDefaults { // app.tinyui.components/TinyUIDefaults|null[0]
-    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ..., app.tinyui.components/BottomSheetStyle? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?;app.tinyui.components.BottomSheetStyle?){}[0]
+    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ..., app.tinyui.components/BottomSheetStyle? = ..., app.tinyui.components/TopAppBarStyle? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?;app.tinyui.components.BottomSheetStyle?;app.tinyui.components.TopAppBarStyle?){}[0]
 
     final val bottomSheet // app.tinyui.components/TinyUIDefaults.bottomSheet|{}bottomSheet[0]
         final fun <get-bottomSheet>(): app.tinyui.components/BottomSheetStyle? // app.tinyui.components/TinyUIDefaults.bottomSheet.<get-bottomSheet>|<get-bottomSheet>(){}[0]
@@ -351,6 +353,17 @@ final class app.tinyui.components/TinyUIDefaults { // app.tinyui.components/Tiny
         final fun <get-textField>(): app.tinyui.components/TextFieldStyle? // app.tinyui.components/TinyUIDefaults.textField.<get-textField>|<get-textField>(){}[0]
     final val textLinks // app.tinyui.components/TinyUIDefaults.textLinks|{}textLinks[0]
         final fun <get-textLinks>(): androidx.compose.ui.text/TextLinkStyles? // app.tinyui.components/TinyUIDefaults.textLinks.<get-textLinks>|<get-textLinks>(){}[0]
+    final val topAppBar // app.tinyui.components/TinyUIDefaults.topAppBar|{}topAppBar[0]
+        final fun <get-topAppBar>(): app.tinyui.components/TopAppBarStyle? // app.tinyui.components/TinyUIDefaults.topAppBar.<get-topAppBar>|<get-topAppBar>(){}[0]
+}
+
+final class app.tinyui.components/TopAppBarStyle { // app.tinyui.components/TopAppBarStyle|null[0]
+    constructor <init>(androidx.compose.ui.unit/Dp? = ..., androidx.compose.ui.unit/Dp? = ...) // app.tinyui.components/TopAppBarStyle.<init>|<init>(androidx.compose.ui.unit.Dp?;androidx.compose.ui.unit.Dp?){}[0]
+
+    final val backIconSize // app.tinyui.components/TopAppBarStyle.backIconSize|{}backIconSize[0]
+        final fun <get-backIconSize>(): androidx.compose.ui.unit/Dp? // app.tinyui.components/TopAppBarStyle.backIconSize.<get-backIconSize>|<get-backIconSize>(){}[0]
+    final val height // app.tinyui.components/TopAppBarStyle.height|{}height[0]
+        final fun <get-height>(): androidx.compose.ui.unit/Dp? // app.tinyui.components/TopAppBarStyle.height.<get-height>|<get-height>(){}[0]
 }
 
 final class app.tinyui.components/UINode { // app.tinyui.components/UINode|null[0]
@@ -841,6 +854,7 @@ final val app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop 
 final val app.tinyui.components/app_tinyui_components_TextFieldStyle$stableprop // app.tinyui.components/app_tinyui_components_TextFieldStyle$stableprop|#static{}app_tinyui_components_TextFieldStyle$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_Theme$stableprop // app.tinyui.components/app_tinyui_components_Theme$stableprop|#static{}app_tinyui_components_Theme$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_TinyUIDefaults$stableprop // app.tinyui.components/app_tinyui_components_TinyUIDefaults$stableprop|#static{}app_tinyui_components_TinyUIDefaults$stableprop[0]
+final val app.tinyui.components/app_tinyui_components_TopAppBarStyle$stableprop // app.tinyui.components/app_tinyui_components_TopAppBarStyle$stableprop|#static{}app_tinyui_components_TopAppBarStyle$stableprop[0]
 final val app.tinyui.components/app_tinyui_components_UINode$stableprop // app.tinyui.components/app_tinyui_components_UINode$stableprop|#static{}app_tinyui_components_UINode$stableprop[0]
 final val app.tinyui/app_tinyui_CapabilityRegistry$stableprop // app.tinyui/app_tinyui_CapabilityRegistry$stableprop|#static{}app_tinyui_CapabilityRegistry$stableprop[0]
 final val app.tinyui/app_tinyui_EventBus$stableprop // app.tinyui/app_tinyui_EventBus$stableprop|#static{}app_tinyui_EventBus$stableprop[0]
@@ -904,6 +918,7 @@ final fun app.tinyui.components/app_tinyui_components_SizeValue_Wrap$stableprop_
 final fun app.tinyui.components/app_tinyui_components_TextFieldStyle$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_TextFieldStyle$stableprop_getter|app_tinyui_components_TextFieldStyle$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_Theme$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_Theme$stableprop_getter|app_tinyui_components_Theme$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_TinyUIDefaults$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_TinyUIDefaults$stableprop_getter|app_tinyui_components_TinyUIDefaults$stableprop_getter(){}[0]
+final fun app.tinyui.components/app_tinyui_components_TopAppBarStyle$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_TopAppBarStyle$stableprop_getter|app_tinyui_components_TopAppBarStyle$stableprop_getter(){}[0]
 final fun app.tinyui.components/app_tinyui_components_UINode$stableprop_getter(): kotlin/Int // app.tinyui.components/app_tinyui_components_UINode$stableprop_getter|app_tinyui_components_UINode$stableprop_getter(){}[0]
 final fun app.tinyui/PageFailureScreen(app.tinyui/PageFailure, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui/PageFailureScreen|PageFailureScreen(app.tinyui.PageFailure;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 final fun app.tinyui/TinyUIPage(app.tinyui/PageModule, app.tinyui/TinyUIHost, kotlin/String?, kotlin.collections/List<app.tinyui/PageLocalValue<*>>?, androidx.compose.ui/Modifier?, app.tinyui/SourceMaps?, kotlin/Function3<app.tinyui/PageFailure, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>?, kotlin/Function1<app.tinyui/PageHost, kotlin/Unit>?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // app.tinyui/TinyUIPage|TinyUIPage(app.tinyui.PageModule;app.tinyui.TinyUIHost;kotlin.String?;kotlin.collections.List<app.tinyui.PageLocalValue<*>>?;androidx.compose.ui.Modifier?;app.tinyui.SourceMaps?;kotlin.Function3<app.tinyui.PageFailure,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>?;kotlin.Function1<app.tinyui.PageHost,kotlin.Unit>?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
