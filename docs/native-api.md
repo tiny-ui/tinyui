@@ -90,6 +90,8 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
 - `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方，并记一条日志
 - 呈现方式（2026-11-21 加）：页面用 `export const presentation = "sheet"` 说自己是底部弹层（build-chain.md §11），不说就是普通的一页。宿主打开页面前用 `updates.pageInfo(page)`（不用 `Updates` 的宿主读 `bundle.manifest.pageInfo(page)`）拿到它，据此决定导航条目怎么展示；返回 null 说明 App 里没有这一页，不打开并经 `PageSink` 上报。这样页面名不用在宿主里逐个登记：能不能开、怎么开都从清单来，新加的页面热下发后旧宿主也能打开
+- 参数校验（2026-11-21 加）：包带了契约（manifest 的 `contracts`，build-chain.md §10）时，页面挂载前框架拿 props 对一遍形状。缺必填字段、类型不对就**不挂载**，按页面失败处理（错误页 + `PageSink`，错误类别 E8），报错只说哪个字段、该是什么，不带值——props 里有 token。多出来的字段放行。页面是照着某个形状写的，形状不对时让它跑起来只会在里面某处报一个看不出原因的错；宿主的原生代码打开页面、而内置包落后于宿主时就是这种情况。E8 不触发 `Updates` 的回退：错的可能是调用方，换回内置包不一定更对
+    - 宿主想在发版前就知道：`updates.pageInfo(page)?.contract?.problems(paramsJson)` 返回同一份问题清单，放进宿主的测试里校验自己构造的参数；页面带回的结果用 `resultProblems(resultJson)`
 - `push` 从不在栈顶的页面发起时由宿主定，通常忽略并记一条日志：被盖住的页面不该把用户带去别处
 - 缺省 `Navigator.None`（调用无效果）。`push` 是 J4，页面拿不到结果，宿主认不出的页面名由它忽略
 

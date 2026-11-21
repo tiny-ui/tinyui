@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import app.tinyui.bundle.PageContract
 import app.tinyui.components.ComponentRegistry
 import app.tinyui.components.NodeRenderer
 import app.tinyui.components.NodeTree
@@ -39,15 +40,22 @@ internal class RuntimeBundle(val core: ByteArray, val native: ByteArray)
 
 /**
  * One page's bytecode; [name] is the module name (`sample/todos`) and [buildId] comes from `manifest.json`.
- * [i18n] is its package's strings (docs/native-api.md §8).
+ * [i18n] is its package's strings (docs/native-api.md §8). [contract] is what the page takes, when its package
+ * carries contracts: props that do not fit never reach the page (E8).
  */
-class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "", val i18n: PackageI18n = PackageI18n.EMPTY) {
+class PageModule(
+    val name: String,
+    val bytecode: ByteArray,
+    val buildId: String = "",
+    val i18n: PackageI18n = PackageI18n.EMPTY,
+    val contract: PageContract? = null,
+) {
     /** The package the page belongs to: the part of [name] before the first `/`. */
     val pkg: String get() = name.substringBefore('/')
 }
 
 /** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */
-/** The page's failure (E2 / E6): engine gone, error page to be rendered by the host. */
+/** The page's failure (E2 / E6: engine gone; E8: never started), error page to be rendered by the host. */
 class PageFailure(val error: PageError) {
     val kind: String get() = error.kind
     val message: String get() = error.message
@@ -112,6 +120,14 @@ class PageHost internal constructor(
     }
 
     internal fun start() {
+        // props that do not fit the page's contract: the page was written against another shape, so it is not run
+        // at all rather than left to fail somewhere inside (E8)
+        val misfit = page.contract?.problems(propsJson).orEmpty()
+        if (misfit.isNotEmpty()) {
+            fail("E8", IllegalArgumentException("props do not fit ${page.name}: ${misfit.joinToString("; ")}"))
+            mountSettled.complete(Unit)
+            return
+        }
         scope.launch {
             try {
                 // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6

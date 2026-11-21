@@ -28,7 +28,7 @@ class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
     suspend fun page(name: String): LoadedPage {
         require(name in manifest.pages) { "page $name is not in package ${manifest.name}: ${manifest.pages}" }
         val bytecode = read(manifest.file(name) + ".jsb")
-        val module = PageModule(name, bytecode, manifest.buildId(name), i18n())
+        val module = PageModule(name, bytecode, manifest.buildId(name), i18n(), manifest.contracts[name])
         return LoadedPage(module, sourceMaps(name), this)
     }
 
