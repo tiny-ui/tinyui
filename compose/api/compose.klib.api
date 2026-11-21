@@ -277,7 +277,7 @@ final class app.tinyui.bundle/PageInfo { // app.tinyui.bundle/PageInfo|null[0]
 }
 
 final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String> = ...) // app.tinyui.bundle/PageRequires.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/String> = ...) // app.tinyui.bundle/PageRequires.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>){}[0]
 
     final val capabilities // app.tinyui.bundle/PageRequires.capabilities|{}capabilities[0]
         final fun <get-capabilities>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
@@ -285,6 +285,8 @@ final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|n
         final fun <get-channels>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.channels.<get-channels>|<get-channels>(){}[0]
     final val components // app.tinyui.bundle/PageRequires.components|{}components[0]
         final fun <get-components>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.components.<get-components>|<get-components>(){}[0]
+    final val routes // app.tinyui.bundle/PageRequires.routes|{}routes[0]
+        final fun <get-routes>(): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PageRequires.routes.<get-routes>|<get-routes>(){}[0]
 }
 
 final class app.tinyui.components/BottomSheetStyle { // app.tinyui.components/BottomSheetStyle|null[0]
@@ -488,6 +490,17 @@ final class app.tinyui/LocaleSource { // app.tinyui/LocaleSource|null[0]
         final fun <get-state>(): kotlinx.coroutines.flow/StateFlow<kotlin/String> // app.tinyui/LocaleSource.state.<get-state>|<get-state>(){}[0]
 }
 
+final class app.tinyui/NativeRoute { // app.tinyui/NativeRoute|null[0]
+    constructor <init>(kotlin/String, kotlinx.serialization.descriptors/SerialDescriptor) // app.tinyui/NativeRoute.<init>|<init>(kotlin.String;kotlinx.serialization.descriptors.SerialDescriptor){}[0]
+
+    final val name // app.tinyui/NativeRoute.name|{}name[0]
+        final fun <get-name>(): kotlin/String // app.tinyui/NativeRoute.name.<get-name>|<get-name>(){}[0]
+    final val params // app.tinyui/NativeRoute.params|{}params[0]
+        final fun <get-params>(): kotlinx.serialization.descriptors/SerialDescriptor // app.tinyui/NativeRoute.params.<get-params>|<get-params>(){}[0]
+    final val schema // app.tinyui/NativeRoute.schema|{}schema[0]
+        final fun <get-schema>(): kotlinx.serialization.json/JsonObject // app.tinyui/NativeRoute.schema.<get-schema>|<get-schema>(){}[0]
+}
+
 final class app.tinyui/PackageI18n { // app.tinyui/PackageI18n|null[0]
     constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String>>) // app.tinyui/PackageI18n.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.collections.Map<kotlin.String,kotlin.String>>){}[0]
 
@@ -643,7 +656,7 @@ final class app.tinyui/StoreValue { // app.tinyui/StoreValue|null[0]
 }
 
 final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
-    constructor <init>(app.tinyui.components/ComponentRegistry, app.tinyui/PageSink, app.tinyui/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HttpChannel> = ..., app.tinyui/LocaleSource? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui/SessionSource? = ..., app.tinyui/AnalyticsSink? = ..., app.tinyui/LinkOpener? = ..., app.tinyui/Navigator = ..., okio/Path? = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.components.ComponentRegistry;app.tinyui.PageSink;app.tinyui.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.HttpChannel>;app.tinyui.LocaleSource?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.SessionSource?;app.tinyui.AnalyticsSink?;app.tinyui.LinkOpener?;app.tinyui.Navigator;okio.Path?){}[0]
+    constructor <init>(app.tinyui.components/ComponentRegistry, app.tinyui/PageSink, app.tinyui/CapabilityRegistry = ..., kotlin.collections/Map<kotlin/String, app.tinyui/HttpChannel> = ..., app.tinyui/LocaleSource? = ..., kotlinx.coroutines.flow/StateFlow<kotlin/String>? = ..., app.tinyui/SessionSource? = ..., app.tinyui/AnalyticsSink? = ..., app.tinyui/LinkOpener? = ..., app.tinyui/Navigator = ..., okio/Path? = ..., kotlin.collections/List<app.tinyui/NativeRoute> = ...) // app.tinyui/TinyUIHost.<init>|<init>(app.tinyui.components.ComponentRegistry;app.tinyui.PageSink;app.tinyui.CapabilityRegistry;kotlin.collections.Map<kotlin.String,app.tinyui.HttpChannel>;app.tinyui.LocaleSource?;kotlinx.coroutines.flow.StateFlow<kotlin.String>?;app.tinyui.SessionSource?;app.tinyui.AnalyticsSink?;app.tinyui.LinkOpener?;app.tinyui.Navigator;okio.Path?;kotlin.collections.List<app.tinyui.NativeRoute>){}[0]
 
     final val analytics // app.tinyui/TinyUIHost.analytics|{}analytics[0]
         final fun <get-analytics>(): app.tinyui/AnalyticsSink? // app.tinyui/TinyUIHost.analytics.<get-analytics>|<get-analytics>(){}[0]
@@ -665,6 +678,8 @@ final class app.tinyui/TinyUIHost { // app.tinyui/TinyUIHost|null[0]
         final fun <get-locale>(): app.tinyui/LocaleSource? // app.tinyui/TinyUIHost.locale.<get-locale>|<get-locale>(){}[0]
     final val navigator // app.tinyui/TinyUIHost.navigator|{}navigator[0]
         final fun <get-navigator>(): app.tinyui/Navigator // app.tinyui/TinyUIHost.navigator.<get-navigator>|<get-navigator>(){}[0]
+    final val routes // app.tinyui/TinyUIHost.routes|{}routes[0]
+        final fun <get-routes>(): kotlin.collections/List<app.tinyui/NativeRoute> // app.tinyui/TinyUIHost.routes.<get-routes>|<get-routes>(){}[0]
     final val session // app.tinyui/TinyUIHost.session|{}session[0]
         final fun <get-session>(): app.tinyui/SessionSource? // app.tinyui/TinyUIHost.session.<get-session>|<get-session>(){}[0]
     final val sink // app.tinyui/TinyUIHost.sink|{}sink[0]
@@ -777,7 +792,7 @@ final object app.tinyui.bundle/HostSnapshot { // app.tinyui.bundle/HostSnapshot|
 }
 
 final object app.tinyui.bundle/PackageCheck { // app.tinyui.bundle/PackageCheck|null[0]
-    final fun problems(app.tinyui.bundle/BuildManifest, app.tinyui/TinyUIHost): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PackageCheck.problems|problems(app.tinyui.bundle.BuildManifest;app.tinyui.TinyUIHost){}[0]
+    final fun problems(app.tinyui.bundle/BuildManifest, app.tinyui/TinyUIHost, kotlin.collections/List<app.tinyui.bundle/BuildManifest> = ...): kotlin.collections/List<kotlin/String> // app.tinyui.bundle/PackageCheck.problems|problems(app.tinyui.bundle.BuildManifest;app.tinyui.TinyUIHost;kotlin.collections.List<app.tinyui.bundle.BuildManifest>){}[0]
 }
 
 final object app.tinyui.components.generated/BuiltinSchemas { // app.tinyui.components.generated/BuiltinSchemas|null[0]
@@ -908,6 +923,7 @@ final val app.tinyui/app_tinyui_HttpRequest$stableprop // app.tinyui/app_tinyui_
 final val app.tinyui/app_tinyui_HttpResponse$stableprop // app.tinyui/app_tinyui_HttpResponse$stableprop|#static{}app_tinyui_HttpResponse$stableprop[0]
 final val app.tinyui/app_tinyui_KtorChannel$stableprop // app.tinyui/app_tinyui_KtorChannel$stableprop|#static{}app_tinyui_KtorChannel$stableprop[0]
 final val app.tinyui/app_tinyui_LocaleSource$stableprop // app.tinyui/app_tinyui_LocaleSource$stableprop|#static{}app_tinyui_LocaleSource$stableprop[0]
+final val app.tinyui/app_tinyui_NativeRoute$stableprop // app.tinyui/app_tinyui_NativeRoute$stableprop|#static{}app_tinyui_NativeRoute$stableprop[0]
 final val app.tinyui/app_tinyui_Navigator_None$stableprop // app.tinyui/app_tinyui_Navigator_None$stableprop|#static{}app_tinyui_Navigator_None$stableprop[0]
 final val app.tinyui/app_tinyui_PackageI18n$stableprop // app.tinyui/app_tinyui_PackageI18n$stableprop|#static{}app_tinyui_PackageI18n$stableprop[0]
 final val app.tinyui/app_tinyui_PageContext$stableprop // app.tinyui/app_tinyui_PageContext$stableprop|#static{}app_tinyui_PageContext$stableprop[0]
@@ -976,6 +992,7 @@ final fun app.tinyui/app_tinyui_HttpRequest$stableprop_getter(): kotlin/Int // a
 final fun app.tinyui/app_tinyui_HttpResponse$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_HttpResponse$stableprop_getter|app_tinyui_HttpResponse$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_KtorChannel$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_KtorChannel$stableprop_getter|app_tinyui_KtorChannel$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_LocaleSource$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_LocaleSource$stableprop_getter|app_tinyui_LocaleSource$stableprop_getter(){}[0]
+final fun app.tinyui/app_tinyui_NativeRoute$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_NativeRoute$stableprop_getter|app_tinyui_NativeRoute$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_Navigator_None$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_Navigator_None$stableprop_getter|app_tinyui_Navigator_None$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_PackageI18n$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PackageI18n$stableprop_getter|app_tinyui_PackageI18n$stableprop_getter(){}[0]
 final fun app.tinyui/app_tinyui_PageContext$stableprop_getter(): kotlin/Int // app.tinyui/app_tinyui_PageContext$stableprop_getter|app_tinyui_PageContext$stableprop_getter(){}[0]

@@ -19,6 +19,8 @@ export interface PublishOptions {
     rollout?: number;
     concurrency?: number;
     onUpload?: (result: UploadResult) => void;
+    /** Something worth a look that does not stop the publish. */
+    onWarning?: (message: string) => void;
 }
 
 export interface PublishResult {
@@ -51,7 +53,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
     const pkg = manifest.name;
     const hostVersion = manifest.hostVersion;
     const version = manifest.version;
-    await checkHost(client, app, local.manifest);
+    await checkHost(client, app, local.manifest, options.onWarning);
     const prefix = segments(app, pkg, hostVersion, version);
 
     const files = [...new Set(payload(manifest).map((f) => requirePackagePath(f.path))), "manifest.json"];
@@ -81,7 +83,7 @@ export async function publish(options: PublishOptions): Promise<PublishResult> {
  * not provide, or a runtime newer than the oldest host of that version has. Such a page does not crash, so no rollback
  * would catch it (docs/updates.md §1.3).
  */
-async function checkHost(client: UpdatesClient, app: string, manifest: LocalBundle["manifest"]): Promise<void> {
+async function checkHost(client: UpdatesClient, app: string, manifest: LocalBundle["manifest"], warn?: (message: string) => void): Promise<void> {
     const target = `host version ${manifest.hostVersion} of ${app}`;
     if (typeof manifest.tinyui !== "string" || typeof manifest.requires !== "object" || manifest.requires === null || Array.isArray(manifest.requires)) {
         throw new Error(`${manifest.name} ${manifest.version} was built without "tinyui" / "requires" in its manifest; rebuild it with a current tinyui-cli`);
@@ -111,6 +113,10 @@ async function checkHost(client: UpdatesClient, app: string, manifest: LocalBund
         if (components.length) problems.push(`  ${page} uses host component${components.length > 1 ? "s" : ""} ${components.join(", ")}`);
         if (capabilities.length) problems.push(`  ${page} calls ${capabilities.join(", ")}`);
         if (channels.length) problems.push(`  ${page} sends through http channel${channels.length > 1 ? "s" : ""} ${channels.join(", ")}`);
+        // not a failure: the name may be a page of another package of the App, which nothing here can look up. The
+        // host's own check over its embedded packages knows them all (PackageCheck)
+        const elsewhere = (needs.routes ?? []).filter((r) => !host.routes.has(r));
+        if (elsewhere.length) warn?.(`${page} navigates to ${elsewhere.join(", ")}: not ${elsewhere.length > 1 ? "native routes" : "a native route"} of ${target}; fine if another package of the App has ${elsewhere.length > 1 ? "them" : "it"}`);
     }
     if (problems.length) throw new Error(`${manifest.name} ${manifest.version} cannot go to ${target}, which does not provide what it uses:\n${problems.join("\n")}`);
 }

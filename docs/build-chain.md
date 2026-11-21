@@ -157,8 +157,9 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
     - JSON 带不过去、或宿主没法校验的类型直接报错，指出页面和字段：函数、`unknown` / `any`、元组、`bigint`、引用自己的递归类型。props 里有这些的页面先把类型收紧
     - 读类型要类型检查器，用的是**页面工程自己装的 TypeScript**（7 及以上，它的 `typescript/unstable/sync`）和工程自己的 `tsconfig.json`，所以一个类型在这里的含义和 `tsc` 看到的一致。`typescript` 是 `tinyui-cli` 的可选 peer 依赖，只有 `--schema` 用到；`tinyui build` 仍然只用 esbuild，不碰类型，它只核对这份文件说的是不是当前这些页面，props 改了没重新生成由 `routes --check` 拦。这个 API 上游标的是 unstable：升 TypeScript 后 `--schema` 报错，先看这里
     - 联合类型的成员按文本排序后写出，检查器给的顺序不稳定，否则 `--check` 会无故失败
+- `--host <快照文件>`（2026-11-21 加）把目标宿主的原生路由生成进 `HostRoutes`（名字 → 参数类型，由快照 `routes` 段里的形状转成 TS 类型），去原生页的 `push` / `replace` 也有编译期检查（native-api.md §3）。快照变了生成物就变，`--check` 要带同样的 `--host`
 - 生成之后 `navigation.push` / `replace` 在编译期检查：本包的页面名必须在表里（拼错即报，编辑器有补全），参数必须是那一页的 props，页面不收 props 时可省略；`since` 只收本包的页面名。没生成这张表时不检查，与 `i18n.t` 没生成 key 类型时一样
-- 以别的前缀开头的名字（别的包的页面、宿主 `Navigator` 认识的原生路由）照原样放行，参数是扁平的 `Params`。跨包的参数是两个团队之间的接口（[app-model.md](./app-model.md) §7），它的类型怎么交付等第二个真实的跨包跳转出现再定
+- 既不是本包页面、也不在 `HostRoutes` 里的名字（别的包的页面）照原样放行，参数是任意 JSON 对象 `Params`。跨包的参数是两个团队之间的接口（[app-model.md](./app-model.md) §7），它的类型怎么交付等第二个真实的跨包跳转出现再定
 - `--check` 在生成物与页面目录对不上时失败（增删、改名了页面却没重新生成；带 `--schema` 时还包括任何一页的 props 或 `Result` 变了），放进页面工程的 CI，用法同 `tinyui i18n --check`
 - 与 `tinyui i18n`、`tinyui schema` 一样把生成物提交进仓。两条命令并列而不合成一条：合并要改掉所有页面工程的脚本与 CI，等出现第三种要生成的类型再合
 - 业界同类：Expo Router、TanStack Router、Next.js typed routes 按文件路径生成路由类型；React Navigation 是手写一份 `ParamList` 再全局声明合并，这里省掉手写的那一份

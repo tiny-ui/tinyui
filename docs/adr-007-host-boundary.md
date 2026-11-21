@@ -168,7 +168,7 @@ QuickJS 没有 `Intl`：复数、本地化数字与日期第一批不做，触�
 
 `HostServices` 删除：`navigator` 挪到 `TinyUIHost`，`locals` 改为 `TinyUIPage` 的可选参数（只给 `host.call` 的能力用）。
 
-宿主快照收录宿主组件、`host.call` 能力名，**新增网络通道名**，以及是否提供会话（记作能力 `session.signIn`：会话缺省时 `signIn` 会失败，必须能在发布前核对）；事件 topic、埋点事件名、其余标准接口（缺省时有可用的默认行为）不进快照。`hostVersion` 的口径随之收窄为这几类的集合及其参数与行为。事件改名后宿主静默收不到，快照拦不住，所以页面到宿主的事件要尽量少。跳原生页的路由名第一批不进快照：`navigation.push` 是 J4，页面拿不到结果，`Navigator` 认不出时忽略并经 `PageSink` 上报；需要页面能降级时再议。
+宿主快照收录宿主组件、`host.call` 能力名，**新增网络通道名**，以及是否提供会话（记作能力 `session.signIn`：会话缺省时 `signIn` 会失败，必须能在发布前核对）；事件 topic、埋点事件名、其余标准接口（缺省时有可用的默认行为）不进快照。`hostVersion` 的口径随之收窄为这几类的集合及其参数与行为。事件改名后宿主静默收不到，快照拦不住，所以页面到宿主的事件要尽量少。跳原生页的路由名第一批不进快照（2026-11-21 已进：宿主登记 `TinyUIHost.routes`，见 native-api.md §3）：`navigation.push` 是 J4，页面拿不到结果，`Navigator` 认不出时忽略并经 `PageSink` 上报；需要页面能降级时再议。
 
 ## 4. 决策
 

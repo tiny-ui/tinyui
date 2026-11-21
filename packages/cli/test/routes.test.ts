@@ -8,7 +8,8 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { discoverPages } from "../src/build.ts";
 import { generateKeyPair } from "../src/keys.ts";
-import { routesTypes } from "../src/routes.ts";
+import type { Schema } from "../src/contracts.ts";
+import { routesTypes, schemaType } from "../src/routes.ts";
 
 const bin = fileURLToPath(new URL("../src/bin.ts", import.meta.url));
 const tinyui = (...args: string[]) => promisify(execFile)(process.execPath, [bin, ...args]);
@@ -39,6 +40,39 @@ describe("tinyui routes", () => {
         const text = routesTypes("shop", pages, join(root, "src/generated/routes.ts"), new Set(["shop/checkout/pay"]));
         assert.match(text, /interface RouteResults \{\n        "shop\/checkout\/pay": import\("\.\.\/pages\/checkout\/pay"\)\.Result;\n    \}/);
         assert.match(routesTypes("shop", pages, join(root, "src/generated/routes.ts")), /interface RouteResults \{\n    \}/, "none: the interface is still there");
+    });
+
+    it("types the host's native routes from its snapshot", async () => {
+        const pages = await discoverPages("shop", join(root, "src/pages"));
+        const routes = new Map<string, Schema>([
+            ["settings", { type: "object", properties: {}, required: [] }],
+            ["account/choose", {
+                type: "object",
+                properties: {
+                    token: { type: "string" },
+                    user: { type: "object", properties: { id: { type: "string" }, "main-user": { type: "boolean" } }, required: ["id"] },
+                    tags: { type: "array", items: { anyOf: [{ type: "null" }, { type: "string" }] } },
+                    kind: { enum: ["a", "b"] },
+                    labels: { type: "object", additionalProperties: { type: "number" } },
+                },
+                required: ["token", "user"],
+            }],
+        ]);
+        const text = routesTypes("shop", pages, join(root, "src/generated/routes.ts"), new Set(), routes);
+        assert.match(text, /interface HostRoutes \{\n        "account\/choose": \{ token: string; user: \{ id: string; "main-user"\?: boolean \}; tags\?: \(null \| string\)\[\]; kind\?: "a" \| "b"; labels\?: Record<string, number> \};\n        "settings": \{\};\n    \}/);
+        assert.equal(schemaType({ format: "date" } as unknown as Schema), "unknown", "a keyword from a newer host");
+    });
+
+    it("--host reads the snapshot file and --check notices a host that changed", async () => {
+        const out = join(root, "src/generated/host-routes.ts");
+        const snapshot = join(root, "host.txt");
+        const body = (routes: string) => `hostVersion 3\ntinyui 0.14.0-alpha04\n\ncomponents\n\ncapabilities\n\nchannels\n\nroutes\n${routes}`;
+        await writeFile(snapshot, body(`  settings  {"type":"object","properties":{},"required":[]}\n`));
+        await tinyui("routes", "--root", root, "--ts", out, "--host", snapshot);
+        assert.match(await readFile(out, "utf8"), /"settings": \{\};/);
+        await tinyui("routes", "--root", root, "--ts", out, "--host", snapshot, "--check");
+        await writeFile(snapshot, body(`  settings  {"type":"object","properties":{"tab":{"type":"string"}},"required":[]}\n`));
+        await assert.rejects(tinyui("routes", "--root", root, "--ts", out, "--host", snapshot, "--check"), /out of date; run tinyui routes .* --host /);
     });
 
     it("writes the file, and --check fails once a page was added", async () => {

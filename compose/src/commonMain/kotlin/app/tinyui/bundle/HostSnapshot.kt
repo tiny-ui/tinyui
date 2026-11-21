@@ -11,7 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 object HostSnapshot {
     /**
      * The host test's check (docs/updates.md §4.1): what keeps [host] from being a host of [snapshot], the committed
-     * `tinyui-host/<hostVersion>.txt`; empty when it is one. Components, capabilities and channels must match exactly; the
+     * `tinyui-host/<hostVersion>.txt`; empty when it is one. Components, capabilities, channels and routes must match exactly; the
      * `tinyui` line is the lower bound of this host version, so this host's tinyui only has to be compatible with it.
      */
     fun problems(snapshot: String, host: TinyUIHost, hostVersion: String): List<String> = buildList {
@@ -22,9 +22,11 @@ object HostSnapshot {
         if (floor == null || !TinyUI.isCompatible(TinyUI.version, floor)) {
             add("tinyui ${TinyUI.version} is not compatible with this host version's lower bound $floor (same major, not older)")
         }
-        // snapshots frozen before channels existed have no such section: they provide none
-        val recorded = lines.drop(2).let { if ("channels" in it) it else it.dropLastWhile(String::isEmpty) + listOf("", "channels", "") }
-        if (recorded != current.drop(2)) add("components, capabilities or channels differ from the snapshot")
+        // snapshots frozen before channels or routes existed have no such section: they provide none
+        val recorded = listOf("channels", "routes").fold(lines.drop(2)) { body, section ->
+            if (section in body) body else body.dropLastWhile(String::isEmpty) + listOf("", section, "")
+        }
+        if (recorded != current.drop(2)) add("components, capabilities, channels or routes differ from the snapshot")
     }
 
     /** The snapshot of [host] at [hostVersion]; its `tinyui` line is this library's version, the lower bound when first written. */
@@ -40,6 +42,9 @@ object HostSnapshot {
             section(host.capabilityNames.associateWith { "" })
             append("\nchannels\n")
             section(host.channels.keys.associateWith { "" })
+            append("\nroutes\n")
+            // the shape is JSON on one line: page projects generate their types from it (docs/updates.md §6.4)
+            section(host.routes.associate { it.name to it.schema.toString() })
         }
     }
 
