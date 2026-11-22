@@ -15,6 +15,21 @@ dependencies {
     testImplementation(libs.kotlin.test)
 }
 
+// A host runs Gradle on whatever JDK it has; the plugin must not ask for the one that happened to build it.
+// (0.14.0-alpha05 was built on 25 and so refused every older JVM.) 17 is what Gradle 9 itself needs.
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+tasks.withType<JavaCompile>().configureEach { options.release = 17 }
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        // also only the JDK 17 API, when a newer JDK compiles this
+        freeCompilerArgs.add("-Xjdk-release=17")
+    }
+}
+
 gradlePlugin {
     plugins {
         create("tinyui") {
