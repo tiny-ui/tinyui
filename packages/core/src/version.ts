@@ -1,2 +1,2 @@
 /** The tinyui-core version; a package records it as the runtime it needs (docs/updates.md §1.1). */
-export const VERSION = "0.14.0-alpha04";
+export const VERSION = "0.14.0-alpha05";
