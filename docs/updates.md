@@ -35,6 +35,7 @@ pages/**/*.jsb
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.jsb` 一致，取第一个）；客户端要求等于宿主 |
 | `hashes` | `tinyui build` | 模块名 → 该模块 `.jsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件，键为其相对路径（`i18n/en.json`） |
+| `presentation` | `tinyui build` | 页面模块名 → 呈现方式（`"sheet"`），只列声明了非缺省值的页面，都是缺省时省略（build-chain.md §11）。宿主经 `pageInfo` 读（§4.2）；不认识的值按全屏页处理 |
 | `i18n` | `tinyui build` | `{ "default": 默认语言, "files": { 语言: 相对路径 } }`，包没有 i18n 资源时省略（build-chain.md §8） |
 | `tinyui` | `tinyui build` | 页面需要的最低运行时：JS 工程构建时的 `tinyui-core` 版本（能用哪些内置组件与运行时 API）与 `tinyui-cli` 版本（产物布局由同版本起的库读取）取较新者；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels }`：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3）；`Updates` 不读它，宿主可以用 `PackageCheck` 在设备上再核对一遍 |
@@ -205,6 +206,7 @@ class Updates(
 | 成员 | 语义 |
 |---|---|
 | `fun current(pkg: String): Bundle` | 构造时按包定死（§4.4）；进程内只在 §4.5 回退后换回该包的内置 |
+| `fun pageInfo(name: String): PageInfo?` | 页面 `name`（含包名）在当前包里声明了什么（`presentation`，build-chain.md §11）；App 里没有这个包、或包里没有这一页时为 null。宿主打开页面前先问：null 就不打开并上报，不等 `UpdatesPage` 抛错（native-api.md §3） |
 | `suspend fun check(trigger = MANUAL): Map<String, CheckResult>` | 全部包各跑一遍 §4.3，彼此独立并行，一包失败不影响其他；同一实例串行，重入直接返回进行中的结果（事件沿用发起那次的 `trigger`） |
 | `suspend fun check(pkg: String, trigger = MANUAL): CheckResult` | 只查一个包 |
 | `val status: StateFlow<Map<String, PackageStatus>>` | 每个包在本进程的状态，给调试面板与 `UpdatesStatusLine` 看（§4.7）；只读，不影响选包 |

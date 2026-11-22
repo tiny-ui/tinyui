@@ -156,3 +156,15 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - `--check` 在生成物与页面目录对不上时失败（增删、改名了页面却没重新生成），放进页面工程的 CI，用法同 `tinyui i18n --check`
 - 与 `tinyui i18n`、`tinyui schema` 一样把生成物提交进仓。两条命令并列而不合成一条：合并要改掉所有页面工程的脚本与 CI，等出现第三种要生成的类型再合
 - 业界同类：Expo Router、TanStack Router、Next.js typed routes 按文件路径生成路由类型；React Navigation 是手写一份 `ParamList` 再全局声明合并，这里省掉手写的那一份
+
+## 11. 页面声明
+
+定于 2026-11-21。页面除了默认导出，还可以用具名导出说明自己；`tinyui build` 用 `oxc-parser` 从页面源文件读，不执行页面，写进 manifest（[updates.md](./updates.md) §1.1）。宿主在打开页面之前就要知道这些，所以它们不能等页面跑起来再问。
+
+| 导出 | 写法 | 去向 |
+|---|---|---|
+| `presentation` | `export const presentation = "sheet";` | manifest `presentation`：宿主怎么呈现这一页（native-api.md §3） |
+
+- `presentation` 必须是页面文件里的 `const` 字符串字面量（可以带类型标注、`as const`、`satisfies`）：变量、模板字符串、从别处再导出的，构建时报错并指出文件，不猜
+- 取值 `"screen"`（缺省，不用写）、`"sheet"`；其他值构建失败。manifest 只列不是 `screen` 的页面
+- 由页面自己声明而不是打开它的一方传：页面的内容是按某种呈现画的（弹层自带标题栏、高度随内容），从哪里打开都该是那个样子，原生代码打开它时也不用知道

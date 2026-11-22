@@ -4,6 +4,7 @@ import app.tinyui.PageFailure
 import app.tinyui.TinyUI
 import app.tinyui.bundle.BuildManifest
 import app.tinyui.bundle.Bundle
+import app.tinyui.bundle.PageInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
@@ -95,6 +96,13 @@ class Updates internal constructor(
 
     /** The bundle every page of [pkg] loads from in this process: chosen at construction, embedded again after a rollback. */
     fun current(pkg: String): Bundle = pkg(pkg).current
+
+    /**
+     * What the page named [name] (`<package>/<path>`) declares about itself, in the bundle its package runs from in
+     * this process; null when the App has no such package or the package no such page. A host asks before opening a
+     * page a page or its own code named: null means do not open, and report.
+     */
+    fun pageInfo(name: String): PageInfo? = packages[name.substringBefore('/')]?.current?.manifest?.pageInfo(name)
 
     /**
      * Runs the check for every package at once; a second call while one is running joins it, and its events keep the
