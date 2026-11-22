@@ -468,10 +468,10 @@ final class app.tinyui/KtorChannel : app.tinyui/HttpChannel { // app.tinyui/Ktor
 }
 
 final class app.tinyui/LocaleSource { // app.tinyui/LocaleSource|null[0]
-    constructor <init>(kotlinx.coroutines.flow/StateFlow<kotlin/String>, kotlin.collections/List<kotlin/String> = ..., kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/Unit>? = ...) // app.tinyui/LocaleSource.<init>|<init>(kotlinx.coroutines.flow.StateFlow<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.Unit>?){}[0]
+    constructor <init>(kotlinx.coroutines.flow/StateFlow<kotlin/String>, kotlin.collections/List<kotlin/String>? = ..., kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/Unit>? = ...) // app.tinyui/LocaleSource.<init>|<init>(kotlinx.coroutines.flow.StateFlow<kotlin.String>;kotlin.collections.List<kotlin.String>?;kotlin.coroutines.SuspendFunction1<kotlin.String,kotlin.Unit>?){}[0]
 
     final val available // app.tinyui/LocaleSource.available|{}available[0]
-        final fun <get-available>(): kotlin.collections/List<kotlin/String> // app.tinyui/LocaleSource.available.<get-available>|<get-available>(){}[0]
+        final fun <get-available>(): kotlin.collections/List<kotlin/String>? // app.tinyui/LocaleSource.available.<get-available>|<get-available>(){}[0]
     final val set // app.tinyui/LocaleSource.set|{}set[0]
         final fun <get-set>(): kotlin.coroutines/SuspendFunction1<kotlin/String, kotlin/Unit>? // app.tinyui/LocaleSource.set.<get-set>|<get-set>(){}[0]
     final val state // app.tinyui/LocaleSource.state|{}state[0]

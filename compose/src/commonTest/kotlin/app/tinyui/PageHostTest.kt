@@ -254,6 +254,22 @@ class PageHostTest {
         assertTrue(text.contains("rejected 32") && text.contains("does not offer fr"), text)
         assertEquals(listOf("zh"), asked, "fr never reached the host's setter")
         host.close()
+
+        // a list that is given and empty offers nothing; no list at all leaves it to the setter (the test above)
+        asked.clear()
+        val none = host(app = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, locale = LocaleSource(flow, available = emptyList()) { asked += it }))
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        try {
+            none.start()
+            none.await { none.tree.root.children.isNotEmpty() }
+            none.dispatch(2, "onSetLocale", "{}")
+            none.await { (none.tree.node(1)!!.props["text"] as String).count { it == ';' } == 2 }
+        } finally {
+            Dispatchers.resetMain()
+        }
+        assertTrue((none.tree.node(1)!!.props["text"] as String).contains("rejected 31"))
+        assertEquals(emptyList(), asked)
+        none.close()
     }
 
     @Test

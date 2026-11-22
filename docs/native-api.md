@@ -220,12 +220,12 @@ i18n.formatDate(1767225600000, "yyyy-MM-dd HH:mm:ss")   // 当前时区下的 "2
 - 当前语言：`TinyUIHost.locale`（`LocaleSource`）的 `state`，缺省为系统语言；变化时经 K5 topic `i18n.locale` 通知活页面，`t()` 与 `locale()` 的绑定重算，页面不重建
 - 改语言（2026-11-13 加）：`i18n.setLocale(tag)` 是 J3，交给 `LocaleSource.set`（在主线程调用）。语言的真值在宿主，页面只是请求：宿主改了 `state`，页面经上一条跟上，`setLocale` 自己不改任何东西。宿主不认识的语言由 `set` 抛 `HostException("E_INVALID")`；没给 `set`（只读，或根本没给 `locale`）时以 `E_UNSUPPORTED` reject。此前页面里的语言切换只能靠宿主自定一个 `host.call` 能力，每个有这个入口的宿主都要造一遍
 
-- 有哪些语言可选（2026-11-21 加）：`i18n.locales()` 是 J2，返回 `LocaleSource.available`，顺序即宿主给的顺序；宿主没给就是空数组。给了清单的宿主，`setLocale` 只放行清单里的语言，别的不调 `set` 直接答 `E_INVALID`——菜单上有的和能切的是同一份。App 支持哪些语言只有宿主知道，页面里的语言菜单从它来，不自己再写一份清单——否则页面可以先于宿主热下发一种宿主不认的语言，点了被 `E_INVALID` 拒绝。页面只留各语言的显示名：菜单项是 `locales()` 里页面有显示名的那些。这份清单在 App 的一次运行里不变，所以不是 accessor
+- 有哪些语言可选（2026-11-21 加）：`i18n.locales()` 是 J2，返回 `LocaleSource.available`，顺序即宿主给的顺序；宿主没给就是空数组。给了清单的宿主（`available` 不是 null，空清单也算给了），`setLocale` 只放行清单里的语言，别的不调 `set` 直接答 `E_INVALID`——菜单上有的和能切的是同一份。没给清单（null）时页面读到空数组，放不放行由 `set` 自己定。App 支持哪些语言只有宿主知道，页面里的语言菜单从它来，不自己再写一份清单——否则页面可以先于宿主热下发一种宿主不认的语言，点了被 `E_INVALID` 拒绝。页面只留各语言的显示名：菜单项是 `locales()` 里页面有显示名的那些。这份清单在 App 的一次运行里不变，所以不是 accessor
 
 ```kotlin
 class LocaleSource(
     val state: StateFlow<String>,
-    val available: List<String> = emptyList(),
+    val available: List<String>? = null,
     val set: (suspend (locale: String) -> Unit)? = null,
 )
 ```
