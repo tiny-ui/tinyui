@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { copyFile, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type { Manifest } from "./build.ts";
-import { isPackageName } from "./config.ts";
+import { isHostVersion, isPackageName } from "./config.ts";
 import { payload, requirePackagePath } from "./payload.ts";
 import { isPublicKey, publicKeyOf, sign } from "./keys.ts";
 
@@ -40,10 +40,7 @@ export function isPathSegment(value: string): boolean {
     return /^[A-Za-z0-9._-]+$/.test(value) && value !== "." && value !== "..";
 }
 
-/** A positive integer, so an App version such as `1.2.0` cannot be mistaken for a host version. */
-export function isHostVersion(value: string): boolean {
-    return /^[1-9][0-9]*$/.test(value);
-}
+export { isHostVersion };
 
 export async function bundle(options: BundleOptions): Promise<BundleResult> {
     const dist = resolve(options.dist);

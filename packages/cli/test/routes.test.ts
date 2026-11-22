@@ -63,16 +63,36 @@ describe("tinyui routes", () => {
         assert.equal(schemaType({ format: "date" } as unknown as Schema), "unknown", "a keyword from a newer host");
     });
 
-    it("--host reads the snapshot file and --check notices a host that changed", async () => {
-        const out = join(root, "src/generated/host-routes.ts");
-        const snapshot = join(root, "host.txt");
-        const body = (routes: string) => `hostVersion 3\ntinyui 0.14.0-alpha04\n\ncomponents\n\ncapabilities\n\nchannels\n\nroutes\n${routes}`;
-        await writeFile(snapshot, body(`  settings  {"type":"object","properties":{},"required":[]}\n`));
-        await tinyui("routes", "--root", root, "--ts", out, "--host", snapshot);
-        assert.match(await readFile(out, "utf8"), /"settings": \{\};/);
-        await tinyui("routes", "--root", root, "--ts", out, "--host", snapshot, "--check");
-        await writeFile(snapshot, body(`  settings  {"type":"object","properties":{"tab":{"type":"string"}},"required":[]}\n`));
-        await assert.rejects(tinyui("routes", "--root", root, "--ts", out, "--host", snapshot, "--check"), /out of date; run tinyui routes .* --host /);
+    it("types native routes from the snapshot of the config's hostVersion, and --check notices a host that changed", async () => {
+        const project = await mkdtemp(join(tmpdir(), "tinyui-routes-host-"));
+        try {
+            const key = generateKeyPair().publicKey;
+            await mkdir(join(project, "src/pages"), { recursive: true });
+            await writeFile(join(project, "src/pages/home.ts"), `export default function Home() { return 0; }`);
+            const out = join(project, "src/generated/routes.ts");
+            const body = (hostVersion: string, routes: string) => `hostVersion ${hostVersion}\ntinyui 0.14.0-alpha04\n\ncomponents\n\ncapabilities\n\nchannels\n\nroutes\n${routes}`;
+
+            await writeFile(join(project, "tinyui.config.json"), JSON.stringify({ name: "shop", publicKey: key, hostVersion: "3" }));
+            await assert.rejects(tinyui("routes", "--root", project, "--ts", out), /hostVersion 3, but .*tinyui-host\/3\.txt does not exist; run tinyui hosts download/);
+
+            await mkdir(join(project, "tinyui-host"), { recursive: true });
+            await writeFile(join(project, "tinyui-host/3.txt"), body("3", `  settings  {"type":"object","properties":{},"required":[]}\n`));
+            await tinyui("routes", "--root", project, "--ts", out);
+            assert.match(await readFile(out, "utf8"), /"settings": \{\};/);
+            await tinyui("routes", "--root", project, "--ts", out, "--check");
+            await writeFile(join(project, "tinyui-host/3.txt"), body("3", `  settings  {"type":"object","properties":{"tab":{"type":"string"}},"required":[]}\n`));
+            await assert.rejects(tinyui("routes", "--root", project, "--ts", out, "--check"), /out of date; run tinyui routes /);
+
+            // following the host is the one number: the next snapshot is read, and one filed under the wrong number is refused
+            await writeFile(join(project, "tinyui.config.json"), JSON.stringify({ name: "shop", publicKey: key, hostVersion: "4" }));
+            await writeFile(join(project, "tinyui-host/4.txt"), body("3", ""));
+            await assert.rejects(tinyui("routes", "--root", project, "--ts", out), /4\.txt is the snapshot of host version 3/);
+            await writeFile(join(project, "tinyui-host/4.txt"), body("4", `  wallet  {"type":"object","properties":{},"required":[]}\n`));
+            await tinyui("routes", "--root", project, "--ts", out);
+            assert.match(await readFile(out, "utf8"), /"wallet": \{\};/);
+        } finally {
+            await rm(project, { recursive: true, force: true });
+        }
     });
 
     it("writes the file, and --check fails once a page was added", async () => {

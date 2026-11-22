@@ -22,7 +22,7 @@ describe("the generated routes type-check navigation", () => {
     before(async () => {
         root = await mkdtemp(join(import.meta.dirname, ".contracts-"));
         const packages = join(import.meta.dirname, "..", "..");
-        await writeFile(join(root, "tinyui.config.json"), JSON.stringify({ name: "shop", publicKey: generateKeyPair().publicKey }));
+        await writeFile(join(root, "tinyui.config.json"), JSON.stringify({ name: "shop", publicKey: generateKeyPair().publicKey, hostVersion: "3" }));
         await writeFile(join(root, "tsconfig.json"), JSON.stringify({
             compilerOptions: {
                 strict: true, noEmit: true, module: "esnext", moduleResolution: "bundler", allowImportingTsExtensions: true, skipLibCheck: true, types: [], lib: ["ES2025"], target: "ES2025",
@@ -33,8 +33,9 @@ describe("the generated routes type-check navigation", () => {
         await mkdir(join(root, "src/pages"), { recursive: true });
         await writeFile(join(root, "src/pages/home.ts"), `export default function Home() { return 0; }`);
         await writeFile(join(root, "src/pages/pay.ts"), `export type Result = { paid: boolean };\nexport default function Pay(props: { id: number }) { return props.id; }`);
-        await writeFile(join(root, "host.txt"), `hostVersion 3\ntinyui 0.14.0-alpha04\n\ncomponents\n\ncapabilities\n\nchannels\n\nroutes\n  account/choose  {"type":"object","properties":{"token":{"type":"string"},"user":{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}},"required":["token","user"]}\n`);
-        await run(process.execPath, [bin, "routes", "--root", root, "--ts", join(root, "src/generated/routes.ts"), "--host", join(root, "host.txt")]);
+        await mkdir(join(root, "tinyui-host"), { recursive: true });
+        await writeFile(join(root, "tinyui-host/3.txt"), `hostVersion 3\ntinyui 0.14.0-alpha04\n\ncomponents\n\ncapabilities\n\nchannels\n\nroutes\n  account/choose  {"type":"object","properties":{"token":{"type":"string"},"user":{"type":"object","properties":{"id":{"type":"string"}},"required":["id"]}},"required":["token","user"]}\n`);
+        await run(process.execPath, [bin, "routes", "--root", root, "--ts", join(root, "src/generated/routes.ts")]);
     });
     after(() => rm(root, { recursive: true, force: true }));
 

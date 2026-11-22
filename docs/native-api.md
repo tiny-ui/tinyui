@@ -87,7 +87,7 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 - `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），并通知它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载时，结果等它挂载完再送达
 - **每次关闭都通知，没带结果时 `result` 是 `null`**（2026-11-21 改；此前不带结果的关闭不通知）：`pop()` 不带结果时 `resultJson` 为 null，宿主照发；用户自己关掉页面（系统返回、下拉弹层、点遮罩）时宿主同样发一次 `result: null`。等结果的页面因此总能知道这一轮结束了，「用户取消」不用每个页面和宿主各约定一个假结果——同 Android 的 `RESULT_CANCELED`。已有的 `onResult` 处理函数要能接受 `null`
 - 结果的类型（2026-11-21 加）：会带结果的页面导出名为 `Result` 的类型（`export type Result = …`），`tinyui routes` 把它记进生成物（build-chain.md §10），接收方写 `onResult("<页面名>", fn)` 时 `result` 就是 `Result | null`，同时只收这一页的结果。`pop(result)` 的签名不变，页面自己写 `const close = (result: Result) => navigation.pop(result)` 把两头对上。流程中途 `replace` 过的，结果记在最后关闭的那一页名下
-- 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；带了 `--host <快照>` 时宿主的原生路由同样检查；别的包的页面照原样放行，参数是任意 JSON 对象
+- 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；`tinyui.config.json` 写了 `hostVersion` 时宿主的原生路由同样检查；别的包的页面照原样放行，参数是任意 JSON 对象
 - **原生路由**（2026-11-21 加）：页面去原生页和去另一个 TinyUI 页是同一种写法，`navigation.push("account/choose", { … })` / `replace(…, { since })`，到 `Navigator` 时就是一个页面名，宿主认出来后开自己的页面。宿主把这些名字连同参数类型登记在 `TinyUIHost.routes`：
 
     ```kotlin
@@ -97,7 +97,7 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 
     - 登记了就是宿主契约：进快照的 `routes` 段（[updates.md](./updates.md) §6.4），增删路由或改参数要加 `hostVersion`。ADR-007 §3.9 当时留了「原生路由名第一批不进快照，需要时再议」，这里补上
     - 名字由宿主起，不设保留前缀（2026-10-28 曾拟保留包名 `host`，因是潜规则撤销）；唯一的要求是不以本 App 任何一个包的名字开头，那些名字归包里的页面
-    - 页面工程用 `tinyui routes --ts … --host <快照文件>` 把它们生成进类型（build-chain.md §10），名字和参数在编译期检查；快照文件从宿主仓拿，或 `tinyui hosts download --host-version <n> --out <file>`
+    - 页面工程在 `tinyui.config.json` 写 `hostVersion`，`tinyui routes --ts …` 就从 `tinyui-host/<hostVersion>.txt` 把它们生成进类型（build-chain.md §10），名字和参数在编译期检查；快照文件由 `tinyui hosts download` 取来，或从宿主仓拷
     - `tinyui build` 把页面跳到包外的、字面量写出的页面名记进 manifest 的 `requires.routes`。宿主对内置包的检查 `PackageCheck.problems(manifest, host, others)` 要求每个名字要么是宿主的原生路由、要么是 App 里另一个包的页面；`publish` 手里没有 App 的包列表，对不在快照 `routes` 里的名字只给警告
     - 它不取代 `host.call`：要原生页把结果交回页面、或失败要让页面知道的，仍走 `host.call`（J3，有返回）；`push` / `replace` 是 J4，发出去就不管了
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { parseArgs, type ParseArgsConfig } from "node:util";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, readHostSnapshot, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
 import { build, discoverPages } from "./build.ts";
 import { embed } from "./embed.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
-import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
-import { loadConfig, requireName } from "./config.ts";
+import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient, URL_ENV } from "./client.ts";
+import { CONFIG_FILE, HOST_SNAPSHOTS, loadConfig, requireName, type TinyUIConfig } from "./config.ts";
 import { i18nTypes, loadI18n } from "./i18n.ts";
 import { contractsFile, pageContracts } from "./contracts.ts";
 import { pageDeclarations } from "./declarations.ts";
@@ -22,10 +22,10 @@ import { loadSchema } from "./schema/load.ts";
 
 const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] [--js-only] [--version <v>]
        tinyui embed --out <dir> [--root <dir>] [--dist <dir>] [--maps] [--qjsc <path>]
-       tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
+       tinyui bundle --signing-key <pem> [--host-version <hostVersion>] [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui i18n --ts <file> [--root <dir>] [--check]
-       tinyui routes --ts <file> [--schema <file>] [--host <snapshot>] [--root <dir>] [--check]
-       tinyui hosts download --host-version <n> --out <file> [--app <a>]
+       tinyui routes --ts <file> [--schema <file>] [--root <dir>] [--check]
+       tinyui hosts download [--host-version <n>] [--out <file>] [--app <a>]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -38,9 +38,9 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui packages rotate-key <pkg> --public-key <k> [--app <a>]
        tinyui tokens create <pkg> --channels <a,b> [--app <a>]
        tinyui tokens revoke <pkg> --id <token-id> [--app <a>]
-       tinyui releases list --host-version <hostVersion> [--pkg <p>] [--app <a>] [--json]
-       tinyui releases rollout <0-100> --host-version <hostVersion> --channel <c> [--pkg <p>] [--app <a>]
-       tinyui releases promote <version> --host-version <hostVersion> --to <c> [--pkg <p>] [--app <a>]
+       tinyui releases list [--host-version <hostVersion>] [--pkg <p>] [--app <a>] [--json]
+       tinyui releases rollout <0-100> --channel <c> [--host-version <hostVersion>] [--pkg <p>] [--app <a>]
+       tinyui releases promote <version> --to <c> [--host-version <hostVersion>] [--pkg <p>] [--app <a>]
 
 build      compile the pages of the package described by <root>/tinyui.config.json
   --root     project root (default: cwd)
@@ -59,7 +59,7 @@ embed      build, then make <out> hold the package as a host embeds it: manifest
   --qjsc     as for build
 
 bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersion>/ (docs/updates.md)
-  --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1)
+  --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1); default: "hostVersion" in tinyui.config.json
   --signing-key      PKCS#8 PEM whose public key is the one in tinyui.config.json
   --dist             tinyui build output (default: ./dist)
   --rollout          percentage written to current.json (default: 100)
@@ -70,8 +70,8 @@ routes     type navigation.push / replace from the package's pages (docs/build-c
   --root     project root (default: cwd)
   --ts       write the tinyui-native type augmentation here (I18nKeys for i18n, Routes for routes)
   --schema   routes only: also write what each page takes and hands back, as JSON (set "contracts" in tinyui.config.json to it and the build puts it into the manifest); reads types with the project's typescript
-  --host     routes only: the snapshot of the host the package is written for (tinyui hosts download, or the file in
-             the host's repository); navigation to its native routes is then typed by name and params
+             routes only: with "hostVersion" in tinyui.config.json, navigation to the host's native routes is typed by
+             name and params from tinyui-host/<hostVersion>.txt (tinyui hosts download, or the file in the host's repository)
   --check    exit 1 if --ts (and --schema) is not already up to date, write nothing
 
 keys generate
@@ -102,7 +102,9 @@ the publishing and management commands talk to --url, default ${DEFAULT_URL} (or
   $${ADMIN_TOKEN_ENV}  the instance's admin token or an app token, for apps, packages, tokens and hosts;
                        only the admin token creates apps and app tokens (docs/updates.md §6)
   $TINYUI_APP          default for --app
-  --pkg defaults to "name" in ./tinyui.config.json
+  ./tinyui.config.json gives the defaults a page project needs: --pkg is its "name", --app its "app" (after $TINYUI_APP),
+  --host-version its "hostVersion", --url its "updatesUrl" (after $TINYUI_UPDATES_URL). Following the host to a new
+  host version is changing "hostVersion" there and running tinyui hosts download.
 `;
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
@@ -145,9 +147,8 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
     bundle: {
         options: { "host-version": { type: "string" }, "signing-key": { type: "string" }, dist: { type: "string" }, rollout: { type: "string" }, out: { type: "string" } },
         run: async (v) => {
-            const hostVersion = v["host-version"] as string | undefined;
+            const hostVersion = hostVersionOf(v, "bundle");
             const signingKey = v["signing-key"] as string | undefined;
-            if (!hostVersion) throw new Error("bundle: --host-version is required");
             if (!signingKey) throw new Error("bundle: --signing-key is required");
             const result = await bundle({
                 dist: (v["dist"] as string | undefined) ?? resolve("dist"),
@@ -161,22 +162,31 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     routes: {
-        options: { root: { type: "string" }, ts: { type: "string" }, schema: { type: "string" }, host: { type: "string" }, check: { type: "boolean", default: false } },
+        options: { root: { type: "string" }, ts: { type: "string" }, schema: { type: "string" }, check: { type: "boolean", default: false } },
         run: async (v) => {
             const root = resolve((v["root"] as string | undefined) ?? process.cwd());
             const ts = v["ts"] as string | undefined;
             const schema = v["schema"] as string | undefined;
-            const host = v["host"] as string | undefined;
-            const hostRoutes = host === undefined ? undefined : parseHostSnapshot(await readFile(resolve(host), "utf8")).routes;
             if (!ts) throw new Error("routes: --ts is required");
             const out = resolve(ts);
             const config = await loadConfig(root);
+            // the host the package is written for: its native routes are typed from the snapshot kept in the project
+            let hostRoutes: ReturnType<typeof parseHostSnapshot>["routes"] | undefined;
+            if (config.hostVersion !== undefined) {
+                const file = join(root, HOST_SNAPSHOTS, `${config.hostVersion}.txt`);
+                const text = await readFile(file, "utf8").catch(() => {
+                    throw new Error(`routes: ${CONFIG_FILE} says hostVersion ${config.hostVersion}, but ${file} does not exist; run tinyui hosts download, or copy the host's snapshot there`);
+                });
+                const snapshot = parseHostSnapshot(text);
+                if (snapshot.hostVersion !== config.hostVersion) throw new Error(`routes: ${file} is the snapshot of host version ${snapshot.hostVersion}`);
+                hostRoutes = snapshot.routes;
+            }
             const pages = await discoverPages(config.name, join(root, config.pages));
             if (pages.size === 0) throw new Error(`routes: no pages found under ${join(root, config.pages)}`);
             const results = new Set<string>();
             for (const [name, file] of pages) if (pageDeclarations(file, await readFile(file, "utf8")).result) results.add(name);
             const text = routesTypes(config.name, pages, out, results, hostRoutes);
-            const again = `run tinyui routes --ts ${ts}${schema ? ` --schema ${schema}` : ""}${host ? ` --host ${host}` : ""}`;
+            const again = `run tinyui routes --ts ${ts}${schema ? ` --schema ${schema}` : ""}`;
             const contracts = schema ? contractsFile(await pageContracts(root, pages, results)) : undefined;
             if (v["check"]) {
                 const current = await readFile(out, "utf8").catch(() => "");
@@ -327,7 +337,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const out = required(v["out"], "pull: --out is required; it is replaced as a whole");
             const pkg = v["pkg"] === undefined ? undefined : requireName("--pkg", v["pkg"] as string);
             const acceptKey = v["accept-key"] as string | undefined;
-            const result = await pull({ url: resolveUrl(v["url"] as string | undefined), app: await appId(v), channel, hostVersion, out, ...(pkg && { pkg }), ...(acceptKey && { acceptKey }) });
+            const result = await pull({ url: urlOf(v), app: await appId(v), channel, hostVersion, out, ...(pkg && { pkg }), ...(acceptKey && { acceptKey }) });
             process.stderr.write(result.changed ? `${out} -> ${result.version}\n` : `${out} kept at ${result.version}: ${result.reason}\n`);
             process.stdout.write(`${result.version}\n`);
             return 0;
@@ -337,9 +347,9 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         options: { ...URL_OPTION, app: { type: "string" }, "host-version": { type: "string" }, out: { type: "string" } },
         run: async (v, positionals) => {
             if (positionals[1] === "download") {
-                const hostVersion = required(v["host-version"], "hosts download: --host-version is required");
-                if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
-                const out = resolve(required(v["out"], "hosts download: --out is required"));
+                const hostVersion = hostVersionOf(v, "hosts download");
+                // in a page project the snapshot goes where `routes` reads it
+                const out = resolve((v["out"] as string | undefined) ?? (projectConfig() ? join(HOST_SNAPSHOTS, `${hostVersion}.txt`) : required(undefined, "hosts download: --out is required")));
                 // any credential that may publish to the app may read what its hosts provide
                 const client = process.env[ADMIN_TOKEN_ENV] ? adminClient(v) : publishClient(v);
                 const bytes = await readHostSnapshot(client, await appId(v), hostVersion);
@@ -392,8 +402,7 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
     const client = publishClient(v);
     const app = await appId(v);
     const pkg = await packageName(v, undefined);
-    const hostVersion = required(v["host-version"], `releases ${action ?? ""}: --host-version is required`);
-    if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
+    const hostVersion = hostVersionOf(v, `releases ${action ?? ""}`.trim());
     if (action === "list") {
         const found = await listReleases(client, app, pkg, hostVersion);
         if (v["json"] as boolean) {
@@ -431,22 +440,43 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
 }
 
 function publishClient(v: Values): UpdatesClient {
-    return new UpdatesClient({ url: resolveUrl(v["url"] as string | undefined), token: requireToken(TOKEN_ENV) });
+    return new UpdatesClient({ url: urlOf(v), token: requireToken(TOKEN_ENV) });
 }
 
 function adminClient(v: Values): UpdatesClient {
-    return new UpdatesClient({ url: resolveUrl(v["url"] as string | undefined), token: requireToken(ADMIN_TOKEN_ENV) });
+    return new UpdatesClient({ url: urlOf(v), token: requireToken(ADMIN_TOKEN_ENV) });
 }
 
 async function appId(v: Values): Promise<string> {
-    return requireName("--app", required((v["app"] as string | undefined) ?? process.env["TINYUI_APP"], "--app is required, or set $TINYUI_APP"));
+    // an empty variable is an unset one: CI systems define what a pipeline declares even when it has no value
+    const app = (v["app"] as string | undefined) ?? (process.env["TINYUI_APP"] || projectConfig()?.app);
+    return requireName("--app", required(app, `--app is required, or set $TINYUI_APP, or "app" in ${CONFIG_FILE}`));
+}
+
+/** The page project the command runs in, when it runs in one: the defaults for --app, --host-version and --url. */
+let project: { config: TinyUIConfig | null; error?: Error } = { config: null };
+
+/** Throws what is wrong with ./tinyui.config.json only for a command that turns to it. */
+function projectConfig(): TinyUIConfig | null {
+    if (project.error) throw project.error;
+    return project.config;
+}
+
+function hostVersionOf(v: Values, command: string): string {
+    const hostVersion = required((v["host-version"] as string | undefined) ?? projectConfig()?.hostVersion, `${command}: --host-version is required, or set "hostVersion" in ${CONFIG_FILE}`);
+    if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
+    return hostVersion;
+}
+
+function urlOf(v: Values): string {
+    return resolveUrl((v["url"] as string | undefined) ?? (process.env[URL_ENV] ? undefined : projectConfig()?.updatesUrl));
 }
 
 /** The package is the one being built here unless another is named: `name` in tinyui.config.json is its identity. */
 async function packageName(v: Values, positional: string | undefined): Promise<string> {
     const explicit = positional ?? (v["pkg"] as string | undefined);
     if (explicit !== undefined) return requireName("a package name", explicit);
-    const config = await loadConfig(process.cwd()).catch(() => null);
+    const config = projectConfig();
     if (config) return config.name;
     return required(undefined, "--pkg is required here; there is no tinyui.config.json in the current directory to take it from");
 }
@@ -476,6 +506,9 @@ async function main(argv: string[]): Promise<number> {
     }
     const { values, positionals } = parseArgs({ args: argv, allowPositionals: true, options: command.options });
     await useEnvProxy();
+    if (await stat(join(process.cwd(), CONFIG_FILE)).then(() => true, () => false)) {
+        project = await loadConfig(process.cwd()).then((config) => ({ config }), (error: Error) => ({ config: null, error }));
+    }
     return command.run(values, positionals);
 }
 
