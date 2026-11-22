@@ -1,5 +1,7 @@
 package app.tinyui
 
+import app.tinyui.bundle.PageContract
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -199,6 +201,26 @@ class PageHostTest {
         host.start()
         host.await { host.tree.node(1)?.props?.get("text") == """navigation.result {"result":{"saved":true},"from":"pages/detail"} #1""" }
         host.close()
+    }
+
+    @Test
+    fun propsThatDoNotFitThePagesContractNeverReachIt() = runTest {
+        val contract = PageContract.parse(Json.parseToJsonElement("""{"params":{"type":"object","properties":{"id":{"type":"number"}},"required":["id"]}}"""))
+        val typed = PageModule(page.name, page.bytecode, page.buildId, page.i18n, contract)
+        val misfit = PageHost(RuntimeBundle(core, native), typed, tinyui, """{"id":"secret-42"}""", emptyList())
+        misfit.emit("probe", "{}") // the stub answers it with navigation.pop: visible if the engine ever ran
+        misfit.start()
+        misfit.await { misfit.failure != null }
+        assertEquals("E8", misfit.failure!!.kind)
+        assertEquals("props do not fit pages/counter: $.id: expected a number", misfit.failure!!.message, "the path, not the value")
+        assertEquals(emptyList(), navigated)
+        misfit.close()
+
+        val fits = PageHost(RuntimeBundle(core, native), typed, tinyui, """{"id":42}""", emptyList())
+        fits.start()
+        fits.await { fits.tree.root.children.isNotEmpty() }
+        assertNull(fits.failure)
+        fits.close()
     }
 
     @Test

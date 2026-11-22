@@ -7,6 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { isPathSegment } from "./bundle.ts";
 import { loadConfig, type TinyUIConfig } from "./config.ts";
+import type { PageContract } from "./contracts.ts";
 import { DeclarationError, pageDeclarations, type Presentation } from "./declarations.ts";
 import { loadI18n } from "./i18n.ts";
 import { compileModule, findQjsc } from "./qjsc.ts";
@@ -68,6 +69,8 @@ export interface Manifest {
     requires: Record<string, PageRequires>;
     /** Page module name → how the host shows it, for pages that are not a plain `screen` (docs/build-chain.md §11); absent when every page is one. */
     presentation?: Record<string, Presentation>;
+    /** Page module name → what it takes and hands back (docs/build-chain.md §10); absent when the package exports none. */
+    contracts?: Record<string, PageContract>;
     /** The package's strings: the default language and each language's file (docs/build-chain.md §8); absent without strings. */
     i18n?: { default: string; files: Record<string, string> };
 }
@@ -91,6 +94,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     await rm(join(out, "pages"), { recursive: true, force: true });
     await rm(join(out, "i18n"), { recursive: true, force: true });
     const presentation = await pagePresentations(pageNames);
+    const contracts = config.contracts === undefined ? undefined : await loadContracts(join(root, config.contracts), [...pageNames.keys()]);
     const pages = await bundlePages(root, out, config, pagesDir, pageNames);
     const requires = await pageRequires(pages);
     await finish(root, pages, qjsc);
@@ -120,6 +124,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         hashes,
         requires,
         ...(Object.keys(presentation).length > 0 && { presentation }),
+        ...(contracts && { contracts }),
         ...(i18n && { i18n: { default: i18n.defaultLocale, files: Object.fromEntries(i18n.paths) } }),
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
@@ -150,6 +155,27 @@ async function finish(root: string, modules: BuiltModule[], qjsc: string | undef
         m.bin = m.js.replace(/\.js$/, ".jsb");
         await compileModule({ qjsc, input: m.js, output: m.bin, name: m.name });
     }
+}
+
+/**
+ * The contracts `tinyui routes --schema` wrote. The build does not read types itself (that takes the type checker);
+ * it only refuses a file that is not about these pages. A page whose props changed since is `routes --check`'s to catch.
+ */
+async function loadContracts(file: string, pages: string[]): Promise<Record<string, PageContract>> {
+    const hint = `run tinyui routes --schema ${file}`;
+    let contracts: Record<string, PageContract>;
+    try {
+        contracts = JSON.parse(await readFile(file, "utf8")) as Record<string, PageContract>;
+    } catch (e) {
+        throw new Error(`contracts: cannot read ${file} (${(e as Error).message}); ${hint}`);
+    }
+    const listed = Object.keys(contracts);
+    const missing = pages.filter((p) => !listed.includes(p));
+    const gone = listed.filter((p) => !pages.includes(p));
+    if (missing.length || gone.length) {
+        throw new Error(`contracts: ${file} is out of date (${[...missing.map((p) => `no ${p}`), ...gone.map((p) => `${p} is not a page`)].join(", ")}); ${hint}`);
+    }
+    return Object.fromEntries(pages.map((p) => [p, contracts[p]!]));
 }
 
 /** What each page declares about how it is shown; every page is read before failing, as with [pageRequires]. */

@@ -27,9 +27,11 @@ class BuildManifest(
     val i18n: I18nFiles? = null,
     /** Page module name → how the page asks to be shown, as written; only pages that are not a plain screen. Read it through [pageInfo]. */
     val presentation: Map<String, String> = emptyMap(),
+    /** Page module name → what the page takes and hands back (docs/build-chain.md §10); empty for a package built without contracts. */
+    val contracts: Map<String, PageContract> = emptyMap(),
 ) {
     /** What [page] declares about itself; null when the package has no such page. */
-    fun pageInfo(page: String): PageInfo? = if (page in pages) PageInfo(Presentation.of(presentation[page])) else null
+    fun pageInfo(page: String): PageInfo? = if (page in pages) PageInfo(Presentation.of(presentation[page]), contracts[page]) else null
 
     /** Every file of the package besides the manifest, as (path, key into [hashes]). */
     val payload: List<Pair<String, String>>
@@ -72,6 +74,7 @@ class BuildManifest(
                 } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
                 presentation = strings("presentation"),
+                contracts = root["contracts"]?.jsonObject?.mapNotNull { (page, entry) -> PageContract.parse(entry)?.let { page to it } }?.toMap() ?: emptyMap(),
                 i18n = root["i18n"]?.jsonObject?.let { i ->
                     I18nFiles(
                         defaultLocale = i["default"]?.jsonPrimitive?.contentOrNull ?: "",
@@ -99,8 +102,11 @@ enum class Presentation {
     }
 }
 
-/** What a page declares about itself in the manifest, for a host deciding whether and how to open it. */
-class PageInfo(val presentation: Presentation)
+/**
+ * What a page declares about itself in the manifest, for a host deciding whether and how to open it; [contract] is
+ * null when the package was built without contracts.
+ */
+class PageInfo(val presentation: Presentation, val contract: PageContract? = null)
 
 /** Dotted host components, capability names (`host.call`, `session.signIn`) and http channels one page uses. */
 class PageRequires(val components: List<String>, val capabilities: List<String>, val channels: List<String> = emptyList())
