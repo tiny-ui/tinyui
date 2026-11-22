@@ -153,6 +153,7 @@ class PageHost internal constructor(
                     e.call("flush")
                 } }
             } catch (t: TimeoutCancellationException) {
+                if (closedBy(t)) throw t
                 fail("E6", IllegalStateException("page load exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
                 if (closedBy(t)) throw t
@@ -199,6 +200,7 @@ class PageHost internal constructor(
                     }
                 }
             } catch (t: TimeoutCancellationException) {
+                if (closedBy(t)) throw t
                 fail("E6", IllegalStateException("K entry $name exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
                 if (closedBy(t)) throw t
