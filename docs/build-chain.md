@@ -151,6 +151,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 定于 2026-11-12（运行时契约见 native-api.md §3）。页面名就是文件路径（§2），页面的参数就是它默认导出的 props，这两样本来都在源码里，不该再手写一张表。
 
 - `tinyui routes --ts <file>` 扫描页面目录，生成对 `tinyui-native` 的模块扩充：`RoutePackage`（包名）与 `Routes`（每个页面名 → 它的 props）。props 不靠解析源码，写成 `PageProps<typeof import("<页面文件>")>`，由类型检查器从默认导出上读，页面用 `interface` 还是 `type` 声明都行
+- 页面导出了名为 `Result` 的类型时（它 `pop` 带回的东西，§11），再生成一张 `RouteResults`（页面名 → `import("<页面文件>").Result`），`navigation.onResult("<页面名>", fn)` 的 `result` 据此有类型。有没有这个导出是用 `oxc-parser` 从源文件看的：类型导出不存在时，类型层面没有办法探测而不报错
 - 生成之后 `navigation.push` / `replace` 在编译期检查：本包的页面名必须在表里（拼错即报，编辑器有补全），参数必须是那一页的 props，页面不收 props 时可省略；`since` 只收本包的页面名。没生成这张表时不检查，与 `i18n.t` 没生成 key 类型时一样
 - 以别的前缀开头的名字（别的包的页面、宿主 `Navigator` 认识的原生路由）照原样放行，参数是扁平的 `Params`。跨包的参数是两个团队之间的接口（[app-model.md](./app-model.md) §7），它的类型怎么交付等第二个真实的跨包跳转出现再定
 - `--check` 在生成物与页面目录对不上时失败（增删、改名了页面却没重新生成），放进页面工程的 CI，用法同 `tinyui i18n --check`
@@ -164,6 +165,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | 导出 | 写法 | 去向 |
 |---|---|---|
 | `presentation` | `export const presentation = "sheet";` | manifest `presentation`：宿主怎么呈现这一页（native-api.md §3） |
+| `Result` | `export type Result = …;`（或 `interface`、`export type { Result }`） | `tinyui routes` 的 `RouteResults`：这一页 `pop` 带回什么（§10） |
 
 - `presentation` 必须是页面文件里的 `const` 字符串字面量（可以带类型标注、`as const`、`satisfies`）：变量、模板字符串、从别处再导出的，构建时报错并指出文件，不猜
 - 取值 `"screen"`（缺省，不用写）、`"sheet"`；其他值构建失败。manifest 只列不是 `screen` 的页面

@@ -214,12 +214,22 @@ describe("tinyui-native", () => {
 
     it("events.on subscribes once per handler and navigation is fire-and-forget", () => {
         const seen: unknown[] = [];
-        tinyui().mount(() => { events.on("net", (p) => seen.push(p)); navigation.onResult((r) => seen.push(r)); return h(Text, { text: "x" }); }, "{}", HOST);
+        const named: unknown[] = [];
+        tinyui().mount(() => {
+            events.on("net", (p) => seen.push(p));
+            navigation.onResult((r) => seen.push(r));
+            navigation.onResult("pages/x", (r) => named.push(r));
+            return h(Text, { text: "x" });
+        }, "{}", HOST);
         tinyui().flush();
         assert.deepEqual(bridge.sent.at(-1), { name: "events.subscribe", args: { topic: "net" } });
         tinyui().emit("net", JSON.stringify({ online: true }));
         tinyui().emit("navigation.result", JSON.stringify({ result: 42, from: "pages/x" }));
         assert.deepEqual(seen, [{ online: true }, 42]);
+        // a close without a result arrives as null; a named handler hears only its page
+        tinyui().emit("navigation.result", JSON.stringify({ result: null, from: "pages/x" }));
+        tinyui().emit("navigation.result", JSON.stringify({ result: 7, from: "pages/y" }));
+        assert.deepEqual(named, [42, null]);
         navigation.push("pages/detail", { id: 1 });
         assert.deepEqual(bridge.sent.at(-1), { name: "navigation.push", args: { page: "pages/detail", params: { id: 1 } } });
         navigation.replace("pages/next");

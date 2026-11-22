@@ -9,6 +9,7 @@ import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
 import { ADMIN_TOKEN_ENV, DEFAULT_URL, resolveUrl, requireToken, TOKEN_ENV, UpdatesClient } from "./client.ts";
 import { loadConfig, requireName } from "./config.ts";
 import { i18nTypes, loadI18n } from "./i18n.ts";
+import { pageDeclarations } from "./declarations.ts";
 import { routesTypes } from "./routes.ts";
 import { generateKeyPair } from "./keys.ts";
 import { useEnvProxy } from "./proxy.ts";
@@ -164,7 +165,9 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             const config = await loadConfig(root);
             const pages = await discoverPages(config.name, join(root, config.pages));
             if (pages.size === 0) throw new Error(`routes: no pages found under ${join(root, config.pages)}`);
-            const text = routesTypes(config.name, pages, out);
+            const results = new Set<string>();
+            for (const [name, file] of pages) if (pageDeclarations(file, await readFile(file, "utf8")).result) results.add(name);
+            const text = routesTypes(config.name, pages, out, results);
             if (v["check"]) {
                 const current = await readFile(out, "utf8").catch(() => "");
                 if (current !== text) throw new Error(`${ts} is out of date; run tinyui routes --ts ${ts}`);

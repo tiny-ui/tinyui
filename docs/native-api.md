@@ -53,7 +53,8 @@ TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 navigation.push("subscription/detail", { id: 42 });   // J4 → Navigator.push(page, paramsJson, from)；页面名含包名
 navigation.replace("subscription/done", { id: 42 });  // J4 → Navigator.replace(page, paramsJson, since, from)：关闭本页，在原位置打开新页
 navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJson, since, from)：关闭本页
-navigation.onResult((result, from) => …);       // 渲染期调用；K5 topic navigation.result
+navigation.onResult("subscription/detail", (result) => …);   // 渲染期调用；K5 topic navigation.result。result 是那一页的 Result 或 null
+navigation.onResult((result, from) => …);       // 不点名：从这里打开的任何页面关了都收到
 
 // 多步流程：since 是这个流程的第一页，从它到本页的这一段一起关
 navigation.replace("signup/activate", { id }, { since: "signup/account" });   // 丢掉走完的步骤再往前
@@ -77,12 +78,14 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
         if (first <= 0) return@launch               // 已出栈，或这一段连着栈底
         val below = entry.stack[first - 1]
         entry.stack.subList(first, index + 1).clear()   // 关的是调用方这一段，哪怕它不在栈顶
-        if (resultJson != null) below.pageHost?.emit("navigation.result", """{"result":$resultJson,"from":"${from.name}"}""")
+        below.pageHost?.emit("navigation.result", """{"result":${resultJson ?: "null"},"from":"${from.name}"}""")   // 没带结果也通知
     }
 }
 ```
 
-- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），结果交给它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载时，结果等它挂载完再送达
+- `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），并通知它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载时，结果等它挂载完再送达
+- **每次关闭都通知，没带结果时 `result` 是 `null`**（2026-11-21 改；此前不带结果的关闭不通知）：`pop()` 不带结果时 `resultJson` 为 null，宿主照发；用户自己关掉页面（系统返回、下拉弹层、点遮罩）时宿主同样发一次 `result: null`。等结果的页面因此总能知道这一轮结束了，「用户取消」不用每个页面和宿主各约定一个假结果——同 Android 的 `RESULT_CANCELED`。已有的 `onResult` 处理函数要能接受 `null`
+- 结果的类型（2026-11-21 加）：会带结果的页面导出名为 `Result` 的类型（`export type Result = …`），`tinyui routes` 把它记进生成物（build-chain.md §10），接收方写 `onResult("<页面名>", fn)` 时 `result` 就是 `Result | null`，同时只收这一页的结果。`pop(result)` 的签名不变，页面自己写 `const close = (result: Result) => navigation.pop(result)` 把两头对上。流程中途 `replace` 过的，结果记在最后关闭的那一页名下
 - 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；别的包的页面与原生路由照原样放行
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
 - `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方，并记一条日志
