@@ -9,6 +9,8 @@ export { For, Keyed, Show } from "./control.ts";
 export type { ForProps, KeyedProps, ShowProps, Truthy } from "./control.ts";
 export { resource } from "./resource.ts";
 export type { ResourceActions, ResourceOptions } from "./resource.ts";
+export { action, actionLock } from "./action.ts";
+export type { ActionLock, ActionOptions } from "./action.ts";
 export { HostError } from "./host.ts";
 export type { HostErrorDetails } from "./host.ts";
 export * as internal from "./internal.ts";
