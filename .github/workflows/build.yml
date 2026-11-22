@@ -63,6 +63,8 @@ jobs:
           (cd "$RUNNER_TEMP/quickjs-kmp" && ./gradlew :library:buildNativeHostJni --no-daemon)
       - run: echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
       - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:shared:testAndroidHostTest :sample:androidApp:assembleDebug --no-daemon
+      # the host-side Gradle plugin is its own build (gradle-plugin/)
+      - run: ./gradlew -p gradle-plugin test --no-daemon
 
   pnpm:
     runs-on: ubuntu-latest
