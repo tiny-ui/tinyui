@@ -1,6 +1,6 @@
 # ADR-006 · 热下发：整包原子、宿主 hostVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新；同日新增 §2.11：运行时随宿主、包只含页面，包与宿主的 tinyui 版本从"相等"放宽为"宿主不低于包"，升 tinyui 不再加 `hostVersion`，§2.10"运行时仍放包里"作废；2026-09-25 §2.4 "core 库零 I/O"被 ADR-007 推翻，core 自带 ktor 与 okio，`tinyui-updates` 的边界不变；2026-10-27 §2 库的边界：检查时机从「宿主的事」改为库提供可选的 `UpdatesScheduler`（启动、网络失败重试一次、回前台按间隔），宿主仍可只用 `check()`，见 updates.md §4.6）；实现进度见 updates-plan.md
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓；2026-09-19 再修订：多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest；2026-09-22 修订：签名覆盖不可变 manifest 的原始字节而非规范化 JSON，指针文件只含 version / rollout / signature；启动时重算 installed 包 sha256，挂载标记作推迟项；2026-09-23 §2.2 补精确匹配与 `>=` 范围的对比，bump 口径进 updates.md §4.1；同日兼容键改名 `hostVersion`，见 updates.md §4.1；同日按 M6 拍板改 §4.2：TrendingAI 的包名为 `trendingai`，内置包由 `tinyui pull` 取 production 那版，见 updates-plan.md 第 7、11 点；2026-09-24 按 M6 拍板第 12–15 点修订 §2.8 回滚与 §4.2 内置包：指针只往前走、回滚是用旧内容发新版本，内置包只求兼容、由宿主 pull 刷新；同日新增 §2.11：运行时随宿主、包只含页面，包与宿主的 tinyui 版本从"相等"放宽为"宿主不低于包"，升 tinyui 不再加 `hostVersion`，§2.10"运行时仍放包里"作废；2026-09-25 §2.4 "core 库零 I/O"被 ADR-007 推翻，core 自带 ktor 与 okio，`tinyui-updates` 的边界不变；2026-11-22 新增 §2.12：内置包由宿主构建时解析、不入库、不做 lock，§4.2 随改；2026-10-27 §2 库的边界：检查时机从「宿主的事」改为库提供可选的 `UpdatesScheduler`（启动、网络失败重试一次、回前台按间隔），宿主仍可只用 `check()`，见 updates.md §4.6）；实现进度见 updates-plan.md
 - 结论：**App 由 N≥1 个包组成，包是所有权单元与分发单元，一个包是一次 `tinyui build` 的页面产物（运行时随宿主，§2.11），整包原子生效、下次启动切换，各包独立发布、独立回退；包名进模块名（`subscription/home`）与投递 URL，密钥与发布 token 按包发，验签公钥随包进 manifest、以内置包的为信任锚；兼容键是宿主声明的 `hostVersion`，引擎 commit 要求相等、包的 tinyui 版本要求与宿主兼容（同 major 且宿主不低于包），两者只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）以一组包为单位做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 用旧内容发一个新版本（指针只往前走）；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
 - 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
 - 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的模块名加包名前缀、manifest 字段扩展、`tinyui.config.json`；app-model.md 的路由键与跨包约定；ADR-005 §4 的模块名规则。§2.11 另影响：updates.md §1.1（manifest 去 `runtime`，`tinyui` 改义）、§1.3（publish 判下限）、§4.1（加 1 口径）、§4.3（客户端核对）、§6.4（快照 `tinyui` 行改义）；patch-protocol.md §6（K0 版本核对删去）；build-chain.md §2（build 不产出 `runtime/`，运行时由库构建）；runtime-api.md 写入公开面铁律；roadmap D 组"运行时 ABI 版本"一行删去
@@ -198,6 +198,32 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 迁移：包格式不兼容（包内无 `runtime/`，manifest 去掉 `runtime` 字段，`tinyui-updates-server` 的 manifest 校验同步删去该字段，不留兼容），随 tinyui 0.7.0 一起落地，各宿主加 1 次 `hostVersion`，此前各 `hostVersion` 下已发布的包作废。TrendingAI 线上尚无带热下发的版本（1.9.0-beta.1 只含首次接入），无兼容负担。
 
+### 2.12 内置包在宿主构建时解析，不入库（2026-11-22）
+
+原做法：内置包是宿主仓里提交的字节，由 `tinyui pull` 从 production 取（§4.2、M6 拍板第 11、12 点）。两个宿主接入后的实际情况：页面每发一版，宿主仓要跟一次「拉取并提交」（集成分支拉 staging、发版前再拉 production）；本地联调写进同一个目录的产物不能提交，联调完要手工还原；为拦住误提交与没跟上的内置包，两个宿主各自写了拉取脚本、发版检查与 MR 测试。其间两次出现集成分支的内置包停在旧版本、页面打开即报错。根子是内置包要进 App 必须先走完签名、发布、晋级、拉取、提交整条链，而它只是「这次构建带哪一版页面」。
+
+业界：Expo / CodePush / Shorebird 的 JS 与原生同仓，内置包在 App 构建时从源码现编；页面分仓的动态化平台在打包时从发布平台取预置包。两者都不把预置包的字节提交进宿主仓。
+
+| | 入库的字节（原） | 入库一行版本号（lock） | **构建时跟随通道** |
+|---|---|---|---|
+| 页面发新版后宿主仓 | 拉取并提交 | 改一行并提交 | 不动 |
+| 同一提交重复构建 | 相同 | 相同 | 中间有晋级则不同 |
+| 某个安装包内置了什么 | git 历史 | git 历史 | 构建记录 |
+| 本地联调产物 | 写进同一目录，不能提交 | 另需旁路 | 另一种来源，写进 build 目录 |
+| 宿主构建要联网 | 否 | 是 | 是 |
+
+选构建时跟随通道。页面与宿主分仓是前提，内置包与页面仓的发布之间总要有一次同步，能选的只是它由人做还是由构建做。重复构建不一致的代价小：正式包只构建一次，内置包新旧本来就是尽力而为（§4.2）。
+
+随之定下：
+
+- 由 Gradle 插件 `app.tinyui` 做，宿主声明 app、`hostVersion`、通道、各包公钥。通道取这次构建的 App 运行时检查的那个通道：内测包内置 staging 当前版本，正式包内置 production 当前版本
+- 信任锚从「已提交的内置 manifest」改为宿主构建脚本里声明的公钥；设备上的信任锚仍是内置包 manifest 的 `publicKey`（§2.9），两者由构建时的核对保证相同
+- 从通道取包用 JVM 实现，不调 CLI：宿主构建不因此依赖 Node。验签与核对的规则与设备相同，规范仍只在 updates.md
+- 本地联调是另一种来源：`tinyui.<pkg>.dir` 指向页面工程，插件调 `tinyui embed`。与 `quickjs-kmp.dir`、`tinyui.dir` 是同一个约定
+- 不做 lock。按版本号重建旧安装包需要投递端点提供每个版本的签名，推迟（§4.3）
+
+规则见 [updates.md](./updates.md) §1.4。代价：宿主构建要能访问热下发服务；一个安装包内置了哪版页面不再能从宿主仓的历史里读出，以构建记录为准。
+
 ## 3. 决策
 
 | 项 | 结论 |
@@ -226,7 +252,7 @@ App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的
 
 ### 4.2 首批租户
 
-TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各自一个 `app` id、自己 bump 的 `hostVersion`；TrendingAI 一个包（`trendingai`，页面 `trendingai/subscription`），第二个 App 按业务线分包，每个包自己的密钥对与 token。宿主后端不需要任何改动，只配 base URL。发布由各包 JS 工程的 CI 完成：`tinyui bundle --signing-key` → `tinyui publish`。内置包只求兼容：是给当前 `hostVersion` 发布过的某个版本，由宿主仓用 `tinyui pull` 刷新（updates.md §1.4），新旧尽力而为。TrendingAI 的页面模块名已从 `pages/…` 改为 `trendingai/…`（M6）。
+TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各自一个 `app` id、自己 bump 的 `hostVersion`；TrendingAI 一个包（`trendingai`，页面 `trendingai/subscription`），第二个 App 按业务线分包，每个包自己的密钥对与 token。宿主后端不需要任何改动，只配 base URL。发布由各包 JS 工程的 CI 完成：`tinyui bundle --signing-key` → `tinyui publish`。内置包只求兼容，新旧尽力而为；2026-11-22 起由宿主构建时从通道解析、不入库（§2.12，updates.md §1.4），此前是宿主仓用 `tinyui pull` 刷新的入库字节。TrendingAI 的页面模块名已从 `pages/…` 改为 `trendingai/…`（M6）。
 
 ### 4.3 推迟项（记 roadmap D 组）
 
@@ -243,6 +269,7 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 | 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
 | 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情；MAU 按 app 内 `install` 去重，不因分包重复计数） | 托管实例对外收费；业界参照见 §4.4 |
 | 挂载标记：`UpdatesPage` 挂 installed 页面前落盘 `attempting`、首帧后清除，构造时残留计数达 2 即拉黑（CodePush `notifyAppReady` / Android A/B boot-success 同类） | 出现以 TinyUI 页面作启动首屏的宿主，或线上出现热下发包导致的崩溃循环。在此之前：启动 sha256 校验挡磁盘损坏；页面代码触发的引擎崩溃是确定性的、同一引擎 commit 在开发与 staging 就会复现，线上靠灰度 + 指针回滚 + `check()` 先于页面挂载 |
+| 按版本号解析内置包（重建某个旧安装包）：投递端点提供每个版本的签名 | 出现必须逐字节重建旧安装包的要求（审计、渠道复核） |
 | 增量传输 | 整包超过 1 MB |
 | 页内 `import()` 懒加载（接 `JsEngineConfig.moduleLoader`） | 出现单页字节码过大的页面 |
 
