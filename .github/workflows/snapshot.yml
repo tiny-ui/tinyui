@@ -1,0 +1,48 @@
+name: snapshot
+
+# Publishes a ref to the Central Portal snapshot repository as <version>-SNAPSHOT: the Maven side of a
+# pre-release for hosts to try before (or instead of) a release to Maven Central, whose monthly publishing
+# limits a release counts against. Snapshots are overwritten in place and cleaned up after about 90 days.
+# Hosts add https://central.sonatype.com/repository/maven-snapshots/ and take app.tinyui:*:<version>-SNAPSHOT;
+# the library still reports the plain version as TinyUI.version, which is what packages are matched against.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag or branch to publish (its tinyui-core version, plus -SNAPSHOT, is the Maven version)"
+        required: true
+
+jobs:
+  maven:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # the runtime bytecode the library embeds must be the one this ref's packages compile to
+      - run: pnpm build
+      - run: pnpm runtime:check
+      - name: Version
+        run: echo "ORG_GRADLE_PROJECT_VERSION_NAME=$(node -p "require('./packages/core/package.json').version")-SNAPSHOT" >> "$GITHUB_ENV"
+      - name: Publish to the Central Portal snapshot repository
+        run: |
+          echo "publishing $ORG_GRADLE_PROJECT_VERSION_NAME"
+          ./gradlew :compose:publishToMavenCentral :updates:publishToMavenCentral --no-configuration-cache --no-daemon
+          ./gradlew -p gradle-plugin test publishToMavenCentral --no-configuration-cache --no-daemon
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
