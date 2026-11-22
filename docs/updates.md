@@ -39,7 +39,7 @@ pages/**/*.jsb
 | `contracts` | `tinyui build` | 页面模块名 → `{ params, result? }`：页面收什么、带回什么的形状（build-chain.md §10），取自 `tinyui.config.json` 的 `contracts` 指向的文件，没配置时省略。`Bundle.page` 把它带进 `PageModule`，挂载时校验 props；宿主也可以经 `pageInfo(name).contract` 拿来校验自己构造的参数 |
 | `i18n` | `tinyui build` | `{ "default": 默认语言, "files": { 语言: 相对路径 } }`，包没有 i18n 资源时省略（build-chain.md §8） |
 | `tinyui` | `tinyui build` | 页面需要的最低运行时：JS 工程构建时的 `tinyui-core` 版本（能用哪些内置组件与运行时 API）与 `tinyui-cli` 版本（产物布局由同版本起的库读取）取较新者；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
-| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels }`：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3）；`Updates` 不读它，宿主可以用 `PackageCheck` 在设备上再核对一遍 |
+| `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels, routes }`（`routes` 是页面跳到包外的页面名：原生路由或别的包的页面，native-api.md §3；`publish` 对不在快照里的只警告，`PackageCheck` 给了其他包的清单时才判错）。前三项：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3）；`Updates` 不读它，宿主可以用 `PackageCheck` 在设备上再核对一遍 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
 
 签名值与 `rollout` 不在 manifest 里，在指针文件 `current.json`（§1.2）。内置包没有指针文件，不参与灰度、不验签；库不读内置包 manifest 的 `hostVersion`（宿主知道自己的值）。它由 `tinyui pull` 取来时带着这个字段，宿主的发版检查用它确认内置包是给当前宿主版本发布过的（§1.4）；本地构建的包没有这个字段。
@@ -182,7 +182,7 @@ class Updates(
 
 **`fetch` 的现成实现**：宿主用 ktor 时写 `fetch = ktorFetch(client) { "$base/$channel" }`（`tinyui-updates` 自带；ktor-client-core 本就在 core 库的依赖面上，不新增依赖）。客户端仍是宿主的，超时、代理、引擎、`expectSuccess` 都由宿主定。**`fetch` 必须有超时**：`check()` 下载期间持有包锁，一个永不返回的 `fetch` 会让此后的检查和 §4.5 回退的落盘一直等下去（页面不受影响，已切到 embedded）；base 每次调用时读，切通道不用重建 `Updates`。它只接管失败文案，因为 `Failed.message` 是传输层唯一能带出来的东西，而宿主上报时还要截到很短：非 2xx 记 `HTTP <状态码> cf-ray=<值或 -> server=<值或 -> body=<前 60 字符>`——Cloudflare 的每个响应都带 `cf-ray`，没有它的 5xx 是设备与服务端之间的代理伪造的，不是源站问题；超时去掉 ktor 附带的 `[url=…]`；DNS / 连接 / TLS 失败保留引擎原话。用别的 HTTP 栈的宿主自己实现 `fetch` 时照这个口径拼文案，各宿主的看板规则才能共用。
 
-**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 上游 commit 变化，build-chain.md §5；上游 commit 不变的 quickjs-kmp 升级不算）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；原生路由增删，或改已有路由的参数（native-api.md §3）；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 上游 commit 变化，build-chain.md §5；上游 commit 不变的 quickjs-kmp 升级不算）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、通道名、tinyui 下限）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已合入 main 的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 
@@ -429,9 +429,12 @@ capabilities
 
 channels
   app
+
+routes
+  account/choose  {"type":"object","properties":{"accessToken":{"type":"string"}},"required":["accessToken"]}
 ```
 
-前两行固定；`components`、`capabilities`、`channels` 三段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）。例外：`channels` 段随 ADR-007 加入，此前冻结的快照没有它，`tinyui` 行低于引入它的 tinyui 版本的快照缺这一段时读作不提供任何通道；每项缩进两格、一行一项、按名排序，名字补空格对齐。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，CLI 核对只看名字；其后是给人看、也给宿主侧检查判断 schema 变没变的完整 schema，改哪一处都会让快照不同：
+前两行固定；`components`、`capabilities`、`channels`、`routes` 四段按此顺序各出现一次，没有条目也要写段名（缺段会被读成"什么都不提供"，所以一律拒绝）。例外：`channels` 段随 ADR-007 加入、`routes` 段随 0.14.0-alpha04 加入，此前冻结的快照没有它们，`tinyui` 行低于引入那一段的 tinyui 版本的快照缺这一段时读作不提供；`routes` 段每行名字之后是参数的形状（build-chain.md §10 的那个子集，一行 JSON），页面工程的类型从它生成，所以这一段的其余部分 CLI 是要读的；每项缩进两格、一行一项、按名排序，名字补空格对齐。`tinyui hosts upload` 先解析并核对首行的 `hostVersion` 与 `--host-version` 相符再上传——服务端只收第一份。**每行第一个词是名字**，CLI 核对只看名字；其后是给人看、也给宿主侧检查判断 schema 变没变的完整 schema，改哪一处都会让快照不同：
 
 - 各段以 `; ` 分隔，依次为 props、`events …`、`commands …`、`children`、`layout`、`noIntrinsics`（schema `intrinsics: false` 时才写，缺省不写，所以加这个标记之前冻结的快照字节不变），没有的段省略
 - prop 按名排序，`名字: 类型`；可选的名字后加 `?`，有默认值加 ` = 默认值`（`string` 的默认值写成 JSON 字符串，带引号与转义，免得换行或 `;` 弄乱一行一项），只在创建时读的加 ` (initial)`；枚举写 `enum(a|b)`，取值排序

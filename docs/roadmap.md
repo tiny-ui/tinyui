@@ -71,7 +71,7 @@
 | 分享、震动、选图等通用能力（均按"框架默认实现、宿主可接管"） | ADR-007 §3.6 | 第一个需要的页面。剪贴板写入已完成（2026-10-12，第一个需要的业务页面触发，[native-api.md](./native-api.md) §15；只写不读，宿主不接管） |
 | 加密的其余算法（OAEP、`sha256`、`hmac`、对称加密） | native-api.md §16 | 第一个需要的页面。RSA PKCS#1 v1.5 公钥加密已完成（2026-10-28，注册流程触发：`crypto.rsaEncrypt`） |
 | `KtorChannel` 把 http `tags` 转成 ktor `attributes`，宿主的 ktor 插件可读 | native-api.md §6 | 第一个用 `KtorChannel` 又要读 tags 的宿主（现有宿主都自写通道）。`tags` 本身已完成（2026-10-28，注册流程触发） |
-| 服务端拒绝建名为 `host` 等保留词的包 | — | 不做：2026-10-28 曾拟保留包名 `host` 给原生路由，因是潜规则撤销；页面要原生页的结果走 `host.call`（launch-for-result），只跳不要结果走 deep link（`linking.openUrl`） |
+| 服务端拒绝建名为 `host` 等保留词的包 | — | 不做：2026-10-28 曾拟保留包名 `host` 给原生路由，因是潜规则撤销；页面要原生页的结果走 `host.call`（launch-for-result），只跳不要结果走 deep link（`linking.openUrl`）。2026-11-21 补：只跳不要结果、但要带结构化参数的，走宿主登记的原生路由（`TinyUIHost.routes`，native-api.md §3），名字由宿主起，仍然没有保留词 |
 | `openUrl` 的打开方式提示（`mode`） | ADR-007 §3.6 | 页面确实要求应用内或外部打开 |
 | ~~`TextField` 的 `height` 可调~~（输入框本体高度，`supportingText` 挂在框外） | components.md §6 | 页面级定高已实现并撤回（[#54](https://github.com/tiny-ui/tinyui/pull/54) 合入后 revert）：自己拼 `DecorationBox` 要跟着维护 M3 原件的细节。2026-11-03 改为宿主级：`TinyUIDefaults.textField` 的 `contentPadding` + `minHeight`，走 M3 `TextFieldState` 版 `OutlinedTextField` 自带的 `contentPadding`，最小高度用 `heightIn` 盖过 `defaultMinSize`；高度是设计系统的事，页面仍不定它 |
 | 流式响应 / SSE、上传下载、请求缓存 | ADR-007 §3.1 | 第一个需要的页面 |

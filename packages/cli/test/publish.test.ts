@@ -189,6 +189,17 @@ describe("tinyui publish", () => {
         assert.deepEqual(requestsSince(before), []);
     });
 
+    it("warns about a page name outside the package that is not a native route of the host; it is not a refusal", async () => {
+        const warnings: string[] = [];
+        const mark = server.requests.length;
+        // the missing capability stops this publish before anything is uploaded, so the fake server stays as it was
+        const dir = await bundled("elsewhere", (m) => { m.requires["fixture/home"]!.routes = ["wallet/home"]; m.requires["fixture/home"]!.capabilities.push("coupon.apply"); });
+        await assert.rejects(publish({ client, dir, app: "demo", channel: "staging", onWarning: (w) => warnings.push(w) }), (e: Error) => /coupon\.apply/.test(e.message) && !/wallet/.test(e.message));
+        assert.equal(warnings.length, 1);
+        assert.match(warnings[0]!, /fixture\/home navigates to wallet\/home: not a native route of host version 1 of demo/);
+        assert.ok(!requestsSince(mark).some((r) => r.startsWith("PUT")));
+    });
+
     it("checks the package against what the target host version provides before uploading anything", async () => {
         const mark = server.requests.length;
         const refuse = async (label: string, edit: Parameters<typeof fakeDist>[2], message: RegExp) => {

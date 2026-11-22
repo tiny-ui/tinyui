@@ -18,13 +18,14 @@ val host = TinyUIHost(
     analytics = AnalyticsSink { name, props, page -> … },  // §12
     links = LinkOpener { url, page -> … },                 // §11，缺省 LinkOpener.System
     navigator = appNavigator,                              // §3
+    routes = listOf(NativeRoute("account/choose", serializer<ChooseAccountParams>().descriptor)),   // §3：页面可以按名字去的原生页
     capabilities = CapabilityRegistry().apply { … },       // §13，兜底
 )
 
 TinyUIPage(module, host, propsJson = "{}", locals = emptyList(), modifier = …)
 ```
 
-除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字，以及是否提供会话（记作能力 `session.signIn`，§9）、是否让页面改语言（记作能力 `i18n.setLocale`，§8）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
+除 `components`、`sink` 外都可缺省，缺省行为见各节（没有 `dataDir` 时 `storage` 答 `E_UNSUPPORTED`）。标准接口（通道之外）的形状由框架定，不进宿主快照；进快照的只有宿主组件、`capabilities` 的名字、`channels` 的名字、`routes`（原生路由的名字与参数形状，§3），以及是否提供会话（记作能力 `session.signIn`，§9）、是否让页面改语言（记作能力 `i18n.setLocale`，§8）（updates.md §6.4）。`host.store`、`host.events` 是框架建的 App 级实例，宿主经它们与页面交换状态和事件（§4、§5）。
 
 `locals` 是这一次挂载交给宿主自己代码的对象：`Navigator`（§3）、`LinkOpener`（§11）与 `host.call` 的能力（§13）都从 `page[local]` 取回，最常见的用途是让导航找到调用方自己的导航条目。
 
@@ -86,7 +87,19 @@ override fun pop(resultJson: String?, since: String?, from: PageContext) {
 - `pop` = 关闭调用方自己（同 Android `finish()`、SwiftUI `dismiss`），并通知它下面那一页：宿主持有那一页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。那一页还在挂载时，结果等它挂载完再送达
 - **每次关闭都通知，没带结果时 `result` 是 `null`**（2026-11-21 改；此前不带结果的关闭不通知）：`pop()` 不带结果时 `resultJson` 为 null，宿主照发；用户自己关掉页面（系统返回、下拉弹层、点遮罩）时宿主同样发一次 `result: null`。等结果的页面因此总能知道这一轮结束了，「用户取消」不用每个页面和宿主各约定一个假结果——同 Android 的 `RESULT_CANCELED`。已有的 `onResult` 处理函数要能接受 `null`
 - 结果的类型（2026-11-21 加）：会带结果的页面导出名为 `Result` 的类型（`export type Result = …`），`tinyui routes` 把它记进生成物（build-chain.md §10），接收方写 `onResult("<页面名>", fn)` 时 `result` 就是 `Result | null`，同时只收这一页的结果。`pop(result)` 的签名不变，页面自己写 `const close = (result: Result) => navigation.pop(result)` 把两头对上。流程中途 `replace` 过的，结果记在最后关闭的那一页名下
-- 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；别的包的页面与原生路由照原样放行
+- 页面名与参数的类型：页面工程跑过 `tinyui routes --ts` 之后（[build-chain.md](./build-chain.md) §10），本包的页面名必须存在、`params` 必须是目标页面的 props，都在编译期检查；带了 `--host <快照>` 时宿主的原生路由同样检查；别的包的页面照原样放行，参数是任意 JSON 对象
+- **原生路由**（2026-11-21 加）：页面去原生页和去另一个 TinyUI 页是同一种写法，`navigation.push("account/choose", { … })` / `replace(…, { since })`，到 `Navigator` 时就是一个页面名，宿主认出来后开自己的页面。宿主把这些名字连同参数类型登记在 `TinyUIHost.routes`：
+
+    ```kotlin
+    @Serializable class ChooseAccountParams(val accessToken: String, val user: User)
+    NativeRoute("account/choose", serializer<ChooseAccountParams>().descriptor)   // 参数形状从描述符读，宿主解码用的就是这个类
+    ```
+
+    - 登记了就是宿主契约：进快照的 `routes` 段（[updates.md](./updates.md) §6.4），增删路由或改参数要加 `hostVersion`。ADR-007 §3.9 当时留了「原生路由名第一批不进快照，需要时再议」，这里补上
+    - 名字由宿主起，不设保留前缀（2026-10-28 曾拟保留包名 `host`，因是潜规则撤销）；唯一的要求是不以本 App 任何一个包的名字开头，那些名字归包里的页面
+    - 页面工程用 `tinyui routes --ts … --host <快照文件>` 把它们生成进类型（build-chain.md §10），名字和参数在编译期检查；快照文件从宿主仓拿，或 `tinyui hosts download --host-version <n> --out <file>`
+    - `tinyui build` 把页面跳到包外的、字面量写出的页面名记进 manifest 的 `requires.routes`。宿主对内置包的检查 `PackageCheck.problems(manifest, host, others)` 要求每个名字要么是宿主的原生路由、要么是 App 里另一个包的页面；`publish` 手里没有 App 的包列表，对不在快照 `routes` 里的名字只给警告
+    - 它不取代 `host.call`：要原生页把结果交回页面、或失败要让页面知道的，仍走 `host.call`（J3，有返回）；`push` / `replace` 是 J4，发出去就不管了
 - `replace` = 关闭调用方并在它的位置打开新页，作为栈的一次变化（2026-11-12 加）。不能拆成先 `pop` 再 `push`：`pop` 之后调用方已经关了，后一步发不出来
 - `since`（`replace` 与 `pop` 都有，2026-11-12 加）把「关闭调用方」扩成关闭一段：从调用方所在的栈里、调用方自己或它下面最近的那个同名页面起，到调用方为止，含两端。用在多步流程——注册提交成功后往前走时丢掉已经走完的步骤（返回不该回到它们，它们各占一个引擎），或流程走完整体退出。页面写的是**自己流程的第一页**，不是流程从哪里进来的：流程可能从别的包、从原生页进来，下面是谁它不该知道（[app-model.md](./app-model.md) §1），`pop` 的结果自然交给发起方。所以不做「回到某一页」的 `popTo(目标)`（React Navigation `popTo`、Flutter `popUntil`、Android `popBackStack(route)` 的写法）：那要求页面认识它下面的页面。`since` 的名字在栈里找不到时，宿主只关调用方，并记一条日志
 - 呈现方式（2026-11-21 加）：页面用 `export const presentation = "sheet"` 说自己是底部弹层（build-chain.md §11），不说就是普通的一页。宿主打开页面前用 `updates.pageInfo(page)`（不用 `Updates` 的宿主读 `bundle.manifest.pageInfo(page)`）拿到它，据此决定导航条目怎么展示；返回 null 说明 App 里没有这一页，不打开并经 `PageSink` 上报。这样页面名不用在宿主里逐个登记：能不能开、怎么开都从清单来，新加的页面热下发后旧宿主也能打开

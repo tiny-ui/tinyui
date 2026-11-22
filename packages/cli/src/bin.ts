@@ -2,7 +2,7 @@
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
+import { createApp, createAppToken, createPackage, createToken, listReleases, movePointer, readHostSnapshot, revokeAppToken, revokeToken, rotatePublicKey, uploadHostSnapshot } from "./admin.ts";
 import { build, discoverPages } from "./build.ts";
 import { embed } from "./embed.ts";
 import { bundle, isHostVersion, isPathSegment } from "./bundle.ts";
@@ -24,7 +24,8 @@ const USAGE = `usage: tinyui build [--root <dir>] [--out <dir>] [--qjsc <path>] 
        tinyui embed --out <dir> [--root <dir>] [--dist <dir>] [--maps] [--qjsc <path>]
        tinyui bundle --host-version <hostVersion> --signing-key <pem> [--dist <dir>] [--rollout <0-100>] [--out <dir>]
        tinyui i18n --ts <file> [--root <dir>] [--check]
-       tinyui routes --ts <file> [--schema <file>] [--root <dir>] [--check]
+       tinyui routes --ts <file> [--schema <file>] [--host <snapshot>] [--root <dir>] [--check]
+       tinyui hosts download --host-version <n> --out <file> [--app <a>]
        tinyui keys generate [--out <pem>]
        tinyui schema --entry <schema.ts> [--ts <file>] [--kt <file> --package <pkg> [--object <Name>]] [--check]
        tinyui publish --channel <c> [--app <a>] [--dir <dir>] [--rollout <0-100>]
@@ -69,6 +70,8 @@ routes     type navigation.push / replace from the package's pages (docs/build-c
   --root     project root (default: cwd)
   --ts       write the tinyui-native type augmentation here (I18nKeys for i18n, Routes for routes)
   --schema   routes only: also write what each page takes and hands back, as JSON (set "contracts" in tinyui.config.json to it and the build puts it into the manifest); reads types with the project's typescript
+  --host     routes only: the snapshot of the host the package is written for (tinyui hosts download, or the file in
+             the host's repository); navigation to its native routes is then typed by name and params
   --check    exit 1 if --ts (and --schema) is not already up to date, write nothing
 
 keys generate
@@ -158,11 +161,13 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     routes: {
-        options: { root: { type: "string" }, ts: { type: "string" }, schema: { type: "string" }, check: { type: "boolean", default: false } },
+        options: { root: { type: "string" }, ts: { type: "string" }, schema: { type: "string" }, host: { type: "string" }, check: { type: "boolean", default: false } },
         run: async (v) => {
             const root = resolve((v["root"] as string | undefined) ?? process.cwd());
             const ts = v["ts"] as string | undefined;
             const schema = v["schema"] as string | undefined;
+            const host = v["host"] as string | undefined;
+            const hostRoutes = host === undefined ? undefined : parseHostSnapshot(await readFile(resolve(host), "utf8")).routes;
             if (!ts) throw new Error("routes: --ts is required");
             const out = resolve(ts);
             const config = await loadConfig(root);
@@ -170,8 +175,8 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
             if (pages.size === 0) throw new Error(`routes: no pages found under ${join(root, config.pages)}`);
             const results = new Set<string>();
             for (const [name, file] of pages) if (pageDeclarations(file, await readFile(file, "utf8")).result) results.add(name);
-            const text = routesTypes(config.name, pages, out, results);
-            const again = `run tinyui routes --ts ${ts}${schema ? ` --schema ${schema}` : ""}`;
+            const text = routesTypes(config.name, pages, out, results, hostRoutes);
+            const again = `run tinyui routes --ts ${ts}${schema ? ` --schema ${schema}` : ""}${host ? ` --host ${host}` : ""}`;
             const contracts = schema ? contractsFile(await pageContracts(root, pages, results)) : undefined;
             if (v["check"]) {
                 const current = await readFile(out, "utf8").catch(() => "");
@@ -248,6 +253,7 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
                 dir: (v["dir"] as string | undefined) ?? resolve("dist", "ota"),
                 ...(v["rollout"] !== undefined && { rollout: percentage(v["rollout"] as string, "publish: --rollout") }),
                 onUpload: (u) => process.stderr.write(`${u.existing ? "exists  " : "uploaded"} ${u.path}\n`),
+                onWarning: (message) => process.stderr.write(`warning: ${message}\n`),
             });
             const { pkg, hostVersion, version, pointer } = result;
             process.stderr.write(`published ${pkg}/${hostVersion}/${version} to ${v["channel"] as string} at rollout ${pointer.rollout} (${result.uploaded} uploaded, ${result.existing} already there)\n`);
@@ -328,9 +334,22 @@ const COMMANDS: Record<string, { options: Options; run: (v: Values, positionals:
         },
     },
     hosts: {
-        options: { ...URL_OPTION, app: { type: "string" }, "host-version": { type: "string" } },
+        options: { ...URL_OPTION, app: { type: "string" }, "host-version": { type: "string" }, out: { type: "string" } },
         run: async (v, positionals) => {
-            if (positionals[1] !== "upload") throw new Error("hosts: expected `hosts upload <snapshot> --host-version <n>`");
+            if (positionals[1] === "download") {
+                const hostVersion = required(v["host-version"], "hosts download: --host-version is required");
+                if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);
+                const out = resolve(required(v["out"], "hosts download: --out is required"));
+                // any credential that may publish to the app may read what its hosts provide
+                const client = process.env[ADMIN_TOKEN_ENV] ? adminClient(v) : publishClient(v);
+                const bytes = await readHostSnapshot(client, await appId(v), hostVersion);
+                parseHostSnapshot(new TextDecoder().decode(bytes));
+                await mkdir(dirname(out), { recursive: true });
+                await writeFile(out, bytes);
+                process.stdout.write(`${out}\n`);
+                return 0;
+            }
+            if (positionals[1] !== "upload") throw new Error("hosts: expected `hosts upload <snapshot> --host-version <n>` or `hosts download --host-version <n> --out <file>`");
             const file = required(positionals[2], "hosts upload: the snapshot file is required");
             const hostVersion = required(v["host-version"], "hosts upload: --host-version is required");
             if (!isHostVersion(hostVersion)) throw new Error(`--host-version must be a positive integer, got "${hostVersion}"`);

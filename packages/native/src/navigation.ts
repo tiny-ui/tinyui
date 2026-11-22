@@ -7,8 +7,17 @@ import { internal } from "tinyui-core";
  */
 export type Presentation = "screen" | "sheet";
 
-/** What crosses to a page of another package or to a native route: flat, JSON. */
-export type Params = Record<string, string | number | boolean | null>;
+/** A JSON value: what params are made of. */
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+/** What crosses to a page of another package: a JSON object. */
+export type Params = Record<string, Json>;
+
+/**
+ * Augmented by `tinyui routes --ts … --host <snapshot>`: each native route of the host the package is written for
+ * and the params it takes (docs/native-api.md §3).
+ */
+export interface HostRoutes {}
 
 /** Augmented by `tinyui routes --ts`: each page of this package and the props it takes (docs/build-chain.md §10). */
 export interface Routes {}
@@ -24,8 +33,9 @@ export type PageProps<M> = M extends { default: (...args: infer A) => unknown } 
 
 type OwnPage = [keyof Routes] extends [never] ? string : keyof Routes & string;
 type OwnName = RoutePackage extends { name: infer N extends string } ? `${N}/${string}` : never;
-/** A page name outside this package: another package's page or a route the host's `Navigator` knows. */
-type Foreign<P extends string> = P extends OwnName ? never : P;
+/** A page name outside this package that is not a native route either: another package's page. */
+type Foreign<P extends string> = P extends OwnName | keyof HostRoutes ? never : P;
+type HostArgs<K extends keyof HostRoutes> = {} extends HostRoutes[K] ? [params?: HostRoutes[K]] : [params: HostRoutes[K]];
 /** What `page` closes with: its `Result`, nothing but `null` for a page that declares none, anything before `tinyui routes` ran. */
 type ResultOf<K> = [keyof Routes] extends [never] ? unknown : K extends keyof RouteResults ? RouteResults[K] : never;
 type RouteArgs<K extends keyof Routes> = {} extends Routes[K] ? [params?: Routes[K]] : [params: Routes[K]];
@@ -41,9 +51,11 @@ export interface Since {
 
 /**
  * J4: opens `page` (a module name such as `shop/detail`) on top of this one. A page of this package is checked
- * against `Routes`: its name must exist and `params` must be its props. Any other name is taken as it is.
+ * against `Routes`: its name must exist and `params` must be its props. A native route of the host is checked
+ * against `HostRoutes` the same way. Any other name is taken as it is.
  */
 export function push<K extends keyof Routes & string>(page: K, ...params: RouteArgs<K>): void;
+export function push<K extends keyof HostRoutes & string>(page: K, ...params: HostArgs<K>): void;
 export function push<P extends string>(page: Foreign<P>, params?: Params): void;
 export function push(page: string, params: object = {}): void {
     internal.send("navigation.push", { page, params });
@@ -51,6 +63,7 @@ export function push(page: string, params: object = {}): void {
 
 /** J4: closes this page (or the run from `since` up to it) and opens `page` where it stood; typed as [push]. */
 export function replace<K extends keyof Routes & string>(page: K, ...rest: [...RouteArgs<K>, options?: Since]): void;
+export function replace<K extends keyof HostRoutes & string>(page: K, ...rest: [...HostArgs<K>, options?: Since]): void;
 export function replace<P extends string>(page: Foreign<P>, params?: Params, options?: Since): void;
 export function replace(page: string, params: object = {}, options: Since = {}): void {
     internal.send("navigation.replace", { page, params, ...(options.since === undefined ? {} : { since: options.since }) });

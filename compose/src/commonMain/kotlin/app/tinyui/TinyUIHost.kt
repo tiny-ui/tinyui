@@ -6,13 +6,14 @@ import okio.Path
 
 /**
  * What one App gives every TinyUI page, built once at startup and not changed after (docs/native-api.md §1).
- * Its host components, capability names, channel names, whether it has a [session] and whether pages may change the
- * language ([LocaleSource.set]) are the host contract
+ * Its host components, capability names, channel names, native [routes], whether it has a [session] and whether pages
+ * may change the language ([LocaleSource.set]) are the host contract
  * [HostSnapshot] renders; the other standard interfaces fall back to defaults when absent.
  *
  * @param channels HTTP channels pages pick by name (`http.client("app")`); `default` is the framework's own and cannot be registered.
  * @param locale the App's language and, optionally, how a page changes it; the system language, read-only, when null.
  * @param timeZone the zone dates are shown in (IANA id, e.g. `Asia/Shanghai`); the system zone when null.
+ * @param routes the native screens pages may navigate to by name; the [navigator] is what opens them.
  * @param dataDir where `storage` keeps each package's file; `storage` answers E_UNSUPPORTED when null. Not the `Updates` directory.
  */
 class TinyUIHost(
@@ -27,7 +28,12 @@ class TinyUIHost(
     val links: LinkOpener? = null,
     val navigator: Navigator = Navigator.None,
     val dataDir: Path? = null,
+    val routes: List<NativeRoute> = emptyList(),
 ) {
+    init {
+        routes.groupBy { it.name }.filterValues { it.size > 1 }.keys.firstOrNull()?.let { throw IllegalArgumentException("native route $it is declared twice") }
+    }
+
     /** App-level key-value shared by every page and the host's own code (docs/native-api.md §4). */
     val store: Store = InMemoryStore()
 
