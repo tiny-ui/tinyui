@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.navigationevent.DirectNavigationEventInput
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import app.tinyui.components.IconValue
+import app.tinyui.components.LocalTinyUIDefaults
 import app.tinyui.components.NodeScope
 import app.tinyui.components.SizeValue
 
@@ -36,6 +37,8 @@ import app.tinyui.components.SizeValue
 internal fun TopAppBarComponent(scope: NodeScope) {
     val container = scope.color("background") ?: MaterialTheme.colorScheme.surface
     val backIcon = scope.get<IconValue>("backIcon")
+    // the page's own size first, then the host's for every bar, then M3's
+    val style = LocalTinyUIDefaults.current.topAppBar
     val dispatcher = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
     val input = remember { DirectNavigationEventInput() }
     if (dispatcher != null) {
@@ -51,7 +54,7 @@ internal fun TopAppBarComponent(scope: NodeScope) {
                 if (backIcon != null) {
                     IconButton(onClick = { if (dispatcher != null) input.backCompleted() }) {
                         // unset keeps the icon's own size: the 24dp every packaged icon carries, defined once in parseIcon
-                        val size = scope.get<Dp>("backIconSize")
+                        val size = scope.get<Dp>("backIconSize") ?: style?.backIconSize
                         Icon(backIcon.vector, contentDescription = scope.get<String>("backLabel"), modifier = if (size != null) Modifier.size(size) else Modifier)
                     }
                 }
@@ -59,7 +62,7 @@ internal fun TopAppBarComponent(scope: NodeScope) {
             actions = { scope.Children() },
             // the insets are padded above, outside the height the page gives
             windowInsets = WindowInsets(0),
-            expandedHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp ?: TopAppBarDefaults.TopAppBarExpandedHeight,
+            expandedHeight = (scope.get<SizeValue>("height") as? SizeValue.Fixed)?.dp ?: style?.height ?: TopAppBarDefaults.TopAppBarExpandedHeight,
             colors = TopAppBarDefaults.topAppBarColors(containerColor = container),
             modifier = scope.modifier(),
         )

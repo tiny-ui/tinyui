@@ -25,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,11 +48,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.IntrinsicMeasurable
+import androidx.compose.ui.layout.IntrinsicMeasureScope
+import androidx.compose.ui.layout.LayoutModifier
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -59,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import app.tinyui.components.Commands
 import app.tinyui.components.IconValue
 import app.tinyui.components.NodeScope
+import app.tinyui.components.ResolvedTextFieldStyle
 import app.tinyui.components.textFieldStyle
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -152,7 +162,9 @@ internal fun TextFieldComponent(scope: NodeScope) {
     // moving focus away commits through onFocusChanged; commit here only when there was nowhere to go
     val onKeyboardAction = KeyboardActionHandler { if (next) { if (!focusManager.moveFocus(FocusDirection.Next)) commit() } else commit() }
     val inputTransformation = remember { ClipTransformation { limit() } }
-    val modifier = scope.modifier(clickable = false).heightIn(min = style.minHeight).focusRequester(focusRequester)
+    val masked = secure != null || keyboard == KeyboardType.Password
+    val singleLine = masked || (scope.get<Boolean>("singleLine") ?: true)
+    val modifier = scope.modifier(clickable = false).fieldMinHeight(style, singleLine).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -162,7 +174,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
             if (!focused) commit()
         }
     // M3's secure field is single-line; `singleLine=false` has no meaning for a masked field (docs/components.md §3)
-    if (secure != null || keyboard == KeyboardType.Password) {
+    if (masked) {
         OutlinedSecureTextField(
             state = state,
             modifier = modifier,
@@ -191,11 +203,46 @@ internal fun TextFieldComponent(scope: NodeScope) {
             inputTransformation = inputTransformation,
             keyboardOptions = keyboardOptions,
             onKeyboardAction = onKeyboardAction,
-            lineLimits = if (scope.get<Boolean>("singleLine") ?: true) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
+            lineLimits = if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
             colors = colors,
             contentPadding = style.contentPadding,
         )
     }
+}
+
+/**
+ * The field's minimum height: the host's ([ResolvedTextFieldStyle.minHeight]) in place of the 56dp M3 applies by itself.
+ *
+ * Measuring is plain `heightIn(min)`: a minimum from outside switches M3's `defaultMinSize` off. An intrinsic
+ * measurement (what `align="stretch"` asks) has no constraints to do that with, so M3 answers with its own 56dp
+ * floor whatever the host set, and a row sized from that answer comes out taller than the field in it. For a
+ * single-line field the box is one line of text and the padding, a height known here; when that is under M3's floor,
+ * the floor is what M3 answered for the box, and the answer is corrected by the difference. A multi-line field grows
+ * with its text, so M3's answer is left alone.
+ */
+@Composable
+internal fun Modifier.fieldMinHeight(style: ResolvedTextFieldStyle, singleLine: Boolean): Modifier {
+    val m3 = OutlinedTextFieldDefaults.MinHeight
+    val lineHeight = LocalTextStyle.current.lineHeight
+    if (!singleLine || style.minHeight >= m3 || !lineHeight.isSp) return heightIn(min = style.minHeight)
+    val line = with(LocalDensity.current) { lineHeight.toDp() }
+    val box = maxOf(style.minHeight, line + style.contentPadding.calculateTopPadding() + style.contentPadding.calculateBottomPadding())
+    return if (box >= m3) heightIn(min = style.minHeight) else this.then(FieldMinHeight(style.minHeight, m3 - box))
+}
+
+/** `heightIn(min)` whose intrinsic heights are M3's less [excess], what M3's own floor adds over the real box. */
+private data class FieldMinHeight(val min: Dp, val excess: Dp) : LayoutModifier {
+    override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        val least = min.roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+        val placeable = measurable.measure(constraints.copy(minHeight = least))
+        return layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+    }
+
+    override fun IntrinsicMeasureScope.minIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int): Int =
+        (measurable.minIntrinsicHeight(width) - excess.roundToPx()).coerceAtLeast(min.roundToPx())
+
+    override fun IntrinsicMeasureScope.maxIntrinsicHeight(measurable: IntrinsicMeasurable, width: Int): Int =
+        (measurable.maxIntrinsicHeight(width) - excess.roundToPx()).coerceAtLeast(min.roundToPx())
 }
 
 /**
