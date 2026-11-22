@@ -97,6 +97,10 @@ suspend fun embedded(pkg: String): Bundle = Bundle.load { path ->
     try { Res.readBytes("files/tinyui/$pkg/$path") } catch (e: MissingResourceException) { null }
 }
 
+// 这次构建的 App 检查哪个通道。插件不生成它：由你区分测试包与正式包的方式决定，
+// 且必须与 §2.2 的 `tinyui { channel = … }` 得出同一个值，否则内置的是一个通道的版本、运行时查的是另一个
+val channel = if (isInternalBuild) "staging" else "production"
+
 val updates = Updates(
     packages = TinyUIBuild.PACKAGES.map { embedded(it) },
     hostVersion = TinyUIBuild.HOST_VERSION,
@@ -229,7 +233,12 @@ tinyui.login.dir=../shop-pages-login
 1. 宿主：改代码，`tinyui.hostVersion` 加 1，带 `-Ptinyui.updateHostSnapshot` 跑快照测试生成新的 `tinyui-host/<n>.txt`，合入主干，CI 上传快照
 2. 页面包：`tinyui.config.json` 的 `hostVersion` 改成新值，取新快照（`TINYUI_TOKEN=<发布 token> tinyui hosts download`，写到 `tinyui-host/<n>.txt`；或从宿主仓拷），重新 `pnpm routes`，合入主干，CI 在新版本下发布
 
-第 1 步之后、第 2 步之前，宿主的测试包构建会回落到上一个 `hostVersion` 的包并打警告，不会失败。什么变化要加 1、什么不用，见 [updates.md](./updates.md) §4.1；单纯升级 tinyui 不用加。
+第 1 步之后、第 2 步之前，宿主的测试包构建会回落到上一个 `hostVersion` 的包并打警告，不会失败。什么变化要加 1、什么不用，见 [updates.md](./updates.md) §4.1。
+
+**升级 tinyui。** 分两种：
+
+- 只升宿主的 tinyui（库与插件），页面包不动：不用加 `hostVersion`，快照也不变。快照第二行记的是这个 `hostVersion` 的 tinyui **下限**，宿主比它新没有关系
+- 页面包也要升（要用新版运行时或新版 CLI 的东西）：页面包三包的版本不能高于快照里的下限，而上传过的快照是冻结的，所以要先在宿主把 `hostVersion` 加 1（新快照的下限即当时的 tinyui 版本），页面包再升级并跟进到新 `hostVersion`。只升页面包会在 `publish` 时被拒
 
 **发 App。** 发版前把要随包发出去的页面版本晋级到 `production`、放量到 100。正式包构建时取 `production` 当前版本作内置包。
 
