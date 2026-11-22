@@ -193,6 +193,29 @@ class PageHostTest {
     }
 
     @Test
+    fun closingAPageWithEntriesStillQueuedIsNotAFailure() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        // the host answers a call and closes the page in the same breath (a page that popped itself)
+        withContext(Dispatchers.Default) { repeat(200) { host.dispatch(2, "onSeq", """{"i":$it}""") } }
+        host.close()
+        withContext(Dispatchers.Default) { delay(300) }
+        assertEquals(emptyList(), errors.map { it.kind })
+        assertNull(host.failure)
+    }
+
+    @Test
+    fun closingAPageThatIsStillLoadingIsNotAFailure() = runTest {
+        val host = host()
+        host.start()
+        host.close()
+        withContext(Dispatchers.Default) { delay(300) }
+        assertEquals(emptyList(), errors.map { it.kind })
+        assertNull(host.failure)
+    }
+
+    @Test
     fun aResultEmittedBeforeTheMountArrivesAfterIt() = runTest {
         val host = host()
         // a page remounted from its props gets navigation.result while it is still loading

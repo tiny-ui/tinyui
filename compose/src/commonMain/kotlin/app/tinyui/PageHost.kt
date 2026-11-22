@@ -9,6 +9,7 @@ import app.tinyui.components.NodeRenderer
 import app.tinyui.components.NodeTree
 import app.tinyui.components.UINode
 import kotlin.concurrent.Volatile
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -17,6 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeout
@@ -153,6 +155,7 @@ class PageHost internal constructor(
             } catch (t: TimeoutCancellationException) {
                 fail("E6", IllegalStateException("page load exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
+                if (closedBy(t)) throw t
                 fail("E6", t)
             } finally {
                 mountSettled.complete(Unit)
@@ -198,10 +201,14 @@ class PageHost internal constructor(
             } catch (t: TimeoutCancellationException) {
                 fail("E6", IllegalStateException("K entry $name exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
+                if (closedBy(t)) throw t
                 fail("E2", t)
             }
         }
     }
+
+    /** [close] cancelled the work that was queued or running: the page is gone, it did not fail. */
+    private fun closedBy(t: Throwable) = t is CancellationException && !scope.isActive
 
     internal fun close() {
         scope.cancel() // pending entries and timers are its children
