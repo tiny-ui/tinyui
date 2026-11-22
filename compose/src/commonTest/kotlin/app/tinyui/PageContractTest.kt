@@ -1,4 +1,4 @@
-package app.tinyui.bundle
+package app.tinyui
 
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -49,8 +49,32 @@ class PageContractTest {
     }
 
     @Test
-    fun aFieldThePageDoesNotListIsAllowedAndAnAbsentOptionalOneMayBeNull() {
-        assertEquals(emptyList(), contract.problems("""{"scene":"login","token":"t","options":[],"pin":false,"note":null,"newer":{"x":1},"retries":null}"""))
+    fun aFieldThePageDoesNotListIsAllowed() {
+        assertEquals(emptyList(), contract.problems("""{"scene":"login","token":"t","options":[],"pin":false,"note":null,"newer":{"x":1}}"""))
+    }
+
+    @Test
+    fun anOptionalFieldIsLeftOutNotSentAsNullUnlessItsTypeAllowsNull() {
+        assertEquals(listOf("$.retries: expected a number"), contract.problems("""{"scene":"login","token":"t","options":[],"pin":false,"note":null,"retries":null}"""))
+    }
+
+    @Test
+    fun keysAShapeDoesNotNameAreHeldToItsIndexSignatureAndNamedOnesAreNot() {
+        val tagged = assertNotNull(PageContract.parse(Json.parseToJsonElement(
+            """{"params":{"type":"object","properties":{"id":{"type":"string"},"__proto__":{"type":"number"}},"required":["id"],"additionalProperties":{"type":"boolean"}}}""",
+        )))
+        assertEquals(emptyList(), tagged.problems("""{"id":"a","__proto__":1,"on":true}"""))
+        assertEquals(listOf("$.__proto__: expected a number", "$.on: expected a boolean"), tagged.problems("""{"id":"a","__proto__":"x","on":1}"""))
+    }
+
+    @Test
+    fun aMalformedContractNeverThrows() {
+        val broken = assertNotNull(PageContract.parse(Json.parseToJsonElement(
+            """{"params":{"type":"object","properties":{"a":{"anyOf":{}},"b":{"enum":"x"},"c":7,"d":{"type":"array","items":[]}},"required":"a"},"result":{"anyOf":[1,{"type":"string"}]}}""",
+        )))
+        assertEquals(emptyList(), broken.problems("""{"a":1,"b":2,"c":3,"d":[4]}"""), "what cannot be read as a check checks nothing")
+        assertEquals(emptyList(), broken.resultProblems("\"ok\""))
+        assertEquals(listOf("$: expected a string"), broken.resultProblems("1"))
     }
 
     @Test
@@ -96,6 +120,7 @@ class PageContractTest {
         assertEquals(emptyList(), newer.problems("""{"at":"2026-01-01"}"""))
         assertFalse(newer.hasResult)
         assertEquals(emptyList(), newer.resultProblems("42"), "no declared result, nothing to check")
-        assertNull(PageContract.parse(Json.parseToJsonElement("""{"result":{}}""")), "not what the build writes")
+        assertNull(PageContract.parse(Json.parseToJsonElement("""{"result":{"type":"string"}}""")), "no params: not what the build writes")
+        assertNull(PageContract.parse(Json.parseToJsonElement("""{"params":[]}""")))
     }
 }

@@ -182,8 +182,8 @@ class HostSnapshotTest {
         val settings = NativeRoute("settings", buildClassSerialDescriptor("Settings"))
         assertFailsWith<IllegalArgumentException> { host(routes = listOf(settings, settings)) }
         assertFailsWith<IllegalArgumentException> { NativeRoute("no spaces", buildClassSerialDescriptor("X")) }
-        val open = NativeRoute("open", buildClassSerialDescriptor("Open") { element("any", buildSerialDescriptor("Any", PolymorphicKind.OPEN)) })
-        assertFailsWith<IllegalArgumentException> { open.schema }
+        // refused where the route is declared, not where a snapshot is first rendered
+        assertFailsWith<IllegalArgumentException> { NativeRoute("open", buildClassSerialDescriptor("Open") { element("any", buildSerialDescriptor("Any", PolymorphicKind.OPEN)) }) }
     }
 
     @Test

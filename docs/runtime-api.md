@@ -113,7 +113,7 @@ function unwrap<T>(value: T): T
 ```ts
 type Node = /* 不透明句柄 */
 function h(type: string | Component, props: Props | null, ...children: Child[]): Node
-type Child = Node | Node[] | null | undefined | false
+type Child = Node | null | undefined | false | Child[]
 type Children = Node | undefined | Children[]    // 组件收到的 props.children
 ```
 
@@ -315,10 +315,11 @@ const [submit, submitting] = action(async () => {
 ```
 
 - `run(...)` 调用时**同步**判断：没有在途的就调 `fn`，`running()` 置 true；有在途的，这次调用直接丢弃，不调 `fn`、不并入在途的那次，返回的 Promise 以 `undefined` 落定。连点两下第二下落空靠的是这个判断，不是按钮的 `enabled`（置灰要等下一次 flush 才到界面）
-- `fn` 落定后复位，正常返回和抛错都一样；`fn` 的返回值是 `run` 的结果，抛出的错误原样交给 `run` 的调用方（同步抛出的也是）。不存 `error` 状态：失败怎么提示由 `fn` 自己定
+- `fn` 落定后复位，正常返回和抛错都一样；`fn` 的返回值是 `run` 的结果，抛出的错误原样交给 `run` 的调用方（同步抛出的也是）。不存 `error` 状态：失败怎么提示由 `fn` 自己定。事件 handler 里通常写 `void submit()`，不接返回的 Promise，所以**失败要在 `fn` 里处理掉**：让它抛出来就是一个没人接的 rejection（E7）
 - 前置校验写在 `fn` 里靠前的位置即可，不通过就 `return`
 - **共用一把锁**：几个操作不该同时进行时（登录页的三种登录方式），`const busy = actionLock()`，各自 `action(fn, { lock: busy })`。其中一个在跑时，另外几个的调用同样被丢弃；`busy.held()` 是「有任何一个在跑」，`running()` 仍只说自己。不给 `lock` 就是一个操作一把锁，互不影响
-- 所属 owner 已 dispose 后落定：不再写 signal，`run` 的 Promise 照常落定
+- 所属 owner 已 dispose 后落定：不再写 signal，`run` 的 Promise 照常落定；dispose 之后再调 `run` 什么都不做，返回 `undefined`。锁按它自己的 owner 算：页面建的锁被某个分支里的 action 持有，分支拆掉后操作落定，`held()` 照常复位
+- `lock` 只收 `actionLock()` 的返回值，别的对象在创建 action 时报错
 - 只能在同步渲染期创建，同 `resource`
 - 不做重试、超时、乐观更新，也不和 `Button` 自动绑定
 

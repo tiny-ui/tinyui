@@ -22,7 +22,13 @@ describe("page declarations", () => {
         rejects(`const kind = "sheet"; export const presentation = kind;`, /string literal/);
         rejects("export const presentation = `sheet`;", /string literal/);
         rejects(`export let presentation = "sheet";`, /must be a const/);
-        rejects(`const presentation = "sheet"; export { presentation };`, /declared where it is exported/);
+        rejects(`const presentation = "sheet"; export { presentation };`, /declared in the page file/);
+        rejects(`export function presentation() { return "sheet"; }`, /declared in the page file/);
+        rejects(`export class presentation {}`, /declared in the page file/);
+        rejects(`export * as presentation from "./kind";`, /declared in the page file/);
+        rejects(`export const { presentation } = options;`, /declared in the page file/);
+        rejects(`export const [first, { kind: presentation = "sheet" }] = options;`, /declared in the page file/);
+        assert.equal(read(`export const { other: renamed } = options; export * from "./more";`).presentation, "screen", "nothing here is named presentation");
         rejects(`export const presentation = "dialog";`, /not one of screen, sheet/);
     });
 

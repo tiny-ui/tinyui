@@ -218,7 +218,8 @@ internal fun TextFieldComponent(scope: NodeScope) {
  * floor whatever the host set, and a row sized from that answer comes out taller than the field in it. For a
  * single-line field the box is one line of text and the padding, a height known here; when that is under M3's floor,
  * the floor is what M3 answered for the box, and the answer is corrected by the difference. A multi-line field grows
- * with its text, so M3's answer is left alone.
+ * with its text and a labelled one is taller by its label; pass `singleLine = false` for those and M3's answer is left
+ * alone.
  */
 @Composable
 internal fun Modifier.fieldMinHeight(style: ResolvedTextFieldStyle, singleLine: Boolean): Modifier {

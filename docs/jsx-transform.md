@@ -66,7 +66,7 @@ h(Text, { text: thunk(() => ("Count: " + count())), color: thunk(() => (theme.pr
 例外：
 
 - children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `Keyed` / `BottomSheet` 的渲染函数）合法，原样传为 `children`
-- `{props.children}`（任意对象上名为 `children` 的属性访问，不含 `props["children"]` 和带运算的写法）合法：组件把自己收到的 children 转交给内置节点（runtime-api.md §3.1）
+- `{props.children}`（一个标识符上名为 `children` 的属性访问；`props["children"]`、`make().children`、`a.b.children` 和带运算的写法都不算）合法：组件把自己收到的 children 转交给内置节点（runtime-api.md §3.1）
 
 ## 4. 元素类型
 

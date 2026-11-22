@@ -1,6 +1,5 @@
 package app.tinyui
 
-import app.tinyui.bundle.PageContract
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -194,6 +193,29 @@ class PageHostTest {
     }
 
     @Test
+    fun closingAPageWithEntriesStillQueuedIsNotAFailure() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        // the host answers a call and closes the page in the same breath (a page that popped itself)
+        withContext(Dispatchers.Default) { repeat(200) { host.dispatch(2, "onSeq", """{"i":$it}""") } }
+        host.close()
+        withContext(Dispatchers.Default) { delay(300) }
+        assertEquals(emptyList(), errors.map { it.kind })
+        assertNull(host.failure)
+    }
+
+    @Test
+    fun closingAPageThatIsStillLoadingIsNotAFailure() = runTest {
+        val host = host()
+        host.start()
+        host.close()
+        withContext(Dispatchers.Default) { delay(300) }
+        assertEquals(emptyList(), errors.map { it.kind })
+        assertNull(host.failure)
+    }
+
+    @Test
     fun aResultEmittedBeforeTheMountArrivesAfterIt() = runTest {
         val host = host()
         // a page remounted from its props gets navigation.result while it is still loading
@@ -233,6 +255,44 @@ class PageHostTest {
         assertEquals("E6", host.failure!!.kind)
         assertEquals(emptyList(), navigated)
         host.close()
+    }
+
+    @Test
+    fun aHostThatListsItsLanguagesIsOnlyAskedForThose() = runTest {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        val asked = mutableListOf<String>()
+        val flow = MutableStateFlow("en")
+        val listing = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, locale = LocaleSource(flow, available = listOf("en", "zh")) { asked += it; flow.value = it })
+        val host = host(app = listing)
+        try {
+            host.start()
+            host.await { host.tree.root.children.isNotEmpty() }
+            host.dispatch(2, "onSetLocale", "{}") // zh, then fr, then none
+            host.await { (host.tree.node(1)!!.props["text"] as String).count { it == ';' } == 2 }
+        } finally {
+            Dispatchers.resetMain()
+        }
+        val text = host.tree.node(1)!!.props["text"] as String
+        assertTrue(text.contains("ok 31"), text)
+        assertTrue(text.contains("rejected 32") && text.contains("does not offer fr"), text)
+        assertEquals(listOf("zh"), asked, "fr never reached the host's setter")
+        host.close()
+
+        // a list that is given and empty offers nothing; no list at all leaves it to the setter (the test above)
+        asked.clear()
+        val none = host(app = TinyUIHost(ComponentRegistry().registerBuiltins(), sink, locale = LocaleSource(flow, available = emptyList()) { asked += it }))
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        try {
+            none.start()
+            none.await { none.tree.root.children.isNotEmpty() }
+            none.dispatch(2, "onSetLocale", "{}")
+            none.await { (none.tree.node(1)!!.props["text"] as String).count { it == ';' } == 2 }
+        } finally {
+            Dispatchers.resetMain()
+        }
+        assertTrue((none.tree.node(1)!!.props["text"] as String).contains("rejected 31"))
+        assertEquals(emptyList(), asked)
+        none.close()
     }
 
     @Test
