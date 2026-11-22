@@ -164,7 +164,10 @@ abstract class GenerateTinyUIBuild : DefaultTask() {
             |    /** What this host promises its pages; `Updates(hostVersion = …)` and the host snapshot read it. */
             |    const val HOST_VERSION: String = "$host"
             |
-            |    /** The channel this build's packages were embedded from, and the one the App is to check at run time. */
+            |    /**
+            |     * The channel the App is to check at run time. A package the build resolved from a channel was resolved
+            |     * from this one; a package built from page sources (`tinyui.<name>.dir`) came from no channel.
+            |     */
             |    const val CHANNEL: String = "$channelName"
             |
             |    /** The packages this build embeds, each under Compose resources `files/tinyui/<name>/`. */
