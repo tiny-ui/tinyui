@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-11-22 改 §1.4：内置包由宿主构建时解析、不入库，`tinyui pull` 待两个宿主迁完后删；2026-11-18 加 §8 包下线；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
+- 状态：已定（2026-09-18；2026-11-22 发布目标 `app` / `hostVersion` / `updatesUrl` 可写进 `tinyui.config.json`，见 build-chain.md §2.1；2026-11-22 改 §1.4：内置包由宿主构建时解析、不入库，`tinyui pull` 待两个宿主迁完后删；2026-11-18 加 §8 包下线；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -47,10 +47,10 @@ pages/**/*.jsb
 ### 1.2 `tinyui bundle`
 
 ```
-tinyui bundle --host-version <hostVersion> --signing-key <私钥 PEM> [--rollout <p>] [--out dist/ota]
+tinyui bundle --signing-key <私钥 PEM> [--host-version <hostVersion>] [--rollout <p>] [--out dist/ota]
 ```
 
-读 `tinyui build` 的输出目录，写：
+读 `tinyui build` 的输出目录，写（`hostVersion` 取 `tinyui.config.json` 的同名字段，`--host-version` 可覆盖，build-chain.md §2.1）：
 
 ```
 dist/ota/<pkg>/<hostVersion>/current.json             指针：{ "version", "rollout", "signature" }
@@ -65,7 +65,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n �
 
 ### 1.3 发布前核对目标宿主版本
 
-`--host-version` 是发布方手填的。填成一个仍有设备在用的旧值（例：main 已为宿主版本 3 用上新能力 `coupon.apply`，却以 `--host-version 2` 发出一个修文案的包），旧宿主会照常装上，页面调用它没有的能力只得到 `E_UNSUPPORTED`、用到它没有的组件只渲染占位——都不崩溃，§4.5 的回退接不住。宿主侧的构建检查（§4.1）只管宿主漏 bump，管不到发布方填错。
+目标宿主版本是发布方手填的（`tinyui.config.json` 的 `hostVersion`，或 `--host-version`）。填成一个仍有设备在用的旧值（例：main 已为宿主版本 3 用上新能力 `coupon.apply`，却以 `--host-version 2` 发出一个修文案的包），旧宿主会照常装上，页面调用它没有的能力只得到 `E_UNSUPPORTED`、用到它没有的组件只渲染占位——都不崩溃，§4.5 的回退接不住。宿主侧的构建检查（§4.1）只管宿主漏 bump，管不到发布方填错。
 
 所以 `tinyui publish` 在上传前核对：**这个包用到的宿主东西，目标宿主版本都提供**。放在 `publish` 而不是 `bundle`：`bundle` 是纯离线命令（签名、写目录，静态托管就用它的产物），`publish` 本来就带着 app、实例地址与 token 在和服务端说话，快照也在服务端上；静态托管没有快照，也就没有这层核对。
 
@@ -214,7 +214,7 @@ class Updates(
 
 **`fetch` 的现成实现**：宿主用 ktor 时写 `fetch = ktorFetch(client) { "$base/$channel" }`（`tinyui-updates` 自带；ktor-client-core 本就在 core 库的依赖面上，不新增依赖）。客户端仍是宿主的，超时、代理、引擎、`expectSuccess` 都由宿主定。**`fetch` 必须有超时**：`check()` 下载期间持有包锁，一个永不返回的 `fetch` 会让此后的检查和 §4.5 回退的落盘一直等下去（页面不受影响，已切到 embedded）；base 每次调用时读，切通道不用重建 `Updates`。它只接管失败文案，因为 `Failed.message` 是传输层唯一能带出来的东西，而宿主上报时还要截到很短：非 2xx 记 `HTTP <状态码> cf-ray=<值或 -> server=<值或 -> body=<前 60 字符>`——Cloudflare 的每个响应都带 `cf-ray`，没有它的 5xx 是设备与服务端之间的代理伪造的，不是源站问题；超时去掉 ktor 附带的 `[url=…]`；DNS / 连接 / TLS 失败保留引擎原话。用别的 HTTP 栈的宿主自己实现 `fetch` 时照这个口径拼文案，各宿主的看板规则才能共用。
 
-**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；原生路由增删，或改已有路由的参数（native-api.md §3）；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 上游 commit 变化，build-chain.md §5；上游 commit 不变的 quickjs-kmp 升级不算）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程发布时由 `tinyui bundle --host-version` 取这个值，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
+**`hostVersion` 的口径**（作用同 Expo 的 `runtimeVersion`，但只取正整数、数的是宿主的变化；不沿用那个名字，是因为 tinyui 里 runtime 已指运行时模块与引擎）：宿主仓持有的递增正整数字符串（`"1"`、`"2"`……；`1.2.0` 这类 App 版本号在 CLI、`Updates`、服务端三处都被拒），语义是"这个值下发布的任何包都能在本宿主上跑"；一个宿主一个值，挂在它上面的所有包共用。**它是宿主对页面承诺的版本，不是 tinyui 版本**（ADR-006 §2.11）。宿主给页面的承诺变了就加 1：宿主组件增删或改 schema；宿主能力增删，或改已有能力的参数与行为；网络通道增删，或改已有通道带的身份；原生路由增删，或改已有路由的参数（native-api.md §3）；提供或撤掉会话（快照里记作能力 `session.signIn`）。语言、埋点出口、链接打开器等框架标准接口缺省时有可用的默认行为，形状随 tinyui 走，宿主接没接、怎么实现都不加（ADR-007 §3.9）；抬高 tinyui 下限（页面要用新版运行时的东西，或升到新 major）；换引擎（含随 tinyui 升级带来的 quickjs-kmp 上游 commit 变化，build-chain.md §5；上游 commit 不变的 quickjs-kmp 升级不算）。单纯升级 tinyui、只改宿主内部实现、其他原生页面、修崩溃，不加。包的 JS 工程把这个值写在 `tinyui.config.json` 的 `hostVersion`（build-chain.md §2.1），`tinyui bundle` 等命令读它，不自行推导。JS 侧取错分两个方向：取成不存在或更新的值，包只是送不到（`releases list` 与客户端事件可见）；取成一个仍有设备在用的旧值，旧宿主会照常装上，而页面可能用到它没有的东西——宿主构建的检查拦不住这个方向，由 `publish` 发布前核对（§1.3）。
 
 漏加的后果是旧宿主收到跑不了的页面（不崩溃的错误不会触发 §4.5 回退），多加的后果是更早的宿主从此收不到更新。漏加只可能发生在宿主仓，由宿主构建拦：宿主快照 `tinyui-host/<hostVersion>.txt`（宿主组件 schema、能力名、通道名、tinyui 下限）每个版本一份入库，当前宿主与当前版本的快照不符即构建失败；已合入 main 的版本，其快照冻结不可改。快照覆盖不到已有能力的参数与行为变化，这部分按上面的规则由人判断。为什么是精确匹配而不是 `>=` 范围，见 ADR-006 §2.2。
 

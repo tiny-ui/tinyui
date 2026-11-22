@@ -18,6 +18,23 @@ export interface TinyUIConfig {
     defaultLocale?: string;
     /** The file `tinyui routes --schema` writes, relative to the root; `tinyui build` puts it into the manifest (docs/build-chain.md §10). Unset, the package has no contracts. */
     contracts?: string;
+    /** The host App this package is published to, as the updates instance knows it; the default for `--app` (docs/updates.md §6). */
+    app?: string;
+    /**
+     * The host version this package is written for (docs/updates.md §4.1): what `bundle` publishes to, what `releases` look at,
+     * and which host snapshot, [HOST_SNAPSHOTS]`/<hostVersion>.txt`, `routes` types native routes from. Following the host is this one number.
+     */
+    hostVersion?: string;
+    /** The updates instance this package is published to; the default for `--url` when `$TINYUI_UPDATES_URL` is unset. */
+    updatesUrl?: string;
+}
+
+/** Where a page project keeps the snapshots of the host it is written for, one `<hostVersion>.txt` each (`tinyui hosts download`). */
+export const HOST_SNAPSHOTS = "tinyui-host";
+
+/** A positive integer, so an App version such as `1.2.0` cannot be mistaken for a host version. */
+export function isHostVersion(value: string): boolean {
+    return /^[1-9][0-9]*$/.test(value);
 }
 
 /** Package name: module name prefix and a path segment on the server and on disk (docs/updates.md §0). */
@@ -52,7 +69,7 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
         throw new Error(`${file}: ${(e as Error).message}`);
     }
     if (typeof raw !== "object" || raw === null) throw new Error(`${file}: expected an object`);
-    const { name, publicKey, pages, i18n, defaultLocale, contracts } = raw as Record<string, unknown>;
+    const { name, publicKey, pages, i18n, defaultLocale, contracts, app, hostVersion, updatesUrl } = raw as Record<string, unknown>;
     if (typeof name !== "string" || !isPackageName(name)) throw new Error(`${file}: "name" must match [a-z0-9-]+`);
     if (typeof publicKey !== "string" || !isPublicKey(publicKey)) {
         throw new Error(`${file}: "publicKey" must be a P-256 uncompressed point in base64 (65 bytes, 04-prefixed); tinyui keys generate prints one`);
@@ -69,5 +86,14 @@ export async function loadConfig(root: string): Promise<TinyUIConfig> {
     if (contracts !== undefined && (typeof contracts !== "string" || !insideRoot(root, contracts))) {
         throw new Error(`${file}: "contracts" must be a file inside the project root`);
     }
-    return { name, publicKey, pages: pages ?? "src/pages", i18n: i18n ?? "i18n", ...(defaultLocale !== undefined && { defaultLocale }), ...(contracts !== undefined && { contracts }) };
+    if (app !== undefined && (typeof app !== "string" || !isPackageName(app))) throw new Error(`${file}: "app" must match [a-z0-9-]+`);
+    if (hostVersion !== undefined && (typeof hostVersion !== "string" || !isHostVersion(hostVersion))) {
+        throw new Error(`${file}: "hostVersion" must be a positive integer in a string such as "3"; it counts what the host provides to pages, it is not the App version`);
+    }
+    if (updatesUrl !== undefined && typeof updatesUrl !== "string") throw new Error(`${file}: "updatesUrl" must be a string`);
+    return {
+        name, publicKey, pages: pages ?? "src/pages", i18n: i18n ?? "i18n",
+        ...(defaultLocale !== undefined && { defaultLocale }), ...(contracts !== undefined && { contracts }),
+        ...(app !== undefined && { app }), ...(hostVersion !== undefined && { hostVersion }), ...(updatesUrl !== undefined && { updatesUrl }),
+    };
 }

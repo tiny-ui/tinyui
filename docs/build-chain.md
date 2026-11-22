@@ -1,6 +1,6 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-11-22 `tinyui.config.json` 加 `app` / `hostVersion` / `updatesUrl`（§2.1），`routes --host` 去掉、改读 `tinyui-host/<hostVersion>.txt`（§10）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk 已随 M1 做进 CLI（[jsx-transform.md](./jsx-transform.md)），`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完（§5）；字节码行号回映射见 §7
 
@@ -28,6 +28,18 @@ tinyui-native 同上（对它而言 tinyui-core 是 external）
 业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "tinyui-core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "tinyui-core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module 'tinyui-core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
 
 `inject` 的 import 不能只写 `external` 配置项：esbuild 对 `external` 列表里的模块一律保留 import（当作有副作用），无 JSX 的页面也会 `import { h } from "tinyui-core"`，引擎链接模块时因 core 没有该导出而报 `SyntaxError`（2026-09-16 Android 模拟器实测）。走插件 `onResolve` 返回 `sideEffects: false` 才会被摇掉。
+
+### 2.1 包发布到哪：`app`、`hostVersion`、`updatesUrl`
+
+定于 2026-11-22。`tinyui.config.json` 另有三个可选字段，说的是这个包发布到哪里，联网与发布命令从它取默认值：
+
+| 字段 | 内容 | 谁读 |
+|---|---|---|
+| `app` | 宿主 App 在热下发服务上的 id | `--app` 的默认值，排在 `$TINYUI_APP` 之后 |
+| `hostVersion` | 这个包是按哪个宿主版本写的（[updates.md](./updates.md) §4.1），正整数的字符串如 `"3"` | `bundle`、`releases`、`hosts download` 的 `--host-version` 的默认值；`routes` 据此读 `tinyui-host/<hostVersion>.txt`（§10） |
+| `updatesUrl` | 热下发服务的地址，私有化部署时写 | `--url` 的默认值，排在 `$TINYUI_UPDATES_URL` 之后 |
+
+**宿主的 `hostVersion` 加 1 之后，页面工程跟进只改 `hostVersion` 这一个数**，再 `tinyui hosts download` 取来新快照、重新 `tinyui routes`。此前它散在 CI 变量、脚本里的快照路径与手工拷贝的快照文件几处，改漏一处要到发布被拒（或类型对不上）才发现。命令行参数仍在，用于偶尔要对别的宿主版本操作的时候（给旧宿主版本晋级、查它的 release）。
 
 ## 3. 页面即构建单元
 
@@ -157,7 +169,7 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
     - JSON 带不过去、或宿主没法校验的类型直接报错，指出页面和字段：函数、`unknown` / `any`、元组、`bigint`、引用自己的递归类型。props 里有这些的页面先把类型收紧
     - 读类型要类型检查器，用的是**页面工程自己装的 TypeScript**（7 及以上，它的 `typescript/unstable/sync`）和工程自己的 `tsconfig.json`，所以一个类型在这里的含义和 `tsc` 看到的一致。`typescript` 是 `tinyui-cli` 的可选 peer 依赖，只有 `--schema` 用到；`tinyui build` 仍然只用 esbuild，不碰类型，它只核对这份文件说的是不是当前这些页面，props 改了没重新生成由 `routes --check` 拦。这个 API 上游标的是 unstable：升 TypeScript 后 `--schema` 报错，先看这里
     - 联合类型的成员按文本排序后写出，检查器给的顺序不稳定，否则 `--check` 会无故失败
-- `--host <快照文件>`（2026-11-21 加）把目标宿主的原生路由生成进 `HostRoutes`（名字 → 参数类型，由快照 `routes` 段里的形状转成 TS 类型），去原生页的 `push` / `replace` 也有编译期检查（native-api.md §3）。快照变了生成物就变，`--check` 要带同样的 `--host`
+- 宿主的原生路由（2026-11-21 加，2026-11-22 改为从配置定位快照，原 `--host <快照文件>` 去掉）：`tinyui.config.json` 写了 `hostVersion` 时，`routes` 读工程里的 `tinyui-host/<hostVersion>.txt`，把目标宿主的原生路由生成进 `HostRoutes`（名字 → 参数类型，由快照 `routes` 段里的形状转成 TS 类型），去原生页的 `push` / `replace` 也有编译期检查（native-api.md §3）。快照文件入库：类型从它生成，`--check` 才是确定的；它由 `tinyui hosts download` 取来（默认就写到这个位置），或从宿主仓拷。写了 `hostVersion` 而文件不存在、或文件首行不是这个版本，`routes` 报错：悄悄不生成的话，去原生页的调用会被当成去别的包的页面而放行。旧写法 `tinyui routes … --host tinyui-host/3.txt` 改为配置里写 `"hostVersion": "3"`，命令去掉 `--host`
 - 生成之后 `navigation.push` / `replace` 在编译期检查：本包的页面名必须在表里（拼错即报，编辑器有补全），参数必须是那一页的 props，页面不收 props 时可省略；`since` 只收本包的页面名。没生成这张表时不检查，与 `i18n.t` 没生成 key 类型时一样
 - 既不是本包页面、也不在 `HostRoutes` 里的名字（别的包的页面）照原样放行，参数是任意 JSON 对象 `Params`。跨包的参数是两个团队之间的接口（[app-model.md](./app-model.md) §7），它的类型怎么交付等第二个真实的跨包跳转出现再定
 - `--check` 在生成物与页面目录对不上时失败（增删、改名了页面却没重新生成；带 `--schema` 时还包括任何一页的 props 或 `Result` 变了），放进页面工程的 CI，用法同 `tinyui i18n --check`
