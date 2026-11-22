@@ -2,10 +2,23 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { BottomSheet, Button, Column, For, h, Keyed, onCleanup, Show, signal, Text, thunk } from "../src/index.ts";
+import { BottomSheet, Button, Column, For, h, Keyed, onCleanup, Show, signal, Text, thunk, type Children } from "../src/index.ts";
 
 const g = globalThis as Record<string, unknown>;
 afterEach(() => unmount());
+
+describe("forwarded children", () => {
+    it("a component hands its children on to a built-in, slots included", () => {
+        const Card = (p: { children: Children }) => h(Column, null, h(Text, { text: "title" }), p.children);
+        mount(() => h(Card, null,
+            h(Text, { text: "a" }),
+            h(Show, { when: true }, () => h(Text, { text: "b" })),
+        ));
+        // a (1), b (2) are built before Card runs; title (3) goes first inside the Column (4)
+        assert.deepEqual(bridge.ops().filter((o) => o[0] === "i"), [["i", 4, 3, 0], ["i", 4, 1, 1], ["i", 4, 2, 2], ["i", 0, 4, 0]]);
+        unmount();
+    });
+});
 
 describe("Show", () => {
     it("is a slot between siblings: switching keeps sibling indices right", () => {

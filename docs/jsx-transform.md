@@ -63,7 +63,10 @@ h(Text, { text: thunk(() => ("Count: " + count())), color: thunk(() => (theme.pr
 
 `async` 组件不在编译期拦：运行时在组件返回 Promise 时抛错（runtime-api.md §3.1），改用 `resource`。
 
-例外：children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `Keyed` / `BottomSheet` 的渲染函数）合法，原样传为 `children`。
+例外：
+
+- children 里恰好一个箭头 / 函数表达式（`For` / `Show` / `Keyed` / `BottomSheet` 的渲染函数）合法，原样传为 `children`
+- `{props.children}`（任意对象上名为 `children` 的属性访问，不含 `props["children"]` 和带运算的写法）合法：组件把自己收到的 children 转交给内置节点（runtime-api.md §3.1）
 
 ## 4. 元素类型
 
