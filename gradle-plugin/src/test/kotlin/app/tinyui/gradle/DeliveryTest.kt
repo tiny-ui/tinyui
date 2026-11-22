@@ -98,6 +98,25 @@ class DeliveryTest {
     }
 
     @Test
+    fun aReplacementThatCannotBeWrittenLeavesThePreviousPackage() {
+        publish("3", "v1")
+        resolve()
+        // a file where a directory has to go: assembling the new package fails before anything is swapped
+        assertFailsWith<Exception> { Delivery.replaceDir(out, mapOf("pages" to byteArrayOf(1), "pages/home.jsb" to byteArrayOf(2))) }
+        assertNotNull(Delivery.published(out, "login", publicKey))
+        assertEquals(listOf(out.name), out.parentFile.list()!!.toList())
+    }
+
+    @Test
+    fun replacingLeavesNothingBesideThePackage() {
+        publish("3", "v1")
+        resolve()
+        publish("3", "v2")
+        resolve()
+        assertEquals(listOf(out.name), out.parentFile.list()!!.toList())
+    }
+
+    @Test
     fun aTamperedDirectoryIsDownloadedAgain() {
         publish("3", "v1")
         resolve()

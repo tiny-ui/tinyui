@@ -3,6 +3,7 @@ package app.tinyui.gradle
 import groovy.json.JsonSlurper
 import java.io.File
 import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.KeyFactory
@@ -174,18 +175,39 @@ class Delivery(private val fetch: Fetch) {
             }
         }
 
-        /** Makes [out] hold exactly [files]. Assembled beside it and swapped in, so [out] never holds half a package. */
+        /**
+         * Makes [out] hold exactly [files]. Assembled beside it and swapped in: [out] never holds half a package, and a
+         * failure at any step leaves the previous one, which a build without network falls back on.
+         */
         fun replaceDir(out: File, files: Map<String, ByteArray>) {
             out.parentFile.mkdirs()
             val incoming = Files.createTempDirectory(out.parentFile.toPath(), "${out.name}.incoming-").toFile()
+            val backup = File(out.parentFile, "${incoming.name}.previous")
+            var moved = false
             try {
                 for ((path, bytes) in files) {
                     File(incoming, path).apply { parentFile.mkdirs() }.writeBytes(bytes)
                 }
-                out.deleteRecursively()
-                Files.move(incoming.toPath(), out.toPath(), StandardCopyOption.ATOMIC_MOVE)
-            } finally {
+                if (out.exists()) {
+                    move(out, backup)
+                    moved = true
+                }
+                move(incoming, out)
+            } catch (e: Exception) {
+                if (moved && !out.exists()) runCatching { move(backup, out) }
                 incoming.deleteRecursively()
+                throw e
+            }
+            // the new package is in place; a backup that will not go away is litter, not a failure
+            backup.deleteRecursively()
+        }
+
+        /** Atomic where the file system can; a plain move elsewhere (some network and virtual file systems). */
+        private fun move(from: File, to: File) {
+            try {
+                Files.move(from.toPath(), to.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            } catch (e: AtomicMoveNotSupportedException) {
+                Files.move(from.toPath(), to.toPath())
             }
         }
     }
