@@ -59,7 +59,7 @@ embed      build, then make <out> hold the package as a host embeds it: manifest
   --qjsc     as for build
 
 bundle     turn a build into the signed upload directory <out>/<pkg>/<hostVersion>/ (docs/updates.md)
-  --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1)
+  --host-version     the positive integer the host declares for what it provides to pages (docs/updates.md §4.1); default: "hostVersion" in tinyui.config.json
   --signing-key      PKCS#8 PEM whose public key is the one in tinyui.config.json
   --dist             tinyui build output (default: ./dist)
   --rollout          percentage written to current.json (default: 100)
@@ -70,8 +70,8 @@ routes     type navigation.push / replace from the package's pages (docs/build-c
   --root     project root (default: cwd)
   --ts       write the tinyui-native type augmentation here (I18nKeys for i18n, Routes for routes)
   --schema   routes only: also write what each page takes and hands back, as JSON (set "contracts" in tinyui.config.json to it and the build puts it into the manifest); reads types with the project's typescript
-  --host     routes only: the snapshot of the host the package is written for (tinyui hosts download, or the file in
-             the host's repository); navigation to its native routes is then typed by name and params
+             routes only: with "hostVersion" in tinyui.config.json, navigation to the host's native routes is typed by
+             name and params from tinyui-host/<hostVersion>.txt (tinyui hosts download, or the file in the host's repository)
   --check    exit 1 if --ts (and --schema) is not already up to date, write nothing
 
 keys generate
