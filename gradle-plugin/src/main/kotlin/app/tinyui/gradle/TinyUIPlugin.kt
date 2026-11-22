@@ -113,9 +113,10 @@ class TinyUIPlugin : Plugin<Project> {
 
         val generate = tasks.register("generateTinyUIBuild", GenerateTinyUIBuild::class.java) {
             group = "tinyui"
-            description = "Generates TinyUIBuild (host version, package names)"
+            description = "Generates TinyUIBuild (host version, channel, package names)"
             generatedPackage.set(tinyui.generatedPackage)
             hostVersion.set(tinyui.hostVersion)
+            channel.set(tinyui.channel.orElse(""))
             packageNames.set(provider { tinyui.packages.names.toList() })
             outputDir.set(layout.buildDirectory.dir("generated/tinyui/commonMain/kotlin"))
         }

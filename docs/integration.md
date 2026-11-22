@@ -77,8 +77,8 @@ tinyui {
 ```
 
 - 内置包不入库。插件在构建时把每个包解析进 build 目录，接进 Compose 资源 `files/tinyui/<包名>/`
-- `channel` 要与这次构建的 App **运行时检查的通道一致**：测试包取 `staging`，正式包取 `production`。上面的写法是「传了 `-PappChannel` 即正式包」，换成你自己区分构建的方式
-- 插件生成 `TinyUIBuild.HOST_VERSION` 与 `TinyUIBuild.PACKAGES`，Kotlin 代码读它们，不另写常量
+- `channel` 是这次构建的通道：测试包取 `staging`，正式包取 `production`。上面的写法是「传了 `-PappChannel` 即正式包」，换成你自己区分构建的方式
+- 插件生成 `TinyUIBuild.HOST_VERSION`、`TinyUIBuild.CHANNEL` 与 `TinyUIBuild.PACKAGES`，Kotlin 代码读它们，不另写常量。内置包取自哪个通道、App 运行时就查哪个通道，由同一个值保证
 
 规则（回落、灰度、离线各是什么行为）见 [updates.md](./updates.md) §1.4。
 
@@ -97,16 +97,12 @@ suspend fun embedded(pkg: String): Bundle = Bundle.load { path ->
     try { Res.readBytes("files/tinyui/$pkg/$path") } catch (e: MissingResourceException) { null }
 }
 
-// 这次构建的 App 检查哪个通道。插件不生成它：由你区分测试包与正式包的方式决定，
-// 且必须与 §2.2 的 `tinyui { channel = … }` 得出同一个值，否则内置的是一个通道的版本、运行时查的是另一个
-val channel = if (isInternalBuild) "staging" else "production"
-
 val updates = Updates(
     packages = TinyUIBuild.PACKAGES.map { embedded(it) },
     hostVersion = TinyUIBuild.HOST_VERSION,
     dir = /* Android filesDir/tinyui，iOS Application Support/tinyui */,
     installId = /* 稳定的安装标识，灰度掷骰用 */,
-    fetch = ktorFetch(httpClient) { "https://updates.example.com/shop/$channel" },
+    fetch = ktorFetch(httpClient) { "https://updates.example.com/shop/${TinyUIBuild.CHANNEL}" },   // 与内置包同一个通道
 )
 UpdatesScheduler(updates, processScope).start()   // App 启动即调，先于任何 TinyUI 页面
 

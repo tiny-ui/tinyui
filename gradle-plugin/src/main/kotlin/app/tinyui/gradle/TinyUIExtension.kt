@@ -37,7 +37,10 @@ abstract class TinyUIExtension {
     /** What the host promises its pages (docs/updates.md §4.1). The only place a host writes it: Kotlin reads the generated `TinyUIBuild.HOST_VERSION`. */
     abstract val hostVersion: Property<String>
 
-    /** The channel the App built here checks at run time; `production` is strict (docs/updates.md §1.4). Only read for packages resolved from a channel. */
+    /**
+     * The channel the App built here checks at run time, and so the one its packages are embedded from; `production` is
+     * strict (docs/updates.md §1.4). Kotlin reads the generated `TinyUIBuild.CHANNEL`, so the two are one value.
+     */
     abstract val channel: Property<String>
 
     /** The Kotlin package of the generated `TinyUIBuild`. */

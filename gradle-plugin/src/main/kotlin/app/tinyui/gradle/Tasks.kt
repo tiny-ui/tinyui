@@ -133,10 +133,13 @@ abstract class EmbedTinyUIPackage : DefaultTask() {
     }
 }
 
-/** `TinyUIBuild`: the host version and package names the build declared, for the host's Kotlin code. */
+/** `TinyUIBuild`: the host version, channel and package names the build declared, for the host's Kotlin code. */
 abstract class GenerateTinyUIBuild : DefaultTask() {
     @get:Input abstract val generatedPackage: Property<String>
     @get:Input abstract val hostVersion: Property<String>
+
+    /** Empty when the build declares none. */
+    @get:Input abstract val channel: Property<String>
     @get:Input abstract val packageNames: ListProperty<String>
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
@@ -144,6 +147,11 @@ abstract class GenerateTinyUIBuild : DefaultTask() {
     fun generate() {
         val host = hostVersion.get()
         if (!Regex("^[1-9][0-9]*$").matches(host)) throw GradleException("tinyui.hostVersion must be a positive integer, got \"$host\"")
+        // the App checks the channel its packages were embedded from: one value, declared once, so the two cannot drift apart
+        val channelName = channel.get()
+        if (!Regex("^[a-z0-9-]+$").matches(channelName)) {
+            throw GradleException("tinyui.channel must be set to the channel the App built here checks (staging, production, …), got \"$channelName\"")
+        }
         val pkg = generatedPackage.get()
         val dir = outputDir.get().asFile
         dir.deleteRecursively()
@@ -155,6 +163,9 @@ abstract class GenerateTinyUIBuild : DefaultTask() {
             |internal object TinyUIBuild {
             |    /** What this host promises its pages; `Updates(hostVersion = …)` and the host snapshot read it. */
             |    const val HOST_VERSION: String = "$host"
+            |
+            |    /** The channel this build's packages were embedded from, and the one the App is to check at run time. */
+            |    const val CHANNEL: String = "$channelName"
             |
             |    /** The packages this build embeds, each under Compose resources `files/tinyui/<name>/`. */
             |    val PACKAGES: List<String> = listOf(${packageNames.get().joinToString { "\"$it\"" }})
