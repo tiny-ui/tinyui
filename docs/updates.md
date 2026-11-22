@@ -1,6 +1,6 @@
 # 热下发：包、投递协议、发布协议与客户端
 
-- 状态：已定（2026-09-18；2026-11-22 改 §1.4：内置包由宿主构建时解析、不入库，`tinyui pull` 待删（插件未实现，实现前旧做法仍可用）；2026-11-18 加 §8 包下线；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
+- 状态：已定（2026-09-18；2026-11-22 改 §1.4：内置包由宿主构建时解析、不入库，`tinyui pull` 待两个宿主迁完后删；2026-11-18 加 §8 包下线；2026-11-13 加 `tinyui embed`（§1.4）；2026-09-19 加发布协议、签名、服务端形态；2026-09-19 改为多包模型——App 由 N≥1 个包组成，包名进模块名与 URL，公钥进 manifest，`Updates` 以一组包为单位；2026-09-22 修订：签名覆盖不可变 `manifest.json` 的原始字节，指针文件 `current.json` 只含 `version` / `rollout` / `signature`，启动时重算 installed 包的 sha256；2026-09-23 兼容键 `runtimeVersion` 改名 `hostVersion` 并限定为正整数；同日加 §1.3 发布前核对目标宿主版本、§6 的 app token 与宿主快照端点；2026-09-24 按 ADR-006 §2.11 修订：运行时随宿主、包只含页面，manifest 去 `runtime`，`tinyui` 从"等于宿主"改为"与宿主兼容"（同 major 且不高于宿主），宿主快照的 `tinyui` 行改为下限，单纯升 tinyui 不加 `hostVersion`；2026-09-25 按 ADR-007：manifest 加 `i18n`、`requires` 与宿主快照加网络通道、`hostVersion` 口径随宿主契约收窄；2026-10-27 §4.4：`Running` 在选定之后、重算 sha256 之前发出，损坏时再发一次；同日 §4.5：回退先重挂页面、再等包锁落盘，不可取消，落盘失败不抛；同日加 §4.6：可选的 `UpdatesScheduler` 统一检查时机，检查结果事件带 `trigger`）；已实现，进度见 [updates-plan.md](./updates-plan.md)
 - 来源：[ADR-006](./adr-006-hot-updates.md)；[build-chain.md](./build-chain.md) §2（manifest、模块名、`tinyui.config.json`）、§7（buildId 与 source map）
 - 四侧：CLI 产出与发布包（`tinyui build` / `bundle` / `publish`）；服务端实现投递与发布两组端点（参考实现 `tinyui-updates-server`，托管实例 `updates.tinyui.app`）；Kotlin 的 `Bundle`（core 库）与 `Updates`（`app.tinyui:tinyui-updates`）
 - 协议规范只在本文一处；服务端仓的一致性测试以本文为准，不复制。**发布后字段与端点只增不改，未知字段透传**——这是两个仓能各自演进的前提
@@ -84,7 +84,7 @@ dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n �
 
 内置包是 App 的地板，只要求**兼容**：引擎与宿主一致、tinyui 与宿主兼容（§1.1），用到的宿主东西宿主都有（宿主测试用 `PackageCheck` 核对，§4.1）。新旧尽力而为：旧一点，新装用户首启后 `check()` 会补上。
 
-插件 `app.tinyui`（`app.tinyui:tinyui-gradle-plugin`，与库同版本号同 tag 发布），用在读内置包的那个模块上：
+插件 `app.tinyui`（`app.tinyui:tinyui-gradle-plugin`，与库同版本号同 tag 发布；源码在 `gradle-plugin/`，是独立的 Gradle 构建，宿主本地联调框架时在 settings 的 `pluginManagement` 里 `includeBuild("<tinyui>/gradle-plugin")`），用在读内置包的那个模块上：
 
 ```kotlin
 plugins { id("app.tinyui") }
@@ -93,6 +93,7 @@ tinyui {
     app = "shop"                      // 热下发服务上的 app；updatesUrl 缺省为托管实例
     hostVersion = "3"                 // 宿主里唯一写它的地方，Kotlin 侧读插件生成的常量（见下）
     channel = providers.gradleProperty("…")   // 这次构建的 App 运行时检查哪个通道，内置包就取哪个通道
+    generatedPackage = "com.example.shop.tinyui"   // 生成的 TinyUIBuild 放在哪个 Kotlin 包
     packages {
         register("login") { publicKey = "BN5p…" }   // 该包 tinyui.config.json 的 publicKey，客户端与构建共同的信任锚
     }
@@ -103,7 +104,7 @@ tinyui {
 
 | 来源 | 条件 | 做什么 | 要 Node |
 |---|---|---|---|
-| 页面源码 | `local.properties` 或 Gradle 属性有 `tinyui.<pkg>.dir=<JS 工程>` | 在该工程里跑它自己装的 `tinyui embed`（带 source map），页面源码变了才重跑 | 是 |
+| 页面源码 | Gradle 属性或根工程 `local.properties` 有 `tinyui.<pkg>.dir=<JS 工程>` | 在该工程里跑它自己装的 `tinyui embed`（`node_modules/.bin/tinyui`，带 source map），页面源码变了才重跑。`local.properties` 里的这一行遇上 `production` 通道即构建失败：留在开发机上的配置不能把本地构建带进正式包，确要如此用 `-Ptinyui.<pkg>.dir` 明说 | 是 |
 | 通道 | 其余情况 | 从投递端点（§2）取 `channel` 当前指向的版本，像设备一样验签、核对 name / version / hostVersion、逐文件核对 sha256 | 否，插件用 JVM 实现 |
 
 从通道取的规则：
@@ -117,9 +118,10 @@ tinyui {
 产物与接线：
 
 - 每个包写成 `tinyui embed` 的布局（`manifest.json`、`pages/`、`i18n/`），接进该模块的 Compose 资源 `files/tinyui/<pkg>/`，宿主读内置包的代码不变（§3）
-- 生成常量（`hostVersion`、包名列表），`Updates(hostVersion = …)` 与宿主快照测试都读它
-- 测试任务依赖解析任务，内置包目录经系统属性 / 环境变量给到 `PackageCheck` 的宿主测试
-- 构建日志与 `build/tinyui/embedded.json` 记下每个包解析到的版本、来源与通道：一个安装包内置了哪版页面以这里为准，仓里没有记录
+- Compose 资源每个源集只认一个目录，所以插件把模块自己的 `src/commonMain/composeResources` 与各内置包合并到 `build/tinyui/compose-resources` 再接入；源码树里还留着 `files/tinyui/<pkg>/` 时合并报重复而失败
+- 生成 `TinyUIBuild`（`HOST_VERSION`、`PACKAGES`）进 `commonMain`，`Updates(hostVersion = …)` 与宿主快照测试都读它
+- `tinyui.embeddedDir` 是这次构建的内置包目录（每包一个子目录）的 Provider，带着对解析任务的依赖；宿主把它作为输入接给跑 `PackageCheck` 的测试任务
+- 构建日志的 `TinyUI: <pkg> <version> (…)` 行与 `build/tinyui/resolved/<pkg>.json` 记下每个包解析到的版本、来源与通道：一个安装包内置了哪版页面以这里为准，仓里没有记录。`resolveTinyUIPackages` 只做解析
 
 不做 lock 文件（把解析结果钉成入库的一行）：它换来同一提交重复构建结果相同，代价是页面每发一版宿主仓都要跟一次提交，正是这次要去掉的步骤。正式包只构建一次、冒烟与发布用同一个产物时，不需要它。按版本号重建某个旧安装包要投递端点提供每个版本的签名（现在签名只在指针里），触发条件记 roadmap D 组。
 
