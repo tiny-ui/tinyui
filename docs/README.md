@@ -2,6 +2,8 @@
 
 基于 QuickJS（经 quickjs-kmp 接入）与 Compose Multiplatform 的 UI 框架：业务页面用 JS 写声明式组件，Android / iOS 双端由 Compose 渲染。热下发见 [ADR-006](./adr-006-hot-updates.md)。本目录是各项关键技术选型的决策记录（ADR），一项决策一个文件；本文只放各决策共享的背景，不重复写进单项 ADR。
 
+要把 TinyUI 接进自己的 App，先读 [接入指南](./integration.md)：它按操作顺序写，细节再链回这里的各篇。
+
 ## 框架定位
 
 - **逻辑和 UI 描述都在 JS**：JS 侧维护组件树与状态，产出节点树 / patch；Kotlin 侧只负责把 patch 映射到 Compose 原生组件（Text / Column / LazyColumn …）

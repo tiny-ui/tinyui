@@ -4,6 +4,7 @@ JS 写声明式组件、Compose Multiplatform 渲染的 UI 框架，引擎为 Qu
 
 > 早期阶段。关键选型已定，M1 Counter 与 M2 列表页已在双端跑通（TSX → 模块字节码 → 引擎 → patch → Compose）；进度见 [docs/roadmap.md](./docs/roadmap.md)。
 
+- 接入自己的 App：[docs/integration.md](./docs/integration.md)
 - 设计文档与决策记录：[docs/](./docs/README.md)
 - 响应式模型与引擎 benchmark：[bench/](./bench/README.md)
 - 站点：tinyui.app（未上线）
@@ -25,10 +26,12 @@ build-logic/ Gradle convention plugins
 
 ## 安装
 
-- Kotlin：`implementation("app.tinyui:tinyui:<version>")`（Maven Central；自带 `wang.harlon:quickjs-kmp`）；热下发另加 `app.tinyui:tinyui-updates`，同版本号
+- Kotlin：`implementation("app.tinyui:tinyui:<version>")`（Maven Central；自带 `wang.harlon:quickjs-kmp`）；热下发另加 `app.tinyui:tinyui-updates` 与 Gradle 插件 `app.tinyui`（宿主构建时解析内置包），同版本号
 - JS：`pnpm add tinyui-core tinyui-native` 与 `pnpm add -D tinyui-cli`，三包同版本号；`tinyui build` 用的 quickjs-kmp 宿主工具 `qjsc-kmp` 随 `tinyui-cli` 的依赖装好（macOS、Linux 预编译版）
 
-版本号与 git tag 一致，不带 `v` 前缀，Maven 与 npm 三包同号同 tag 发：推 tag 触发 `publish.yml`，Maven 走 Sonatype，npm 走 trusted publishing（OIDC，无 token）。
+版本号与 git tag 一致，不带 `v` 前缀，Maven 与 npm 三包同号同 tag 发：推 tag 触发 `publish.yml`，Maven 走 Sonatype，npm 走 trusted publishing（OIDC，无 token）。预发布版本的 Maven 产物可能只在 Central 的 snapshot 仓库（版本号多 `-SNAPSHOT`），见 [docs/integration.md](./docs/integration.md) §6。
+
+从零接入的完整步骤（宿主、页面包、CI、日常操作）见 [docs/integration.md](./docs/integration.md)。
 
 ## 发布
 
@@ -38,7 +41,8 @@ build-logic/ Gradle convention plugins
 2. 合入 main 后打同号 tag 推送。`publish.yml` 先跑 `versions` job 核对五处等于 tag、字节码是最新的，不符则 Maven 与 npm 都不发
 3. 想先看 npm 会发什么：Actions 里手动跑 `publish.yml`，只做 `--dry-run`
 4. 预发布版本号带 `-`（如 `0.14.0-alpha01`）：npm 发到 dist-tag `next`（`latest` 留给正式版），GitHub Release 标成 prerelease；Maven 照常发同号版本，消费方显式写这个版本号才会用到
-5. GitHub Release 的「升级须知」「要点」由 `packages/cli/scripts/release-notes.ts` 调 OpenAI 起草（需仓库 secret `OPENAI_API_KEY`），排在自动生成的 PR 列表之前；没配 key 或调用失败就只有 PR 列表。发布后可在 Release 页上手改；本地预览：`node packages/cli/scripts/release-notes.ts <tag>`
+5. Maven Central 对每个组织有月度发布限额（Sonatype 的 Usage Center 看当前用量与上限；一次发版约 170 个文件，KMP 每个目标一组产物、每个产物再配签名与校验和）。超限后当月的正式发布被拒，`publish.yml` 的 `maven` job 失败而 npm 已发出。此时用 `snapshot.yml`（Actions 里手动触发，输入 tag）把同一个 tag 发到 Central 的 snapshot 仓库，版本号是 `<版本>-SNAPSHOT`；限额在下个自然月重置后重跑失败的 `maven` job 补上正式版本。alpha 阶段少发几次、攒着发，或直接只发 snapshot
+6. GitHub Release 的「升级须知」「要点」由 `packages/cli/scripts/release-notes.ts` 调 OpenAI 起草（需仓库 secret `OPENAI_API_KEY`），排在自动生成的 PR 列表之前；没配 key 或调用失败就只有 PR 列表。发布后可在 Release 页上手改；本地预览：`node packages/cli/scripts/release-notes.ts <tag>`
 
 ## 构建
 
