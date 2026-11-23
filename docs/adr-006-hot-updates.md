@@ -258,7 +258,7 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的 app 接入，各�
 
 | 项 | 触发条件 |
 |---|---|
-| 无活页时立即切换 | "第二次打开才见到更新"成为运营问题 |
+| 无活页时立即切换 | "第二次打开才见到更新"成为运营问题。2026-11-23 重开生效时机的讨论（未定），见 [updates-activation.md](./updates-activation.md) |
 | `rollBackToEmbedded` 指令 | 必须让所有用户立刻回内置、又没有可发的好包 |
 | 服务端定向灰度（按用户属性） | 百分比灰度不够用 |
 | store key / events topic 的包名前缀由库强制（`tinyui-native` 自动加） | 出现跨包撞 key / 撞 topic |

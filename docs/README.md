@@ -133,6 +133,7 @@ app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及
 | [patch-protocol.md](./patch-protocol.md) | patch 协议 v1：六种 op、id、值、顺序保证、版本、E5 | 已定（2026-09-16） |
 | [components.md](./components.md) | 内置组件：schema 真值与生成链、公共布局 prop 与 Modifier 顺序、首批八个组件、命令消费、Placeholder | 已定（2026-09-16） |
 | [native-api.md](./native-api.md) | `tinyui-native` 与 `TinyUIHost`：J2 白名单、navigation / store / events / http / storage / i18n / session / ui / linking / analytics、`host.call` 兜底、E3 错误码与阈值 | 已定（2026-09-16；2026-09-25 按 ADR-007 重写） |
+| [updates-activation.md](./updates-activation.md) | 热下发的生效时机：下次启动之外的候选（启动时等待、只对新开页面、装好即切并重挂）与代价 | 讨论中，未定（2026-11-23） |
 
 ## 下一阶段
 
