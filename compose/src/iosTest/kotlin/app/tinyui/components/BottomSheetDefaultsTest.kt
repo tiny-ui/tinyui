@@ -10,6 +10,8 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.v2.runComposeUiTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 /** A `BottomSheet`'s colours are the host's where set, and M3's where not (docs/components.md §6). */
 @OptIn(ExperimentalTestApi::class, ExperimentalMaterial3Api::class)
@@ -57,5 +59,33 @@ class BottomSheetDefaultsTest {
         waitForIdle()
         assertEquals(m3, got!!.containerColor)
         assertEquals(Color.Gray, got!!.containerColor)
+    }
+
+    @Test
+    fun theHeightCapIsTheHostsWhenSet() = runComposeUiTest {
+        var got: ResolvedBottomSheetStyle? = null
+        setContent {
+            MaterialTheme(colorScheme = scheme) {
+                CompositionLocalProvider(LocalTinyUIDefaults provides TinyUIDefaults(bottomSheet = BottomSheetStyle(maxHeightFraction = 0.9f))) {
+                    got = bottomSheetStyle()
+                }
+            }
+        }
+        waitForIdle()
+        assertEquals(0.9f, got!!.maxHeightFraction)
+    }
+
+    @Test
+    fun noHeightCapWhenTheHostSetsNone() = runComposeUiTest {
+        var got: ResolvedBottomSheetStyle? = null
+        setContent { MaterialTheme(colorScheme = scheme) { got = bottomSheetStyle() } }
+        waitForIdle()
+        assertNull(got!!.maxHeightFraction)
+    }
+
+    @Test
+    fun aHeightCapOutsideTheWindowIsRejected() {
+        assertFailsWith<IllegalArgumentException> { BottomSheetStyle(maxHeightFraction = 0f) }
+        assertFailsWith<IllegalArgumentException> { BottomSheetStyle(maxHeightFraction = 1.1f) }
     }
 }

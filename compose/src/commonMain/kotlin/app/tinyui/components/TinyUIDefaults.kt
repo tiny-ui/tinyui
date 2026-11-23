@@ -67,11 +67,23 @@ class TopAppBarStyle(
  * on another role says so here rather than changing what that role means everywhere else. Null keeps M3's default for
  * that piece; [contentColor] null is M3's content colour for the container in use, so setting [containerColor] to a
  * scheme role is usually enough.
+ *
+ * [maxHeightFraction] caps a sheet at that share of the window's height, in (0, 1]. M3 has no such parameter: a sheet is
+ * as tall as its content, up to the top of the screen, so content that fills (`height="fill"`, a long list) covers the
+ * whole page and leaves no scrim to tap. A design system whose full sheets stop short of the top (90% of the screen, say)
+ * sets it here; a sheet shorter than the cap is untouched. Null keeps M3's.
  */
 class BottomSheetStyle(
     val containerColor: Color? = null,
     val contentColor: Color? = null,
-)
+    val maxHeightFraction: Float? = null,
+) {
+    init {
+        require(maxHeightFraction == null || (maxHeightFraction > 0f && maxHeightFraction <= 1f)) {
+            "maxHeightFraction is a share of the window's height, in (0, 1]: $maxHeightFraction"
+        }
+    }
+}
 
 /**
  * What a host may set on a text input, in M3's own types — the parameters of M3's `OutlinedTextField` that
@@ -179,12 +191,16 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
 )
 
 /** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
-internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color)
+internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color, val maxHeightFraction: Float?)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun bottomSheetStyle(): ResolvedBottomSheetStyle {
     val style = LocalTinyUIDefaults.current.bottomSheet
     val container = style?.containerColor ?: BottomSheetDefaults.ContainerColor
-    return ResolvedBottomSheetStyle(containerColor = container, contentColor = style?.contentColor ?: contentColorFor(container))
+    return ResolvedBottomSheetStyle(
+        containerColor = container,
+        contentColor = style?.contentColor ?: contentColorFor(container),
+        maxHeightFraction = style?.maxHeightFraction,
+    )
 }
