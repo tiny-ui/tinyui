@@ -92,7 +92,7 @@ plugins { id("app.tinyui") }
 tinyui {
     app = "shop"                      // 热下发服务上的 app；updatesUrl 缺省为托管实例
     hostVersion = "3"                 // 宿主里唯一写它的地方，Kotlin 侧读插件生成的常量（见下）
-    channel = providers.gradleProperty("…")   // 这次构建的 App 运行时检查哪个通道，内置包就取哪个通道
+    channel = providers.gradleProperty("…")   // 这次构建的 App 运行时检查哪个通道，内置包就取哪个通道；运行时读生成的 TinyUIBuild.CHANNEL
     generatedPackage = "com.example.shop.tinyui"   // 生成的 TinyUIBuild 放在哪个 Kotlin 包
     packages {
         register("login") { publicKey = "BN5p…" }   // 该包 tinyui.config.json 的 publicKey，客户端与构建共同的信任锚
@@ -119,7 +119,7 @@ tinyui {
 
 - 每个包写成 `tinyui embed` 的布局（`manifest.json`、`pages/`、`i18n/`），接进该模块的 Compose 资源 `files/tinyui/<pkg>/`，宿主读内置包的代码不变（§3）
 - Compose 资源每个源集只认一个目录，所以插件把模块自己的 `src/commonMain/composeResources` 与各内置包合并到 `build/tinyui/compose-resources` 再接入；源码树里还留着 `files/tinyui/<pkg>/` 时合并报重复而失败
-- 生成 `TinyUIBuild`（`HOST_VERSION`、`PACKAGES`）进 `commonMain`，`Updates(hostVersion = …)` 与宿主快照测试都读它
+- 生成 `TinyUIBuild`（`HOST_VERSION`、`CHANNEL`、`PACKAGES`）进 `commonMain`，`Updates(hostVersion = …)` 与宿主快照测试都读它。`CHANNEL` 即这里声明的 `channel`：宿主运行时检查更新的通道读它，内置包取自哪个通道、App 就查哪个通道，两处是同一个值（2026-11-22 加；此前运行时的通道由宿主另算一遍，与构建时的可能不一致）。因此 `channel` 必须声明，全部包都从页面源码构建时也一样
 - `tinyui.embeddedDir` 是这次构建的内置包目录（每包一个子目录）的 Provider，带着对解析任务的依赖；宿主把它作为输入接给跑 `PackageCheck` 的测试任务
 - 构建日志的 `TinyUI: <pkg> <version> (…)` 行与 `build/tinyui/resolved/<pkg>.json` 记下每个包解析到的版本、来源与通道：一个安装包内置了哪版页面以这里为准，仓里没有记录。`resolveTinyUIPackages` 只做解析
 
