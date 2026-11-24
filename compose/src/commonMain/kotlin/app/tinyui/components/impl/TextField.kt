@@ -167,7 +167,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val inputTransformation = remember { ClipTransformation { limit() } }
     val masked = secure != null || keyboard == KeyboardType.Password
     val singleLine = masked || (scope.get<Boolean>("singleLine") ?: true)
-    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).smallFieldCap(style, size, singleLine).focusRequester(focusRequester)
+    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).smallFieldCap(style, size, singleLine && supportingText == null).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -221,7 +221,9 @@ internal fun TextFieldComponent(scope: NodeScope) {
  * line and its padding, so it is capped there, never under the small field's own height: the slot is squeezed to the
  * field and a 24dp glyph still fits; a larger font scale makes the line, and the cap, taller, so nothing is cut. A
  * tappable trailing icon keeps its 48dp touch area, which M3's IconButton reaches outside its bounds. Only the small
- * field: the regular one is the host's height or taller, and a multi-line field grows with its text.
+ * field: the regular one is the host's height or taller, and a multi-line field grows with its text. Not with
+ * supporting text either (pass `singleLine = false`): it hangs below the box inside the same M3 component, so a cap on
+ * the component would squeeze it out; such a field with an icon is M3's 48dp.
  */
 @Composable
 internal fun Modifier.smallFieldCap(style: ResolvedTextFieldStyle, size: String?, singleLine: Boolean): Modifier {

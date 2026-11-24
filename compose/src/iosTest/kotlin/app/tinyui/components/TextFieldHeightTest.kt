@@ -127,7 +127,7 @@ class TextFieldHeightTest {
             }
             waitForIdle()
             assertTrue(problems.isEmpty(), problems.toString())
-            out = onNodeWithTag("field").bounds() to onNodeWithText("Phone").getBoundsInRoot()
+            out = onNodeWithTag("field").bounds() to onNodeWithText("Phone", useUnmergedTree = true).getBoundsInRoot()
         }
         return out!!
     }
@@ -157,5 +157,31 @@ class TextFieldHeightTest {
         // a 36dp line and 8dp above and below: 52dp, over the 40dp cap a fixed one would keep
         assertTrue(field.bottom - field.top > 48.dp, "taller with the text: $field")
         assertTrue(text.bottom - text.top >= 35.dp, "a whole line drawn: $text")
+    }
+
+    @Test
+    fun supportingTextStillHangsBelowASmallField() {
+        val problems = ArrayList<PatchProblem>()
+        val tree = NodeTree(registry) { problems += it }
+        runComposeUiTest {
+            tree.apply(
+                """[["c",1,"TextField"],["p",1,"width",300],["p",1,"size","small"],["p",1,"placeholder","Phone"],["p",1,"supportingText","Hint"],""" +
+                    """["p",1,"trailingIcon","0 0 24 24|M0 0h24v24H0z"],["i",0,1,0]]""",
+            )
+            setContent {
+                MaterialTheme {
+                    CompositionLocalProvider(LocalTinyUIDefaults provides withSmall) { Box(Modifier.testTag("field")) { renderer.Render(tree.node(1)!!) } }
+                }
+            }
+            waitForIdle()
+            assertTrue(problems.isEmpty(), problems.toString())
+            val field = onNodeWithTag("field").bounds()
+            val hint = onNodeWithText("Hint", useUnmergedTree = true).getBoundsInRoot()
+            val text = onNodeWithText("Phone", useUnmergedTree = true).getBoundsInRoot()
+            // the cap is on the whole M3 component, the hint included: with a hint there is none, and both lines are whole
+            assertTrue(hint.bottom - hint.top >= 15.dp, "the hint drawn whole: $hint, input $text, in $field")
+            assertTrue(text.bottom - text.top >= 23.dp, "the input's line drawn whole: $text in $field")
+            assertTrue(hint.top >= text.bottom, "under the input: $hint below $text")
+        }
     }
 }
