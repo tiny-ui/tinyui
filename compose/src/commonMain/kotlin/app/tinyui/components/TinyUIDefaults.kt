@@ -72,11 +72,15 @@ class TopAppBarStyle(
  * as tall as its content, up to the top of the screen, so content that fills (`height="fill"`, a long list) covers the
  * whole page and leaves no scrim to tap. A design system whose full sheets stop short of the top (90% of the screen, say)
  * sets it here; a sheet shorter than the cap is untouched. Null keeps M3's.
+ *
+ * [dragHandle] false leaves out M3's drag handle (the short bar at the top), for a design system whose sheets have none;
+ * the sheet still closes by swiping down, tapping the scrim or going back. Null or true keeps M3's.
  */
 class BottomSheetStyle(
     val containerColor: Color? = null,
     val contentColor: Color? = null,
     val maxHeightFraction: Float? = null,
+    val dragHandle: Boolean? = null,
 ) {
     init {
         require(maxHeightFraction == null || (maxHeightFraction > 0f && maxHeightFraction <= 1f)) {
@@ -191,7 +195,7 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
 )
 
 /** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
-internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color, val maxHeightFraction: Float?)
+internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color, val maxHeightFraction: Float?, val dragHandle: Boolean)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,5 +206,6 @@ internal fun bottomSheetStyle(): ResolvedBottomSheetStyle {
         containerColor = container,
         contentColor = style?.contentColor ?: contentColorFor(container),
         maxHeightFraction = style?.maxHeightFraction,
+        dragHandle = style?.dragHandle ?: true,
     )
 }

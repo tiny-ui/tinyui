@@ -72,13 +72,13 @@ abstract interface app.tinyui.components/NodeScope { // app.tinyui.components/No
     abstract fun RenderChild(app.tinyui.components/UINode, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/NodeScope.RenderChild|RenderChild(app.tinyui.components.UINode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     abstract fun dispatch(kotlin/String, kotlin/String = ...) // app.tinyui.components/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
     abstract fun has(kotlin/String): kotlin/Boolean // app.tinyui.components/NodeScope.has|has(kotlin.String){}[0]
-    abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    abstract fun modifier(kotlin/Boolean, kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.modifier|modifier(kotlin.Boolean;kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun Children(kotlin/Function1<app.tinyui.components/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // app.tinyui.components/NodeScope.Children|Children(kotlin.Function1<app.tinyui.components.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // app.tinyui.components/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun reportProblem(kotlin/String) // app.tinyui.components/NodeScope.reportProblem|reportProblem(kotlin.String){}[0]
 
     final class ComposeDefaultImpls { // app.tinyui.components/NodeScope.ComposeDefaultImpls|null[0]
-        final fun modifier$default(kotlin/Boolean, app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+        final fun modifier$default(kotlin/Boolean, kotlin/Boolean, app.tinyui.components/NodeScope, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): androidx.compose.ui/Modifier // app.tinyui.components/NodeScope.ComposeDefaultImpls.modifier$default|modifier$default#static(kotlin.Boolean;kotlin.Boolean;app.tinyui.components.NodeScope;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
     }
 }
 
@@ -278,12 +278,14 @@ final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|n
 }
 
 final class app.tinyui.components/BottomSheetStyle { // app.tinyui.components/BottomSheetStyle|null[0]
-    constructor <init>(androidx.compose.ui.graphics/Color? = ..., androidx.compose.ui.graphics/Color? = ..., kotlin/Float? = ...) // app.tinyui.components/BottomSheetStyle.<init>|<init>(androidx.compose.ui.graphics.Color?;androidx.compose.ui.graphics.Color?;kotlin.Float?){}[0]
+    constructor <init>(androidx.compose.ui.graphics/Color? = ..., androidx.compose.ui.graphics/Color? = ..., kotlin/Float? = ..., kotlin/Boolean? = ...) // app.tinyui.components/BottomSheetStyle.<init>|<init>(androidx.compose.ui.graphics.Color?;androidx.compose.ui.graphics.Color?;kotlin.Float?;kotlin.Boolean?){}[0]
 
     final val containerColor // app.tinyui.components/BottomSheetStyle.containerColor|{}containerColor[0]
         final fun <get-containerColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.containerColor.<get-containerColor>|<get-containerColor>(){}[0]
     final val contentColor // app.tinyui.components/BottomSheetStyle.contentColor|{}contentColor[0]
         final fun <get-contentColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.contentColor.<get-contentColor>|<get-contentColor>(){}[0]
+    final val dragHandle // app.tinyui.components/BottomSheetStyle.dragHandle|{}dragHandle[0]
+        final fun <get-dragHandle>(): kotlin/Boolean? // app.tinyui.components/BottomSheetStyle.dragHandle.<get-dragHandle>|<get-dragHandle>(){}[0]
     final val maxHeightFraction // app.tinyui.components/BottomSheetStyle.maxHeightFraction|{}maxHeightFraction[0]
         final fun <get-maxHeightFraction>(): kotlin/Float? // app.tinyui.components/BottomSheetStyle.maxHeightFraction.<get-maxHeightFraction>|<get-maxHeightFraction>(){}[0]
 }
