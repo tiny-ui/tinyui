@@ -22,15 +22,15 @@ class BottomSheetHeightTest {
     private class Measured(val contentTop: Int, val contentHeight: Int, val window: Int)
 
     /** An open sheet holding a Column of [height] with a text at its top; where that Column ends up in the window. */
-    private fun measure(height: String, defaults: TinyUIDefaults?): Measured {
+    private fun measure(height: String, defaults: TinyUIDefaults?, pageCap: String = "", rendered: MutableList<String>? = null): Measured {
         val problems = ArrayList<PatchProblem>()
         val registry = ComponentRegistry().registerBuiltins()
         val tree = NodeTree(registry) { problems += it }
-        val renderer = NodeRenderer(registry, onEvent = { _, _, _ -> })
+        val renderer = NodeRenderer(registry, onEvent = { _, _, _ -> }, onProblem = { _, reason -> rendered?.add(reason) })
         var measured: Measured? = null
         runComposeUiTest {
             tree.apply(
-                """[["c",1,"BottomSheet"],["p",1,"open",true],["c",2,"Column"],["p",2,"width","fill"],["p",2,"height",$height],""" +
+                """[["c",1,"BottomSheet"],["p",1,"open",true]$pageCap,["c",2,"Column"],["p",2,"width","fill"],["p",2,"height",$height],""" +
                     """["c",3,"Text"],["p",3,"text","Sheet body"],["i",0,1,0],["i",1,2,0],["i",2,3,0]]""",
             )
             var window = 0
@@ -70,5 +70,22 @@ class BottomSheetHeightTest {
         val limited = measure(height = "120", defaults = capped)
         assertEquals(free.contentTop, limited.contentTop)
         assertEquals(free.contentHeight, limited.contentHeight)
+    }
+
+    @Test
+    fun thePagesCapWinsOverTheHosts() {
+        val free = measure(height = "\"fill\"", defaults = null)
+        val page = measure(height = "\"fill\"", defaults = capped, pageCap = """,["p",1,"maxHeightFraction",0.65]""")
+        val gap = (0.35f * page.window).roundToInt()
+        assertTrue(abs(page.contentTop - free.contentTop - gap) <= 1, "moved down by $gap: ${free.contentTop} -> ${page.contentTop} in ${page.window}")
+    }
+
+    @Test
+    fun aPageCapOutsideTheWindowIsReportedAndTheHostsUsed() {
+        val host = measure(height = "\"fill\"", defaults = capped)
+        val reasons = ArrayList<String>()
+        val bad = measure(height = "\"fill\"", defaults = capped, pageCap = """,["p",1,"maxHeightFraction",1.5]""", rendered = reasons)
+        assertEquals(host.contentTop, bad.contentTop)
+        assertTrue(reasons.any { "maxHeightFraction" in it }, reasons.toString())
     }
 }

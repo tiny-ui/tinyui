@@ -218,6 +218,7 @@ object BuiltinSchemas {
         type = "BottomSheet",
         props = mapOf(
             "open" to PropSpec.Bool(default = null, required = true, initial = false),
+            "maxHeightFraction" to PropSpec.Num(default = null, required = false, initial = false),
         ),
         events = mapOf(
             "onDismiss" to emptyMap(),

@@ -243,6 +243,8 @@ export interface BottomSheetDismissPayload {
 export interface BottomSheetProps {
     /** true slides it in, false animates it out */
     open: boolean;
+    /** cap on the sheet's height as a share of the window's, in (0, 1]: content that fills stops there. A cap, not a height: a shorter sheet keeps its content's height. Unset, the host's (`TinyUIDefaults.bottomSheet`), else none (M3: up to the top of the screen) */
+    maxHeightFraction?: number;
     onDismiss?: (e: BottomSheetDismissPayload) => void;
     children?: Children;
 }
