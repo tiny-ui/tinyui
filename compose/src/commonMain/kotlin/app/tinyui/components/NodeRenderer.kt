@@ -52,7 +52,8 @@ internal class NodeRenderer(
             if (invisible) m = m.invisible()
             val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
             if (clip && shape != RectangleShape) m = m.clip(shape)
-            color("background")?.let { m = m.background(it) }
+            // the shape as well as the clip: a component that draws cornerRadius itself is not clipped (clip = false)
+            color("background")?.let { m = m.background(it, shape) }
             // 0.dp is Compose's hairline (one pixel), not "no border"
             get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
             if (clickable && !invisible && has("onClick")) {

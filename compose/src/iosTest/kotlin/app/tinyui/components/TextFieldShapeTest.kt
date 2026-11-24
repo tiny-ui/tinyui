@@ -58,4 +58,23 @@ class TextFieldShapeTest {
         // a 24dp corner, 8dp above the bottom border is 24 - sqrt(24² - 16²) ≈ 6dp in
         assertTrue(round > 4.dp && round < 8.dp, "a 24dp corner at the field's own bottom: $round")
     }
+
+    @Test
+    fun aBackgroundFollowsTheRadius() {
+        val problems = ArrayList<PatchProblem>()
+        val registry = ComponentRegistry().registerBuiltins()
+        val tree = NodeTree(registry) { problems += it }
+        val renderer = NodeRenderer(registry, onEvent = { _, _, _ -> })
+        runComposeUiTest {
+            tree.apply("""[["c",1,"TextField"],["p",1,"width",300],["p",1,"cornerRadius",24],["p",1,"background","#FF0000"],["i",0,1,0]]""")
+            setContent { MaterialTheme(colorScheme = scheme) { renderer.Render(tree.node(1)!!) } }
+            waitForIdle()
+            assertTrue(problems.isEmpty(), problems.toString())
+            val image = onRoot().captureToImage()
+            val pixels = image.toPixelMap()
+            // the very corner is outside a 24dp rounding; the middle is inside it
+            assertTrue(pixels[1, 1].alpha < 0.1f, "no background in the rounded-off corner: ${pixels[1, 1]}")
+            assertTrue(pixels[image.width / 2, image.height / 2].red > 0.9f, "background inside: ${pixels[image.width / 2, image.height / 2]}")
+        }
+    }
 }
