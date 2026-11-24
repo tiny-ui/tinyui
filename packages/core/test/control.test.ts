@@ -233,6 +233,12 @@ describe("BottomSheet", () => {
         unmount();
     });
 
+    it("passes the page's height cap to the node, and leaves it off when unset", () => {
+        mount(() => sheet({ open: false, maxHeightFraction: 0.65 }, () => h(Text, { text: "x" })));
+        assert.deepEqual(bridge.ops(), [["c", 1, "BottomSheet"], ["p", 1, "open", false], ["p", 1, "maxHeightFraction", 0.65], ["c", 2, "Column"], ["i", 2, 1, 0], ["i", 0, 2, 0]]);
+        unmount();
+    });
+
     it("rejects static children", () => {
         assert.throws(() => mount(() => h(Column, null, h(BottomSheet as never, { open: false }, h(Text, { text: "static" })))), /children must be a function/);
     });

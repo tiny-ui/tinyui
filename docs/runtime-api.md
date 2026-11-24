@@ -232,6 +232,7 @@ interface KeyedProps<T> {
 interface BottomSheetProps<T = boolean> {
     open: T                                       // 编译器包成 thunk；真值即打开
     onDismiss?: () => void
+    maxHeightFraction?: number                    // 高度上限占窗口的比例，(0, 1]；不设用宿主的（components.md §6）
     children: (value: Truthy<T>) => Node
 }
 ```

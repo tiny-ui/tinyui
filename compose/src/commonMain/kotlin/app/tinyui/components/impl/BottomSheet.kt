@@ -37,8 +37,8 @@ import app.tinyui.components.bottomSheetStyle
 /**
  * `open` is the page's; going false animates the sheet out before it leaves composition. A user dismissal (swipe, scrim,
  * back) has already hidden it when `onDismiss` fires: it stays down until `open` goes false and true again. Its colours
- * are the host's where set (`TinyUIDefaults.bottomSheet`), else M3's, and so are a cap on its height
- * ([sheetContentCap]) and whether it has a drag handle. While it is up the page's toasts float above it.
+ * are the host's where set (`TinyUIDefaults.bottomSheet`), else M3's, and so is whether it has a drag handle. A cap on its
+ * height ([sheetContentCap]) is the page's `maxHeightFraction` where set, else the host's. While it is up the page's toasts float above it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,8 +57,12 @@ internal fun BottomSheetComponent(scope: NodeScope) {
     }
     if (showing) {
         val style = bottomSheetStyle()
+        // the page's cap where it sets one, else the host's; one outside (0, 1] is a page mistake: reported, the host's used
+        val pageCap = scope.get<Double>("maxHeightFraction")?.toFloat()
+        val pageCapValid = pageCap == null || (pageCap > 0f && pageCap <= 1f)
+        if (!pageCapValid) LaunchedEffect(pageCap) { scope.reportProblem("maxHeightFraction is a share of the window's height, in (0, 1]: $pageCap") }
         // the page's window and its status bar, read out here: inside the sheet the window is the sheet's own
-        val fraction = style.maxHeightFraction
+        val fraction = (if (pageCapValid) pageCap else null) ?: style.maxHeightFraction
         val window = LocalWindowInfo.current.containerSize.height
         val statusBar = WindowInsets.statusBars.getTop(LocalDensity.current)
         ModalBottomSheet(

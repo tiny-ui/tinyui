@@ -136,6 +136,11 @@ export interface BottomSheetProps<T = boolean> {
     open: T;
     /** Fires after the user swiped, tapped the scrim or pressed back; make `open` falsy in it. */
     onDismiss?: () => void;
+    /**
+     * Cap on the sheet's height as a share of the window's, in (0, 1]: content that fills stops there, leaving scrim
+     * above. A cap, not a height. Unset, the host's cap, else none (docs/components.md §3).
+     */
+    maxHeightFraction?: number;
     /** Builds the content, once per opening, with the value `open` had at that moment. */
     children: (value: Truthy<T>) => Node;
 }
@@ -168,5 +173,6 @@ export function BottomSheet<T>(props: BottomSheetProps<T>): Node {
     });
     onCleanup(() => { if (current) disposeOwner(current.owner); });
     const onDismiss = props.onDismiss;
-    return h("BottomSheet", { open: thunk(() => !!props.open), ...(onDismiss ? { onDismiss } : {}) }, slot);
+    const cap = props.maxHeightFraction !== undefined ? { maxHeightFraction: thunk(() => props.maxHeightFraction) } : {};
+    return h("BottomSheet", { open: thunk(() => !!props.open), ...cap, ...(onDismiss ? { onDismiss } : {}) }, slot);
 }
