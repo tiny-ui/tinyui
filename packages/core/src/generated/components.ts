@@ -155,6 +155,8 @@ export interface TextFieldProps extends LayoutProps {
     autoFocus?: boolean;
     placeholder?: string;
     singleLine?: boolean;
+    /** the host's smaller field (TinyUIDefaults.smallTextField: a search field shorter than the form fields); unset, the host's field (TinyUIDefaults.textField). Height and padding go together, the page writes no number */
+    size?: "small";
     keyboard?: "text" | "number" | "email" | "phone" | "password";
     /** masks the text; unset follows keyboard="password", so a visibility toggle just flips it */
     secure?: boolean;
@@ -323,6 +325,8 @@ export interface SelectProps extends LayoutProps {
     placeholder?: string;
     label?: string;
     enabled?: boolean;
+    /** the host's smaller field (TinyUIDefaults.smallTextField: a search field shorter than the form fields); unset, the host's field (TinyUIDefaults.textField). Height and padding go together, the page writes no number */
+    size?: "small";
     onSelect?: (e: SelectSelectPayload) => void;
     onClick?: (e: SelectClickPayload) => void;
     children?: Children;

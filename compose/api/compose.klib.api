@@ -372,7 +372,7 @@ final class app.tinyui.components/TextFieldStyle { // app.tinyui.components/Text
 }
 
 final class app.tinyui.components/TinyUIDefaults { // app.tinyui.components/TinyUIDefaults|null[0]
-    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ..., app.tinyui.components/BottomSheetStyle? = ..., app.tinyui.components/TopAppBarStyle? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?;app.tinyui.components.BottomSheetStyle?;app.tinyui.components.TopAppBarStyle?){}[0]
+    constructor <init>(app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/TextFieldStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/ButtonStyle? = ..., app.tinyui.components/CheckboxStyle? = ..., androidx.compose.ui.text/TextLinkStyles? = ..., app.tinyui.components/BottomSheetStyle? = ..., app.tinyui.components/TopAppBarStyle? = ...) // app.tinyui.components/TinyUIDefaults.<init>|<init>(app.tinyui.components.TextFieldStyle?;app.tinyui.components.TextFieldStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.ButtonStyle?;app.tinyui.components.CheckboxStyle?;androidx.compose.ui.text.TextLinkStyles?;app.tinyui.components.BottomSheetStyle?;app.tinyui.components.TopAppBarStyle?){}[0]
 
     final val bottomSheet // app.tinyui.components/TinyUIDefaults.bottomSheet|{}bottomSheet[0]
         final fun <get-bottomSheet>(): app.tinyui.components/BottomSheetStyle? // app.tinyui.components/TinyUIDefaults.bottomSheet.<get-bottomSheet>|<get-bottomSheet>(){}[0]
@@ -382,6 +382,8 @@ final class app.tinyui.components/TinyUIDefaults { // app.tinyui.components/Tiny
         final fun <get-filledButton>(): app.tinyui.components/ButtonStyle? // app.tinyui.components/TinyUIDefaults.filledButton.<get-filledButton>|<get-filledButton>(){}[0]
     final val outlinedButton // app.tinyui.components/TinyUIDefaults.outlinedButton|{}outlinedButton[0]
         final fun <get-outlinedButton>(): app.tinyui.components/ButtonStyle? // app.tinyui.components/TinyUIDefaults.outlinedButton.<get-outlinedButton>|<get-outlinedButton>(){}[0]
+    final val smallTextField // app.tinyui.components/TinyUIDefaults.smallTextField|{}smallTextField[0]
+        final fun <get-smallTextField>(): app.tinyui.components/TextFieldStyle? // app.tinyui.components/TinyUIDefaults.smallTextField.<get-smallTextField>|<get-smallTextField>(){}[0]
     final val textButton // app.tinyui.components/TinyUIDefaults.textButton|{}textButton[0]
         final fun <get-textButton>(): app.tinyui.components/ButtonStyle? // app.tinyui.components/TinyUIDefaults.textButton.<get-textButton>|<get-textButton>(){}[0]
     final val textField // app.tinyui.components/TinyUIDefaults.textField|{}textField[0]

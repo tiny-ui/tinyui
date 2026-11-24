@@ -7,6 +7,7 @@ export default defineComponent("TextField", {
         autoFocus: boolean({ initial: true, default: false, doc: "takes focus once, when the field first appears, and brings the keyboard up; later focus changes go through the focus command" }),
         placeholder: string({ default: "" }),
         singleLine: boolean({ default: true }),
+        size: enumOf(["small"], { doc: "the host's smaller field (TinyUIDefaults.smallTextField: a search field shorter than the form fields); unset, the host's field (TinyUIDefaults.textField). Height and padding go together, the page writes no number" }),
         keyboard: enumOf(["text", "number", "email", "phone", "password"], { default: "text" }),
         secure: boolean({ doc: "masks the text; unset follows keyboard=\"password\", so a visibility toggle just flips it" }),
         error: boolean({ default: false, doc: "error colours on the outline, label and supportingText" }),

@@ -120,6 +120,7 @@ object BuiltinSchemas {
             "autoFocus" to PropSpec.Bool(default = false, required = false, initial = true),
             "placeholder" to PropSpec.Str(default = "", required = false, initial = false),
             "singleLine" to PropSpec.Bool(default = true, required = false, initial = false),
+            "size" to PropSpec.Enum(values = setOf("small"), default = null, required = false, initial = false),
             "keyboard" to PropSpec.Enum(values = setOf("text", "number", "email", "phone", "password"), default = "text", required = false, initial = false),
             "secure" to PropSpec.Bool(default = null, required = false, initial = false),
             "error" to PropSpec.Bool(default = false, required = false, initial = false),
@@ -292,6 +293,7 @@ object BuiltinSchemas {
             "placeholder" to PropSpec.Str(default = "", required = false, initial = false),
             "label" to PropSpec.Str(default = null, required = false, initial = false),
             "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
+            "size" to PropSpec.Enum(values = setOf("small"), default = null, required = false, initial = false),
         ),
         events = mapOf(
             "onSelect" to mapOf("value" to FieldSpec.Str),

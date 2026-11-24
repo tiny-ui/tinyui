@@ -140,7 +140,8 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val oneTimeCode = scope.get<String>("autofill") == "oneTimeCode"
     val prefix = scope.get<String>("prefixText")?.takeIf { it.isNotEmpty() }
     val trailing = scope.get<IconValue>("trailingIcon")
-    val style = textFieldStyle()
+    val size = scope.get<String>("size")
+    val style = textFieldStyle(size)
     val colors = style.colors
     val error = scope.get<Boolean>("error") == true
     val placeholder: (@Composable () -> Unit)? = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
@@ -166,7 +167,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val inputTransformation = remember { ClipTransformation { limit() } }
     val masked = secure != null || keyboard == KeyboardType.Password
     val singleLine = masked || (scope.get<Boolean>("singleLine") ?: true)
-    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).focusRequester(focusRequester)
+    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).smallFieldCap(style, size, singleLine).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -212,6 +213,24 @@ internal fun TextFieldComponent(scope: NodeScope) {
             shape = shape,
         )
     }
+}
+
+/**
+ * A `size="small"` field's ceiling: M3 gives each icon slot at least 48dp (a touch target), so a small field with a
+ * trailing icon, or a `Select` with its arrow, would never go below 48 whatever its minimum. A single-line field is one
+ * line and its padding, so it is capped there, never under the small field's own height: the slot is squeezed to the
+ * field and a 24dp glyph still fits; a larger font scale makes the line, and the cap, taller, so nothing is cut. A
+ * tappable trailing icon keeps its 48dp touch area, which M3's IconButton reaches outside its bounds. Only the small
+ * field: the regular one is the host's height or taller, and a multi-line field grows with its text.
+ */
+@Composable
+internal fun Modifier.smallFieldCap(style: ResolvedTextFieldStyle, size: String?, singleLine: Boolean): Modifier {
+    if (size != "small" || !singleLine) return this
+    val lineHeight = LocalTextStyle.current.lineHeight
+    if (!lineHeight.isSp) return this
+    val line = with(LocalDensity.current) { lineHeight.toDp() }
+    val box = line + style.contentPadding.calculateTopPadding() + style.contentPadding.calculateBottomPadding()
+    return heightIn(max = maxOf(style.minHeight, box))
 }
 
 /**
