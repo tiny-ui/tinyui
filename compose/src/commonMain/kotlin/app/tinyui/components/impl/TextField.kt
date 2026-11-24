@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.KeyboardActionHandler
@@ -144,7 +145,8 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val error = scope.get<Boolean>("error") == true
     val placeholder: (@Composable () -> Unit)? = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } }
     // the leading slot rather than M3 `prefix`: that one hides while the field is empty and unfocused, and cannot take a tap
-    val leadingIcon: (@Composable () -> Unit)? = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused), style.minHeight) } }
+    val shape = scope.fieldShape()
+    val leadingIcon: (@Composable () -> Unit)? = prefix?.let { p -> { Prefix(scope, p, colors.prefixColor(enabled = true, isError = error, focused = focused), style.minHeight, shape) } }
     // the page sizes the glyph (a 20dp eye in a design system), never the slot: the IconButton's 48dp tap target stays;
     // zero or less is "unset", like gap / borderWidth
     val trailingSize = scope.get<Dp>("trailingIconSize")?.takeIf { it > 0.dp }
@@ -164,7 +166,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val inputTransformation = remember { ClipTransformation { limit() } }
     val masked = secure != null || keyboard == KeyboardType.Password
     val singleLine = masked || (scope.get<Boolean>("singleLine") ?: true)
-    val modifier = scope.modifier(clickable = false).fieldMinHeight(style, singleLine).focusRequester(focusRequester)
+    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -190,6 +192,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
             onKeyboardAction = onKeyboardAction,
             colors = colors,
             contentPadding = style.contentPadding,
+            shape = shape,
         )
     } else {
         OutlinedTextField(
@@ -206,6 +209,7 @@ internal fun TextFieldComponent(scope: NodeScope) {
             lineLimits = if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.Default,
             colors = colors,
             contentPadding = style.contentPadding,
+            shape = shape,
         )
     }
 }
@@ -254,7 +258,7 @@ private data class FieldMinHeight(val min: Dp, val excess: Dp) : LayoutModifier 
  * inside its 48dp slot), so the 8dp end padding makes 12dp from block to input.
  */
 @Composable
-private fun Prefix(scope: NodeScope, text: String, color: Color, minHeight: Dp) {
+private fun Prefix(scope: NodeScope, text: String, color: Color, minHeight: Dp, outer: Shape) {
     val tap = if (scope.has("onPrefixClick")) Modifier.clickable { scope.dispatch("onPrefixClick") } else Modifier
     val icon = scope.get<IconValue>("prefixIcon")
     val iconSize = scope.get<Dp>("prefixIconSize")
@@ -269,7 +273,6 @@ private fun Prefix(scope: NodeScope, text: String, color: Color, minHeight: Dp) 
         Box(tap.padding(start = 16.dp, end = 8.dp)) { content() }
         return
     }
-    val outer = OutlinedTextFieldDefaults.shape
     val shape = remember(outer) { if (outer is CornerBasedShape) ConcentricInsetShape(outer, PrefixInset) else outer }
     Box(
         Modifier.padding(start = PrefixInset, end = 8.dp)
@@ -282,6 +285,13 @@ private fun Prefix(scope: NodeScope, text: String, color: Color, minHeight: Dp) 
 }
 
 private val PrefixInset = 4.dp
+
+/**
+ * The outline of a text input: `cornerRadius` where the page sets it (a pill-shaped search field), else M3's. It is the
+ * field's own shape rather than a clip, which would cut the supporting text below the field too.
+ */
+@Composable
+internal fun NodeScope.fieldShape(): Shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: OutlinedTextFieldDefaults.shape
 
 /**
  * [outer]'s corners shrunk by [inset], for a block that sits [inset] inside a shape and should follow it. `copy` keeps the

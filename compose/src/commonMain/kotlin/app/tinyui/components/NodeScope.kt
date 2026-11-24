@@ -25,9 +25,14 @@ interface NodeScope {
     @Composable
     fun color(key: String): Color? = get<ColorValue>(key)?.resolve()
 
-    /** Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered. */
+    /**
+     * Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered.
+     * With [clip] false `cornerRadius` does not clip: the component draws it as its own shape (a text field's outline),
+     * since a clip would also cut what hangs outside that shape (the field's supporting text). Background and border
+     * still follow it.
+     */
     @Composable
-    fun modifier(clickable: Boolean = true): Modifier
+    fun modifier(clickable: Boolean = true, clip: Boolean = true): Modifier
 
     @Composable
     fun Children()

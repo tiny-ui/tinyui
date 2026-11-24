@@ -43,7 +43,7 @@ internal class NodeRenderer(
 
         /** docs/components.md §2: parent-scoped (weight) → size → clip → background → border → gesture → padding. */
         @Composable
-        override fun modifier(clickable: Boolean): Modifier {
+        override fun modifier(clickable: Boolean, clip: Boolean): Modifier {
             var m: Modifier = LocalChildModifier.current
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
@@ -51,7 +51,7 @@ internal class NodeRenderer(
             val invisible = get<Boolean>("invisible") == true
             if (invisible) m = m.invisible()
             val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
-            if (shape != RectangleShape) m = m.clip(shape)
+            if (clip && shape != RectangleShape) m = m.clip(shape)
             color("background")?.let { m = m.background(it) }
             // 0.dp is Compose's hairline (one pixel), not "no border"
             get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }

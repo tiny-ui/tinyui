@@ -37,13 +37,14 @@ internal fun SelectComponent(scope: NodeScope) {
     val chosen = options.firstOrNull { it.first == selected }?.second ?: ""
     val style = textFieldStyle()
     val label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!enabled) Unit else if (pageOpens) scope.dispatch("onClick") else expanded = it }, modifier = scope.modifier(clickable = false)) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!enabled) Unit else if (pageOpens) scope.dispatch("onClick") else expanded = it }, modifier = scope.modifier(clickable = false, clip = false)) {
         OutlinedTextField(
             // read-only: the text is the choice, so a new choice is a new state
             state = remember(chosen) { TextFieldState(chosen) },
             readOnly = true,
             colors = style.colors,
             contentPadding = style.contentPadding,
+            shape = scope.fieldShape(),
             enabled = enabled,
             lineLimits = TextFieldLineLimits.SingleLine,
             label = label?.let { { Text(it) } },
