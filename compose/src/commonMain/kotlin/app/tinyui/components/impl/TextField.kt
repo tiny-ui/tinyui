@@ -167,7 +167,10 @@ internal fun TextFieldComponent(scope: NodeScope) {
     val inputTransformation = remember { ClipTransformation { limit() } }
     val masked = secure != null || keyboard == KeyboardType.Password
     val singleLine = masked || (scope.get<Boolean>("singleLine") ?: true)
-    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, singleLine).smallFieldCap(style, size, singleLine && supportingText == null).focusRequester(focusRequester)
+    // with supporting text the component is the box and the line under it: neither one line and its padding (the
+    // intrinsic correction) nor something to cap
+    val oneLineBox = singleLine && supportingText == null
+    val modifier = scope.modifier(clickable = false, clip = false).fieldMinHeight(style, oneLineBox).smallFieldCap(style, size, oneLineBox).focusRequester(focusRequester)
         .then(if (oneTimeCode) Modifier.semantics { contentType = ContentType.SmsOtpCode } else Modifier)
         .onFocusChanged {
             // the first callback reports the initial unfocused state: not a change, not a focus loss
@@ -243,8 +246,9 @@ internal fun Modifier.smallFieldCap(style: ResolvedTextFieldStyle, size: String?
  * floor whatever the host set, and a row sized from that answer comes out taller than the field in it. For a
  * single-line field the box is one line of text and the padding, a height known here; when that is under M3's floor,
  * the floor is what M3 answered for the box, and the answer is corrected by the difference. A multi-line field grows
- * with its text and a labelled one is taller by its label; pass `singleLine = false` for those and M3's answer is left
- * alone.
+ * with its text, a labelled one is taller by its label, and one with supporting text is the box and a line under it,
+ * over M3's floor already, so M3's answer is the real height; pass `singleLine = false` for those and M3's answer is
+ * left alone.
  */
 @Composable
 internal fun Modifier.fieldMinHeight(style: ResolvedTextFieldStyle, singleLine: Boolean): Modifier {

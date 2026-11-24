@@ -184,4 +184,34 @@ class TextFieldHeightTest {
             assertTrue(hint.top >= text.bottom, "under the input: $hint below $text")
         }
     }
+
+    /** A field with an icon and a hint, alone or in a Row that stretches (sized from intrinsics): how tall the hint is drawn, and where. */
+    private fun hintIn(row: Boolean, size: String): DpRect {
+        val problems = ArrayList<PatchProblem>()
+        val tree = NodeTree(registry) { problems += it }
+        var out: DpRect? = null
+        runComposeUiTest {
+            val field = """["c",2,"TextField"],["p",2,"width",200]$size,["p",2,"placeholder","Phone"],["p",2,"supportingText","Hint"],""" +
+                """["p",2,"trailingIcon","0 0 24 24|M0 0h24v24H0z"]"""
+            if (row) tree.apply("""[["c",1,"Row"],["p",1,"width",360],["p",1,"align","stretch"],$field,["i",0,1,0],["i",1,2,0]]""")
+            else tree.apply("""[["c",1,"Column"],["p",1,"width",360],$field,["i",0,1,0],["i",1,2,0]]""")
+            setContent {
+                MaterialTheme { CompositionLocalProvider(LocalTinyUIDefaults provides withSmall) { renderer.Render(tree.node(1)!!) } }
+            }
+            waitForIdle()
+            assertTrue(problems.isEmpty(), problems.toString())
+            out = onNodeWithText("Hint", useUnmergedTree = true).getBoundsInRoot()
+        }
+        return out!!
+    }
+
+    @Test
+    fun aStretchingRowGivesAFieldWithAHintItsWholeHeight() {
+        // with a hint the component is over M3's 56dp floor, so M3's intrinsic answer is the real height: nothing to correct
+        for (size in listOf("", """,["p",2,"size","small"]""")) {
+            val alone = hintIn(row = false, size)
+            val stretched = hintIn(row = true, size)
+            assertTrue(near(alone.top, stretched.top) && near(alone.bottom, stretched.bottom), "size '$size': the hint where it is outside a row, and whole: $stretched vs $alone")
+        }
+    }
 }
