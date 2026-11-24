@@ -59,7 +59,13 @@ internal class NodeRenderer(
             if (clickable && !invisible && has("onClick")) {
                 val role = roleOf(get<String>("role"))
                 val selected = get<Boolean>("selected")
-                m = if (selected != null) m.selectable(selected, role = role) { dispatch("onClick") } else m.clickable(role = role) { dispatch("onClick") }
+                // pressEffect="none": no indication at all, so no ripple (Compose's own way: interactionSource and indication null)
+                if (get<String>("pressEffect") == "none") {
+                    m = if (selected != null) m.selectable(selected, interactionSource = null, indication = null, role = role) { dispatch("onClick") }
+                    else m.clickable(interactionSource = null, indication = null, role = role) { dispatch("onClick") }
+                } else {
+                    m = if (selected != null) m.selectable(selected, role = role) { dispatch("onClick") } else m.clickable(role = role) { dispatch("onClick") }
+                }
             }
             val all = get<Dp>("padding")
             val h = get<Dp>("paddingHorizontal") ?: all

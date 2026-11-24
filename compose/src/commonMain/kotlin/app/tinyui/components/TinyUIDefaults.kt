@@ -32,6 +32,12 @@ import kotlin.math.floor
 class TinyUIDefaults(
     /** The look of every text input — `TextField`, `Select`, and the cells of `CodeField` (their colours). */
     val textField: TextFieldStyle? = null,
+    /**
+     * The look of a `TextField` or `Select` with `size="small"`: a design system's shorter field (a 40dp search field
+     * among 48dp form fields), height and padding together as in MUI's `size` or Material's density. A piece left null
+     * is [textField]'s.
+     */
+    val smallTextField: TextFieldStyle? = null,
     /** The look of `Button` per variant: a design system's primary / secondary / tertiary button. */
     val filledButton: ButtonStyle? = null,
     val outlinedButton: ButtonStyle? = null,
@@ -75,12 +81,18 @@ class TopAppBarStyle(
  *
  * [dragHandle] false leaves out M3's drag handle (the short bar at the top), for a design system whose sheets have none;
  * the sheet still closes by swiping down, tapping the scrim or going back. Null or true keeps M3's.
+ *
+ * [contentPadding] is the room between the sheet's edges and every sheet's content. M3 gives none: the sheet is a bare
+ * container, and the 48dp above the content is the drag handle's own. A design system that drops the handle loses that
+ * room with it, the content starting on the sheet's top edge, inside its rounded corners; it says here, next to
+ * [dragHandle], what its sheets have instead (16dp at the top, say), and pages go on writing none. Null adds nothing.
  */
 class BottomSheetStyle(
     val containerColor: Color? = null,
     val contentColor: Color? = null,
     val maxHeightFraction: Float? = null,
     val dragHandle: Boolean? = null,
+    val contentPadding: PaddingValues? = null,
 ) {
     init {
         require(maxHeightFraction == null || (maxHeightFraction > 0f && maxHeightFraction <= 1f)) {
@@ -141,12 +153,15 @@ internal class ResolvedTextFieldStyle(val colors: TextFieldColors, val contentPa
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun textFieldStyle(): ResolvedTextFieldStyle {
-    val style = LocalTinyUIDefaults.current.textField
+internal fun textFieldStyle(size: String? = null): ResolvedTextFieldStyle {
+    val defaults = LocalTinyUIDefaults.current
+    val style = defaults.textField
+    // the small field's pieces where the host set them, else the regular field's
+    val small = if (size == "small") defaults.smallTextField else null
     return ResolvedTextFieldStyle(
-        colors = style?.colors ?: OutlinedTextFieldDefaults.colors(),
-        contentPadding = style?.contentPadding ?: OutlinedTextFieldDefaults.contentPaddingWithoutLabel(),
-        minHeight = style?.minHeight ?: OutlinedTextFieldDefaults.MinHeight,
+        colors = small?.colors ?: style?.colors ?: OutlinedTextFieldDefaults.colors(),
+        contentPadding = small?.contentPadding ?: style?.contentPadding ?: OutlinedTextFieldDefaults.contentPaddingWithoutLabel(),
+        minHeight = small?.minHeight ?: style?.minHeight ?: OutlinedTextFieldDefaults.MinHeight,
     )
 }
 
@@ -195,7 +210,14 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
 )
 
 /** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
-internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color, val maxHeightFraction: Float?, val dragHandle: Boolean)
+internal class ResolvedBottomSheetStyle(
+    val containerColor: Color,
+    val contentColor: Color,
+    val maxHeightFraction: Float?,
+    val dragHandle: Boolean,
+    /** Null adds nothing. */
+    val contentPadding: PaddingValues?,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,5 +229,6 @@ internal fun bottomSheetStyle(): ResolvedBottomSheetStyle {
         contentColor = style?.contentColor ?: contentColorFor(container),
         maxHeightFraction = style?.maxHeightFraction,
         dragHandle = style?.dragHandle ?: true,
+        contentPadding = style?.contentPadding,
     )
 }

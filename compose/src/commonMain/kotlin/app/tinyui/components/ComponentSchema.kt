@@ -205,6 +205,7 @@ object LayoutProps {
         "paddingVertical" to PropSpec.Dp(default = null),
         "role" to PropSpec.Enum(values = setOf("button", "checkbox", "switch", "radio", "tab"), default = null),
         "selected" to PropSpec.Bool(default = null),
+        "pressEffect" to PropSpec.Enum(values = setOf("none"), default = null),
     )
 }
 

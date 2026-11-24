@@ -35,7 +35,8 @@ internal fun SelectComponent(scope: NodeScope) {
     // disabled, or taken over by the page, while open: the menu goes, so nothing can be picked from it any more
     if ((!enabled || pageOpens) && expanded) expanded = false
     val chosen = options.firstOrNull { it.first == selected }?.second ?: ""
-    val style = textFieldStyle()
+    val size = scope.get<String>("size")
+    val style = textFieldStyle(size)
     val label = scope.get<String>("label")?.takeIf { it.isNotEmpty() }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { if (!enabled) Unit else if (pageOpens) scope.dispatch("onClick") else expanded = it }, modifier = scope.modifier(clickable = false, clip = false)) {
         OutlinedTextField(
@@ -51,7 +52,7 @@ internal fun SelectComponent(scope: NodeScope) {
             placeholder = scope.get<String>("placeholder")?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled)// a floating label sits on the top border and adds to the height, so the box is no longer one line and its padding
-                .fillMaxWidth().fieldMinHeight(style, singleLine = label == null),
+                .fillMaxWidth().fieldMinHeight(style, singleLine = label == null).smallFieldCap(style, size, singleLine = label == null),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for ((value, text) in options) {
