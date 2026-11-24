@@ -19,6 +19,7 @@ export interface LayoutProps {
     paddingVertical?: number;
     role?: "button" | "checkbox" | "switch" | "radio" | "tab";
     selected?: boolean;
+    pressEffect?: "none";
 }
 
 export interface ColumnClickPayload {

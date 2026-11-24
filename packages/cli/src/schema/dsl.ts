@@ -127,4 +127,5 @@ export const LAYOUT_PROPS: Record<string, PropDef> = {
     paddingVertical: dp({ doc: "top and bottom; overrides padding on that axis" }),
     role: enumOf(["button", "checkbox", "switch", "radio", "tab"], { doc: "what a screen reader announces the clickable container as" }),
     selected: boolean({ doc: "makes the clickable container one selectable node (announced selected / not selected)" }),
+    pressEffect: enumOf(["none"], { doc: "what a press on the clickable container draws; unset, M3's ripple. none draws nothing (a tab whose selected look is the feedback); the tap, selection and screen reader stay" }),
 };

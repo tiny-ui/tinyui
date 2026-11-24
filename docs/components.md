@@ -45,6 +45,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
 | 4 | （有 `onClick` handler 时）`role` / `selected` | enum / boolean | 设了 `selected` 为 `selectable(selected, role)`，否则 `clickable(role)`，都 `dispatch("onClick")`（2026-09-25 加 `role` / `selected`） |
+| 4.1 | （同上）`pressEffect` | enum：`none` | 不设即 M3 的水波纹；`none` 时上面两个都传 `interactionSource = null, indication = null`，按下不画任何东西，点击、选中与读屏语义不变（2026-11-24 加，登录流程触发：设计系统的标签切换没有点击效果，选中态本身就是反馈。与 RN `Pressable`、Flutter `GestureDetector`、SwiftUI `.buttonStyle(.plain)` 一样按元素选择，不做宿主全局开关） |
 | 5 | `padding` / `paddingHorizontal` / `paddingVertical` | dp | 一个 `padding(start, top, end, bottom)`：轴向值覆盖该轴，缺的轴用 `padding`（React Native 式级联；2026-09-18 加轴向） |
 
 `role` 取 `button` / `checkbox` / `switch` / `radio` / `tab`，对应 Compose 的 `Role`，只给读屏用；`selected` 让容器成为一个可选中节点，读屏报"已选中 / 未选中"。可点击容器会合并子节点的语义，所以放在它里面的 `RadioButton` 不要再给 `onClick`（给了就是第二个焦点）：
