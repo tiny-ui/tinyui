@@ -278,12 +278,14 @@ final class app.tinyui.bundle/PageRequires { // app.tinyui.bundle/PageRequires|n
 }
 
 final class app.tinyui.components/BottomSheetStyle { // app.tinyui.components/BottomSheetStyle|null[0]
-    constructor <init>(androidx.compose.ui.graphics/Color? = ..., androidx.compose.ui.graphics/Color? = ..., kotlin/Float? = ..., kotlin/Boolean? = ...) // app.tinyui.components/BottomSheetStyle.<init>|<init>(androidx.compose.ui.graphics.Color?;androidx.compose.ui.graphics.Color?;kotlin.Float?;kotlin.Boolean?){}[0]
+    constructor <init>(androidx.compose.ui.graphics/Color? = ..., androidx.compose.ui.graphics/Color? = ..., kotlin/Float? = ..., kotlin/Boolean? = ..., androidx.compose.foundation.layout/PaddingValues? = ...) // app.tinyui.components/BottomSheetStyle.<init>|<init>(androidx.compose.ui.graphics.Color?;androidx.compose.ui.graphics.Color?;kotlin.Float?;kotlin.Boolean?;androidx.compose.foundation.layout.PaddingValues?){}[0]
 
     final val containerColor // app.tinyui.components/BottomSheetStyle.containerColor|{}containerColor[0]
         final fun <get-containerColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.containerColor.<get-containerColor>|<get-containerColor>(){}[0]
     final val contentColor // app.tinyui.components/BottomSheetStyle.contentColor|{}contentColor[0]
         final fun <get-contentColor>(): androidx.compose.ui.graphics/Color? // app.tinyui.components/BottomSheetStyle.contentColor.<get-contentColor>|<get-contentColor>(){}[0]
+    final val contentPadding // app.tinyui.components/BottomSheetStyle.contentPadding|{}contentPadding[0]
+        final fun <get-contentPadding>(): androidx.compose.foundation.layout/PaddingValues? // app.tinyui.components/BottomSheetStyle.contentPadding.<get-contentPadding>|<get-contentPadding>(){}[0]
     final val dragHandle // app.tinyui.components/BottomSheetStyle.dragHandle|{}dragHandle[0]
         final fun <get-dragHandle>(): kotlin/Boolean? // app.tinyui.components/BottomSheetStyle.dragHandle.<get-dragHandle>|<get-dragHandle>(){}[0]
     final val maxHeightFraction // app.tinyui.components/BottomSheetStyle.maxHeightFraction|{}maxHeightFraction[0]

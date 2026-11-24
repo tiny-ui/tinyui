@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.BottomSheetDefaults
@@ -37,7 +38,8 @@ import app.tinyui.components.bottomSheetStyle
 /**
  * `open` is the page's; going false animates the sheet out before it leaves composition. A user dismissal (swipe, scrim,
  * back) has already hidden it when `onDismiss` fires: it stays down until `open` goes false and true again. Its colours
- * are the host's where set (`TinyUIDefaults.bottomSheet`), else M3's, and so is whether it has a drag handle. A cap on its
+ * are the host's where set (`TinyUIDefaults.bottomSheet`), else M3's, and so are whether it has a drag handle and the
+ * room around its content. A cap on its
  * height ([sheetContentCap]) is the page's `maxHeightFraction` where set, else the host's. While it is up the page's toasts float above it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,8 +88,10 @@ internal fun BottomSheetComponent(scope: NodeScope) {
                 }
             },
         ) {
+            // the host's room around the content, inside the cap: the sheet stops where it did, the content gets less
+            val padding = style.contentPadding?.let { Modifier.padding(it) } ?: Modifier
             if (fraction == null) {
-                scope.Children()
+                if (style.contentPadding == null) scope.Children() else Column(padding) { scope.Children() }
             } else {
                 // M3 sizes a sheet by its content and takes the constraints it is given as the whole screen, so the cap
                 // goes on the content: see [sheetContentCap]
@@ -96,7 +100,7 @@ internal fun BottomSheetComponent(scope: NodeScope) {
                         val cap = if (constraints.hasBoundedHeight) sheetContentCap(constraints.maxHeight, window, statusBar, fraction) else constraints.maxHeight
                         val placeable = measurable.measure(constraints.copy(minHeight = minOf(constraints.minHeight, cap), maxHeight = cap))
                         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
-                    },
+                    }.then(padding),
                 ) { scope.Children() }
             }
         }

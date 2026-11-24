@@ -81,12 +81,18 @@ class TopAppBarStyle(
  *
  * [dragHandle] false leaves out M3's drag handle (the short bar at the top), for a design system whose sheets have none;
  * the sheet still closes by swiping down, tapping the scrim or going back. Null or true keeps M3's.
+ *
+ * [contentPadding] is the room between the sheet's edges and every sheet's content. M3 gives none: the sheet is a bare
+ * container, and the 48dp above the content is the drag handle's own. A design system that drops the handle loses that
+ * room with it, the content starting on the sheet's top edge, inside its rounded corners; it says here, next to
+ * [dragHandle], what its sheets have instead (16dp at the top, say), and pages go on writing none. Null adds nothing.
  */
 class BottomSheetStyle(
     val containerColor: Color? = null,
     val contentColor: Color? = null,
     val maxHeightFraction: Float? = null,
     val dragHandle: Boolean? = null,
+    val contentPadding: PaddingValues? = null,
 ) {
     init {
         require(maxHeightFraction == null || (maxHeightFraction > 0f && maxHeightFraction <= 1f)) {
@@ -204,7 +210,14 @@ private fun ButtonStyle?.resolve(enabled: Boolean, colors: ButtonColors, border:
 )
 
 /** A `BottomSheet`'s look with every piece settled: the host's where set, else M3's. */
-internal class ResolvedBottomSheetStyle(val containerColor: Color, val contentColor: Color, val maxHeightFraction: Float?, val dragHandle: Boolean)
+internal class ResolvedBottomSheetStyle(
+    val containerColor: Color,
+    val contentColor: Color,
+    val maxHeightFraction: Float?,
+    val dragHandle: Boolean,
+    /** Null adds nothing. */
+    val contentPadding: PaddingValues?,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -216,5 +229,6 @@ internal fun bottomSheetStyle(): ResolvedBottomSheetStyle {
         contentColor = style?.contentColor ?: contentColorFor(container),
         maxHeightFraction = style?.maxHeightFraction,
         dragHandle = style?.dragHandle ?: true,
+        contentPadding = style?.contentPadding,
     )
 }
