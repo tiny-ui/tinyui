@@ -239,6 +239,18 @@ describe("BottomSheet", () => {
         unmount();
     });
 
+    it("follows a height cap that is unset at first", () => {
+        mount(() => {
+            const [cap, setCap] = signal<number | undefined>(undefined);
+            g["__setCap"] = setCap;
+            return sheet({ open: false, maxHeightFraction: thunk(() => cap()) }, () => h(Text, { text: "x" }));
+        });
+        const setCap = g["__setCap"] as (v: number | undefined) => void;
+        assert.deepEqual(transaction(() => setCap(0.65)), [["p", 1, "maxHeightFraction", 0.65]]);
+        assert.deepEqual(transaction(() => setCap(undefined)), [["p", 1, "maxHeightFraction", null]], "unset again: back to the host's");
+        unmount();
+    });
+
     it("rejects static children", () => {
         assert.throws(() => mount(() => h(Column, null, h(BottomSheet as never, { open: false }, h(Text, { text: "static" })))), /children must be a function/);
     });

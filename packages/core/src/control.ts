@@ -173,6 +173,7 @@ export function BottomSheet<T>(props: BottomSheetProps<T>): Node {
     });
     onCleanup(() => { if (current) disposeOwner(current.owner); });
     const onDismiss = props.onDismiss;
-    const cap = props.maxHeightFraction !== undefined ? { maxHeightFraction: thunk(() => props.maxHeightFraction) } : {};
+    // bound whenever the page passes it, even unset at first: a later value must still reach the node (unset again: null, the host's)
+    const cap = "maxHeightFraction" in props ? { maxHeightFraction: thunk(() => props.maxHeightFraction) } : {};
     return h("BottomSheet", { open: thunk(() => !!props.open), ...cap, ...(onDismiss ? { onDismiss } : {}) }, slot);
 }
