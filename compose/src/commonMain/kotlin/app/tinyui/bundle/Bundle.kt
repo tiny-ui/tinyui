@@ -25,7 +25,7 @@ class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
     private val lock = Mutex()
 
     /** Only the files the manifest lists as assets: a page cannot read its bytecode or anything else through Image. */
-    private val assets = PageAssets { path -> if (path in manifest.assets) files.read(path) else null }
+    private val assets = manifest.assets.toSet().let { listed -> PageAssets { path -> if (path in listed) files.read(path) else null } }
     private val maps = HashMap<String, String?>()
     private var i18n: PackageI18n? = null
 
