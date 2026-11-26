@@ -2,7 +2,7 @@ package app.tinyui.components
 
 import androidx.compose.runtime.compositionLocalOf
 import app.tinyui.PageAssets
-import app.tinyui.sharedHttpClient
+import app.tinyui.defaultHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.decode.DataSource
@@ -98,7 +98,7 @@ internal object SharedImageLoader {
     fun get(context: PlatformContext): ImageLoader = loader ?: ImageLoader.Builder(context)
         .components {
             // Ktor follows redirects itself (both engines leave them to it) and never from https down to http
-            add(KtorNetworkFetcherFactory(httpClient = { sharedHttpClient }))
+            add(KtorNetworkFetcherFactory(httpClient = { defaultHttpClient }))
             add(AssetImageFetcher.Factory())
             add(AssetImageKeyer())
         }
