@@ -65,7 +65,7 @@ object BuiltinSchemas {
             "style" to PropSpec.Enum(values = setOf("displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"), default = null, required = false, initial = false),
             "color" to PropSpec.ColorSpec(default = null, required = false, initial = false),
             "fontSize" to PropSpec.Sp(default = null, required = false, initial = false),
-            "fontWeight" to PropSpec.Enum(values = setOf("normal", "medium", "bold"), default = null, required = false, initial = false),
+            "fontWeight" to PropSpec.Enum(values = setOf("normal", "medium", "semibold", "bold"), default = null, required = false, initial = false),
             "maxLines" to PropSpec.Num(default = 0.0, required = false, initial = false),
             "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
         ),

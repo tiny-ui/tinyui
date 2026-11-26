@@ -85,7 +85,8 @@ export interface TextProps extends LayoutProps {
     style?: "displayLarge" | "displayMedium" | "displaySmall" | "headlineLarge" | "headlineMedium" | "headlineSmall" | "titleLarge" | "titleMedium" | "titleSmall" | "bodyLarge" | "bodyMedium" | "bodySmall" | "labelLarge" | "labelMedium" | "labelSmall";
     color?: ColorValue;
     fontSize?: number;
-    fontWeight?: "normal" | "medium" | "bold";
+    /** 400 / 500 / 600 / 700 */
+    fontWeight?: "normal" | "medium" | "semibold" | "bold";
     /** 0 = unlimited */
     maxLines?: number;
     align?: "start" | "center" | "end";

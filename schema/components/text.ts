@@ -7,7 +7,7 @@ export default defineComponent("Text", {
         style: enumOf(TEXT_STYLES, { doc: "Material 3 text style; fontSize / fontWeight override its fields" }),
         color: color(),
         fontSize: sp(),
-        fontWeight: enumOf(["normal", "medium", "bold"]),
+        fontWeight: enumOf(["normal", "medium", "semibold", "bold"], { doc: "400 / 500 / 600 / 700" }),
         maxLines: number({ doc: "0 = unlimited", default: 0 }),
         align: enumOf(["start", "center", "end"], { default: "start" }),
     },

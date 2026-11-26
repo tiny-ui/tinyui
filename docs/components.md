@@ -84,7 +84,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|---|
 | `Column` / `Row` | `gap`（只隔开占版面的子节点，schema `layout: false` 的 `Menu` / `Popover` / `BottomSheet` / `Option` / `BackHandler` / `IndexBar` 不计）、`align`（交叉轴 start / center / end / stretch）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
-| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align`、`markup`（设了才读 `text` 里的行内标记：`**文案**` 粗体、`[文案](id)` 链接；缺省照原样显示） | `onClick`、`onLinkClick{id}`（点了 `[文案](id)` 链接；链接只在设了 `markup` 时才有） | | |
+| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / semibold / bold，即 400 / 500 / 600 / 700，2026-11-26 加 semibold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align`、`markup`（设了才读 `text` 里的行内标记：`**文案**` 粗体、`[文案](id)` 链接；缺省照原样显示） | `onClick`、`onLinkClick{id}`（点了 `[文案](id)` 链接；链接只在设了 `markup` 时才有） | | |
 | `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
 | `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `Checkbox` | `checked`（必填）、`enabled` | `onClick` | | |
