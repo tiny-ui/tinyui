@@ -36,7 +36,7 @@ internal fun TextComponent(scope: NodeScope) {
         style = scope.get<String>("style")?.let { Theme.textStyle(MaterialTheme.typography, it) } ?: LocalTextStyle.current,
         color = scope.color("color") ?: Color.Unspecified,
         fontSize = scope["fontSize"] ?: TextUnit.Unspecified,
-        fontWeight = when (scope.get<String>("fontWeight")) { "normal" -> FontWeight.Normal; "medium" -> FontWeight.Medium; "bold" -> FontWeight.Bold; else -> null },
+        fontWeight = when (scope.get<String>("fontWeight")) { "normal" -> FontWeight.Normal; "medium" -> FontWeight.Medium; "semibold" -> FontWeight.SemiBold; "bold" -> FontWeight.Bold; else -> null },
         maxLines = maxLines,
         overflow = if (maxLines == Int.MAX_VALUE) TextOverflow.Clip else TextOverflow.Ellipsis,
         textAlign = when (scope.get<String>("align")) { "center" -> TextAlign.Center; "end" -> TextAlign.End; else -> TextAlign.Start },

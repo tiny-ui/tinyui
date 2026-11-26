@@ -193,9 +193,11 @@ class ComponentSchema(
 object LayoutProps {
     val specs: Map<String, PropSpec> = linkedMapOf(
         "weight" to PropSpec.Num(default = null),
+        "animateSize" to PropSpec.Bool(default = null),
         "width" to PropSpec.Size(default = null),
         "height" to PropSpec.Size(default = null),
         "invisible" to PropSpec.Bool(default = null),
+        "opacity" to PropSpec.Num(default = null),
         "cornerRadius" to PropSpec.Dp(default = null),
         "background" to PropSpec.ColorSpec(default = null),
         "borderWidth" to PropSpec.Dp(default = null),
