@@ -39,8 +39,10 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | 顺序 | prop | 类型 | Modifier |
 |---|---|---|---|
 | 0 | `weight` | number | `weight(f)`，由父 `Row` / `Column` 施加（2026-09-17 加） |
+| 0.5 | `animateSize` | boolean | `animateContentSize()`：内容变多变少时自身尺寸做过渡动画，典型是展开收起的分组（2026-11-26 加）。在尺寸之前，动画的是最终尺寸 |
 | 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()` |
 | 1.5 | `invisible` | boolean | `alpha(0)` + 裁剪到空形状（命中测试只在裁剪区内命中，整棵子树因此不被命中、触摸穿过去）+ 清空子树语义（2026-11-02 加） |
+| 1.6 | `opacity` | number（0–1） | `alpha(f)`：节点连同子树按该透明度绘制，在 clip / background / border 之外，背景与边框一起变淡（CSS `opacity`）；仍占位、仍可点，置灰的不可用项要禁用点击请自己不挂 `onClick`；越界按 0–1 截断（2026-11-26 加） |
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)`；输入框（`TextField`、`Select`）不裁剪，改作框自己的描边形状（2026-11-24 改） |
 | 3 | `background` | color | `background(color)` |
 | 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |

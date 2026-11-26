@@ -7,9 +7,11 @@ export type ColorValue = `#${string}` | ColorToken;
 
 export interface LayoutProps {
     weight?: number;
+    animateSize?: boolean;
     width?: number | "fill" | "wrap";
     height?: number | "fill" | "wrap";
     invisible?: boolean;
+    opacity?: number;
     cornerRadius?: number;
     background?: ColorValue;
     borderWidth?: number;

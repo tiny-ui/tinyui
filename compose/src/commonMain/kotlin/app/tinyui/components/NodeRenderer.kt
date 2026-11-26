@@ -1,5 +1,6 @@
 package app.tinyui.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.Role
@@ -45,11 +47,15 @@ internal class NodeRenderer(
         @Composable
         override fun modifier(clickable: Boolean, clip: Boolean): Modifier {
             var m: Modifier = LocalChildModifier.current
+            // before the size: it animates the size the node ends up with, a fixed size included
+            if (get<Boolean>("animateSize") == true) m = m.animateContentSize()
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
             // outside clip / background / border so those vanish too; the gesture below is skipped as well
             val invisible = get<Boolean>("invisible") == true
             if (invisible) m = m.invisible()
+            // outside clip / background / border, so they fade with the content (CSS opacity); taps are unaffected
+            get<Double>("opacity")?.let { if (it < 1.0) m = m.alpha(it.toFloat().coerceIn(0f, 1f)) }
             val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
             if (clip && shape != RectangleShape) m = m.clip(shape)
             // the shape as well as the clip: a component that draws cornerRadius itself is not clipped (clip = false)

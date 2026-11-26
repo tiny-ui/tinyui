@@ -115,9 +115,11 @@ export function defineComponent(name: string, input: ComponentInput = {}): Compo
 /** The common layout props every `layout: true` component accepts; order = Modifier order (docs/components.md §2). */
 export const LAYOUT_PROPS: Record<string, PropDef> = {
     weight: number({ doc: "share of the parent's remaining main-axis space; only as a direct child of Row / Column" }),
+    animateSize: boolean({ doc: "animates its own size when its content grows or shrinks (Compose animateContentSize), e.g. a section that expands" }),
     width: size({ doc: "dp, or fill / wrap" }),
     height: size({ doc: "dp, or fill / wrap" }),
     invisible: boolean({ doc: "keeps its room but is not drawn, tapped or read (CSS visibility: hidden, Android INVISIBLE); for a node that should not take room, do not render it" }),
+    opacity: number({ doc: "0 to 1, the node and its subtree drawn at that alpha, background and border included (CSS opacity); it still takes room and taps" }),
     cornerRadius: dp({ doc: "clips background and content" }),
     background: color(),
     borderWidth: dp({ doc: "drawn inside the corner radius; color defaults to the outline token" }),
