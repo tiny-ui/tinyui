@@ -43,6 +43,9 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             api(libs.okio)
             api(libs.ktor.client.core)
+            // Image (docs/components.md §3): coil decodes and caches; network goes through the ktor client above
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)

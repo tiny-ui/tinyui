@@ -92,6 +92,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `CodeField` | `autoFocus`（只认创建时的值）、`length`（1–12，默认 6）、`secure`、`enabled`、`error`、`autofill`（none / oneTimeCode） | `onChange{text}`、`onComplete{text}`（填满最后一格） | `setText{text}`、`focus`、`clear` | |
 | `Select` | `value`、`placeholder`、`label`、`enabled`、`size`（`small`，见 §6） | `onSelect{value}`、`onClick` | | 是：`Option` |
 | `Option` | `value`（必填）、`text`（必填）；不接受布局 prop；`Select`、`Menu`、`Tabs` 与 `IndexBar` 读它 | | | |
+| `Image` | `src`（必填：页面 import 的图片，或 https 地址）、`contentScale`（fit / crop / fill，默认 fit）、`label`（读屏文字；不设是装饰图）；宽高用布局 prop，必须给 | | | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>`；`SectionHeader` 是吸顶的行，`IndexBar` 不是行 |
 | `SectionHeader` | `index`（这一组在 `IndexBar` 上的标签值，不设就不进索引）、`sticky`（默认 true）、`align`（同 `Box`） | `onClick` | | 是：标题的内容 |
 | `IndexBar` | `label`（读屏念的名字）；不接受布局 prop；只在 `LazyColumn` 的直接 children 里起作用 | | | 是：`Option`，不写就取各 `SectionHeader` 的 `index` |
@@ -131,7 +132,7 @@ const pin = ref<CodeFieldCommands>();
 
 `Text` 内联链接（2026-10-28 加）：设了 `markup`，`text` 里的 `[文案](id)` 渲染成 primary 色链接，点击报 `onLinkClick{id}`。协议句"我同意 [隐私政策](privacy) 及 [服务协议](terms)"要行内折行，`Row` 拼几个 `Text` 做不到；markdown 链接子集是最小够用的标记，i18n 文案里直接写。只认 `[` `]` `(` `)` 紧挨、id 不含空白的形式，其余方括号原样显示；不支持嵌套与转义。
 
-`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角），加粗图标 `"<viewBox>|<d>|+<线宽>"`（先填充再用同一颜色沿轮廓描一道，形状每边长出半个线宽；设计系统把一份几何按描边分「常规 / 加粗」两档时用它，线宽是 viewBox 单位的常数，与渲染尺寸无关，2026-11-02 加）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`。
+`Icon` 不内置任何图标，图标数据随包（2026-09-25，ADR-007 §3.7）。一个图标是一个字符串：填充图标 `"<viewBox>|<d>"`，描边图标 `"<viewBox>|<d>|<线宽>"`（圆头圆角），加粗图标 `"<viewBox>|<d>|+<线宽>"`（先填充再用同一颜色沿轮廓描一道，形状每边长出半个线宽；设计系统把一份几何按描边分「常规 / 加粗」两档时用它，线宽是 viewBox 单位的常数，与渲染尺寸无关，2026-11-02 加）。`viewBox` 是四个数（`0 -960 960 960`），`d` 是 SVG path 数据，多个形状合并成一个 `d`，按 `tint` 着色；用字符串是因为 prop 不过桥对象（patch-protocol.md §4）。schema 里是 prop 类型 `icon()`，Kotlin 写入时解析成 `ImageVector` 并按字符串缓存，格式不对按 E5 跳过。字符串由 `tinyui build` 的 `.svg` 加载器从 SVG 文件生成（build-chain.md §9），页面直接 import SVG：Material Symbols 用 npm 包 `@material-symbols/svg-400`，品牌图标放一个 `.svg` 进工程；类型声明见 `tinyui-core/assets`。多色图标与位图归 `Image`（见下）。
 
 ```tsx
 import bolt from "@material-symbols/svg-400/outlined/bolt.svg";
@@ -266,7 +267,17 @@ const [method, setMethod] = signal("phone");
 
 `Divider` 是 M3 `HorizontalDivider`：占满宽度的一条线，缩进用 `paddingHorizontal`（2026-10-12 加，与 Compose 组件对齐；像素上等同 `<Box width="fill" height={1} background="outlineVariant" />`，内置是为了写法与默认值跟 M3 走）。不做：竖线（`VerticalDivider`，还没有页面需要）与一像素 hairline（尺寸只按 dp 过桥）。
 
-**`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
+`Image` 画一张图（2026-11-26 加，第一个需要的业务页面触发：随包的多色插画、CDN 上的国旗）。`src` 有两种来源：
+
+- **随包图片**：页面 `import hero from "./hero.png"`（png / jpg / webp），`tinyui build` 把文件按内容 hash 拷进包的 `assets/`，import 拿到 `"asset:assets/<hash>.png"`（build-chain.md §12）。文件列在 manifest 的 `assets`，进 `hashes`，与页面字节码一起受签名保护、热下发时一起下载校验（updates.md §1.1）。设备上只从页面所属的包读，读不到清单以外的文件
+- **网络图片**：`https://` 地址，经 core 自带的 ktor 客户端下载，不带宿主的公共头与会话（图片不认人，也就不经页面的 `http.client` 通道）；`http://` 不加载
+
+加载交给 coil3，框架内置、宿主不接线（ADR-007 的判据：能随包变的进包，通用能力框架自己做）。一个进程一个 loader：内存缓存，网络图片另有磁盘缓存（系统临时目录下 `tinyui-images`，64 MB）；随包图片按「包名 + 路径」做缓存 key，路径里有内容 hash，换图即换 key。
+
+- **尺寸**：宽高用公共布局 prop，必须给。图到之前就占好这块地方，到了不挤动别的东西；`background` 就是到之前的底色，`cornerRadius` 裁圆角（圆形国旗写宽高一半）
+- **缩放**：`fit` 整张图放进框里（留白）；`crop` 铺满框、裁掉多出的边；`fill` 拉伸到框
+- **失败**：`src` 两种都不是、读不到、解码失败，框留空，按页面问题上报（E5），不给页面事件。页面要兜底图就自己叠一层
+- **不做**：动图、多色 SVG 转矢量（多色图标先导出成 png）、按屏幕密度挑 @2x / @3x（只放一张够大的图，按 dp 缩放）、页面事件 `onLoad` / `onError`。等第一个需要的页面
 
 ## 4. 命令怎么消费
 

@@ -33,7 +33,7 @@
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 已定（2026-09-16，[patch-protocol.md](./patch-protocol.md)） |
 | schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 已定（[components.md](./components.md) §1，`tinyui schema`） |
 | 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 已定（components.md §2） |
-| 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 已定（components.md §3）；`Image` 推迟到图片加载管线选型 |
+| 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 已定（components.md §3）；`Image` 2026-11-26 补上（coil3 内置，随包图片 + https） |
 | J2 白名单清单与注册方式 | ADR-002 | 已定（[native-api.md](./native-api.md) §1） |
 | `tinyui-native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 已定（native-api.md §2–§5；Promise 糖不做） |
 | E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 已定（native-api.md §6） |
@@ -63,7 +63,7 @@
 | 宿主契约 schema 化 + 代码生成：`host.call` 能力的参数 / 返回用 schema DSL 声明进快照（形状变即快照变、逼 `hostVersion` 加 1），CLI 按目标宿主版本的快照生成 TS 类型，页面编译期核对。ADR-007 后页面 props 与 store key 不再是宿主契约，盲区只剩少数兜底能力 | updates.md §4.1 | 宿主与页面由不同的人或团队维护（外部租户、第二个宿主），或首次因快照盲区出线上问题 |
 | ~~宿主打开页面的契约检查~~ 已做（2026-11-21）：manifest `contracts` + 挂载时校验 + `PageContract.problems` 供宿主测试用，见 build-chain.md §10、native-api.md §3。没做的一半是从契约生成 Kotlin 类型（宿主仍手写参数类型，靠校验对齐），等第二个由宿主原生代码打开并传参的页面出现。原条目：manifest 记下每页的 props 形状（复用 `tinyui routes` 已有的 `PageProps` 类型导出成 JSON），宿主登记自己打开哪些页面、传什么参数，由宿主测试或 CLI 比对；内置包落后于宿主时在宿主的 MR 上失败，不等到运行时报错。与上一行方向相反：上一行管页面调宿主（`host.call`），这一行管宿主开页面 | [build-chain.md](./build-chain.md) §10、[app-model.md](./app-model.md) §7 | 出现第二个由宿主原生代码打开页面并传参的真实场景，或再次因宿主引用了内置包里没有的页面或参数值出问题。已发生一次（2026-11-18）：内置包落后于宿主代码，宿主用新的场景值打开验证页，旧页面不认，运行时报 `not a function` |
 | 以客户端能力探测替代 `hostVersion`：指针列出多个候选版本及其 `requires`，客户端挑能跑的最新一版，配"能力改参数或语义即换名"约定（运行时 ABI 版本一项已由 ADR-006 §2.11 运行时随宿主取代，2026-09-24） | ADR-006 §2.11 | `hostVersion` 加 1 的频率重新成为负担 |
-| `Image` 与图片加载管线（coil3 vs 宿主 loader）；多色 / 位图图标并入这里 | components.md §3 | 出现需要图片的页面 |
+| `Image` 的第二批：页面事件 `onLoad` / `onError`、多倍图（@2x / @3x 按密度选）、多色 SVG 转矢量、动图。第一版（2026-11-26，coil3 内置，随包图片 + https，[components.md](./components.md) §3）不做这些 | components.md §3 | 第一个需要其中某项的页面 |
 | i18n 的复数、本地化数字与日期的文字字段（月份名、星期等，原生侧实现） | ADR-007 §3.2 | 第一个需要复数、本地数字或文字日期字段的页面。数字日期字段与时区已完成（2026-10-12，第一个需要的业务页面触发）：`TinyUIHost.timeZone` + J2 `i18n.zoneOffset` + JS `i18n.formatDate`，见 [native-api.md](./native-api.md) §8 |
 | 框架远程配置 / 功能开关服务（可能是托管实例的付费功能） | ADR-007 §3.3 | 第二个 App 没有自己的配置后端又需要功能开关 |
 | 大数据存储（SQLite / 文件 API） | ADR-007 §3.4 | 第一个要缓存大量数据的页面 |

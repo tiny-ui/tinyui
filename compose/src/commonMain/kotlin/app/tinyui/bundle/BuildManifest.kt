@@ -30,13 +30,15 @@ class BuildManifest(
     val presentation: Map<String, String> = emptyMap(),
     /** Page module name → what the page takes and hands back (docs/build-chain.md §10); empty for a package built without contracts. */
     val contracts: Map<String, PageContract> = emptyMap(),
+    /** The images the pages import, as paths inside the package (`assets/<hash>.png`, docs/build-chain.md §12); each is a key of [hashes]. */
+    val assets: List<String> = emptyList(),
 ) {
     /** What [page] declares about itself; null when the package has no such page. */
     fun pageInfo(page: String): PageInfo? = if (page in pages) PageInfo(Presentation.of(presentation[page]), contracts[page]) else null
 
     /** Every file of the package besides the manifest, as (path, key into [hashes]). */
     val payload: List<Pair<String, String>>
-        get() = pages.map { file(it) + ".jsb" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList())
+        get() = pages.map { file(it) + ".jsb" to it } + (i18n?.files?.values?.map { it to it } ?: emptyList()) + assets.map { it to it }
 
     fun buildId(module: String): String = buildIds[module] ?: ""
 
@@ -76,6 +78,7 @@ class BuildManifest(
                 } ?: emptyMap(),
                 hostVersion = root["hostVersion"]?.jsonPrimitive?.contentOrNull,
                 presentation = strings("presentation"),
+                assets = names("assets"),
                 contracts = root["contracts"]?.jsonObject?.mapNotNull { (page, entry) -> PageContract.parse(entry)?.let { page to it } }?.toMap() ?: emptyMap(),
                 i18n = root["i18n"]?.jsonObject?.let { i ->
                     I18nFiles(

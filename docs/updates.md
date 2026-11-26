@@ -20,6 +20,8 @@
 ```
 manifest.json
 pages/**/*.jsb
+i18n/*.json        有包内文字时
+assets/*           页面 import 的图片（build-chain.md §12）
 ```
 
 ### 1.1 `manifest.json`
@@ -34,10 +36,11 @@ pages/**/*.jsb
 | `version` | `tinyui build` | 包标识，目录名，只求唯一：`<createdAt 紧凑形式>-<git 短 sha（12 位）或 nogit>`，如 `20260918T100212Z-3f2a1c9e04b7`；`--version` 可覆盖 |
 | `createdAt` | `tinyui build` | ISO 8601 UTC，新旧比较只看它 |
 | `engine` | `tinyui build` | 字节码文件头里的引擎 commit（40 位 hex，所有 `.jsb` 一致，取第一个）；客户端要求等于宿主 |
-| `hashes` | `tinyui build` | 模块名 → 该模块 `.jsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件，键为其相对路径（`i18n/en.json`） |
+| `hashes` | `tinyui build` | 模块名 → 该模块 `.jsb` 的 sha256 hex，键与 `files` 一致；另含每个 i18n 文件与每张图片，键为其相对路径（`i18n/en.json`、`assets/<hash>.png`） |
 | `presentation` | `tinyui build` | 页面模块名 → 呈现方式（`"sheet"`），只列声明了非缺省值的页面，都是缺省时省略（build-chain.md §11）。宿主经 `pageInfo` 读（§4.2）；不认识的值按全屏页处理 |
 | `contracts` | `tinyui build` | 页面模块名 → `{ params, result? }`：页面收什么、带回什么的形状（build-chain.md §10），取自 `tinyui.config.json` 的 `contracts` 指向的文件，没配置时省略。`Bundle.page` 把它带进 `PageModule`，挂载时校验 props；宿主也可以经 `pageInfo(name).contract` 拿来校验自己构造的参数 |
 | `i18n` | `tinyui build` | `{ "default": 默认语言, "files": { 语言: 相对路径 } }`，包没有 i18n 资源时省略（build-chain.md §8） |
+| `assets` | `tinyui build` | 页面 import 的图片，包内路径列表（`assets/<hash>.png`，build-chain.md §12）；每个路径也是 `hashes` 的键，随页面一起下载校验。没有图片时省略 |
 | `tinyui` | `tinyui build` | 页面需要的最低运行时：JS 工程构建时的 `tinyui-core` 版本（能用哪些内置组件与运行时 API）与 `tinyui-cli` 版本（产物布局由同版本起的库读取）取较新者；`publish` 核对目标宿主版本的 tinyui 下限与它兼容（§1.3），客户端核对它与 `TinyUI.version` 兼容（§4.3）。**兼容 = major 相同，且宿主的版本不低于包的**（semver `^`；0.x 之间按版本号全序比较，1.0 之前不允许破坏公开面）。成立的前提是运行时公开面只增不删（runtime-api.md §11）；升 major 时宿主加 `hostVersion`（§4.1），旧 major 的包因不兼容被拒收 |
 | `requires` | `tinyui build` | 页面模块名 → `{ components, capabilities, channels, routes }`（`routes` 是页面跳到包外的页面名：原生路由或别的包的页面，native-api.md §3；`publish` 对不在快照里的只警告，`PackageCheck` 给了其他包的清单时才判错）。前三项：该页用到的带点宿主组件名、`host.call` 能力名与 `http.client` 通道名，各自排序；内置组件与 `default` 通道不列。`publish` 据此核对目标宿主版本（§1.3）；`Updates` 不读它，宿主可以用 `PackageCheck` 在设备上再核对一遍 |
 | `hostVersion` | `tinyui bundle` | 发布目标，等于宿主声明值；写入后文件定稿，签名覆盖它的原始字节（§7） |
@@ -57,6 +60,7 @@ dist/ota/<pkg>/<hostVersion>/current.json             指针：{ "version", "rol
 dist/ota/<pkg>/<hostVersion>/<version>/manifest.json  build 的 manifest + hostVersion，写定后不再变
 dist/ota/<pkg>/<hostVersion>/<version>/pages/**/*.jsb
 dist/ota/<pkg>/<hostVersion>/<version>/i18n/<locale>.json   manifest 的 i18n 列出的文件（有才写）
+dist/ota/<pkg>/<hostVersion>/<version>/assets/<hash>.<ext>  manifest 的 assets 列出的图片（有才写）
 ```
 
 `current.json` 只有三个字段：`version` 指向哪个目录；`rollout` 0～100 的整数，缺省 100，服务端可改；`signature` 是对 `<version>/manifest.json` 原始字节的签名（§7）。指针里只有投递策略与签名值，没有任何需要签名保护的字段。

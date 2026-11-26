@@ -432,7 +432,23 @@ object BuiltinSchemas {
         intrinsics = true,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs, SectionHeader, IndexBar)
+    val Image = ComponentSchema(
+        type = "Image",
+        props = mapOf(
+            "src" to PropSpec.Str(default = null, required = true, initial = false),
+            "contentScale" to PropSpec.Enum(values = setOf("fit", "crop", "fill"), default = "fit", required = false, initial = false),
+            "label" to PropSpec.Str(default = null, required = false, initial = false),
+        ),
+        events = mapOf(
+        ),
+        commands = mapOf(
+        ),
+        children = false,
+        layout = true,
+        intrinsics = true,
+    )
+
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer, Icon, Loading, BottomSheet, Divider, Checkbox, CodeField, Select, Option, Popover, TopAppBar, BackHandler, Menu, Tabs, SectionHeader, IndexBar, Image)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")

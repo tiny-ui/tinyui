@@ -15,7 +15,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.tinyui.components.LocalPageImages
 import app.tinyui.components.LocalToastLayer
+import app.tinyui.components.PageImages
 
 /**
  * Renders one TinyUI page; the host owns navigation and passes the page's bytecode (docs/app-model.md).
@@ -82,7 +84,7 @@ fun TinyUIPage(
         if (failure != null) {
             error(failure)
         } else {
-            CompositionLocalProvider(LocalToastLayer provides pageHost.ui.toasts) {
+            CompositionLocalProvider(LocalToastLayer provides pageHost.ui.toasts, LocalPageImages provides PageImages(page.pkg, page.assets)) {
                 for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
             }
         }

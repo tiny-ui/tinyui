@@ -8,6 +8,7 @@ export interface PayloadManifest {
     files: Record<string, string>;
     hashes: Record<string, string>;
     i18n?: { default: string; files: Record<string, string> };
+    assets?: string[];
 }
 
 /** Every file of the package: its path inside the package, and its key into `hashes`. */
@@ -15,6 +16,7 @@ export function payload(manifest: PayloadManifest): { path: string; hashKey: str
     return [
         ...manifest.pages.map((module) => ({ path: `${manifest.files[module]}.jsb`, hashKey: module })),
         ...Object.values(manifest.i18n?.files ?? {}).map((path) => ({ path, hashKey: path })),
+        ...(manifest.assets ?? []).map((path) => ({ path, hashKey: path })),
     ];
 }
 

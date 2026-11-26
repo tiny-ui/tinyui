@@ -20,7 +20,7 @@ describe("tinyui embed", { skip: qjsc ? false : "no qjsc-kmp on this machine" },
     before(async () => { tmp = await mkdtemp(join(tmpdir(), "tinyui-embed-")); });
     after(() => rm(tmp, { recursive: true, force: true }));
 
-    it("writes the manifest, the bytecode and the strings, and nothing else of the build", async () => {
+    it("writes the manifest, the bytecode, the strings and the images, and nothing else of the build", async () => {
         const out = join(tmp, "host", "fixture");
         await mkdir(join(tmp, "host"));
         const result = await embed({ root, out, dist: join(tmp, "dist") });
@@ -28,7 +28,8 @@ describe("tinyui embed", { skip: qjsc ? false : "no qjsc-kmp on this machine" },
         assert.deepEqual(files, result.files);
         assert.ok(files.includes("manifest.json"));
         assert.ok(files.some((f) => f.endsWith(".jsb")));
-        assert.ok(files.every((f) => f === "manifest.json" || f.endsWith(".jsb") || /^i18n\/.+\.json$/.test(f)), files.join(", "));
+        assert.ok(files.every((f) => f === "manifest.json" || f.endsWith(".jsb") || /^i18n\/.+\.json$/.test(f) || /^assets\/[0-9a-f]{16}\.png$/.test(f)), files.join(", "));
+        assert.ok(files.some((f) => f.startsWith("assets/")), "the imported image travels with the package");
         const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8")) as { version: string; pages: string[]; files: Record<string, string> };
         assert.equal(manifest.version, result.version);
         for (const page of manifest.pages) assert.ok(files.includes(`${manifest.files[page]}.jsb`), page);
