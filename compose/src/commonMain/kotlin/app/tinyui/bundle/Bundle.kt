@@ -1,6 +1,7 @@
 package app.tinyui.bundle
 
 import app.tinyui.PackageI18n
+import app.tinyui.PageAssets
 import app.tinyui.PageModule
 import app.tinyui.SourceMaps
 import kotlinx.coroutines.sync.Mutex
@@ -22,13 +23,16 @@ class Bundle(val manifest: BuildManifest, private val files: BundleFiles) {
     val name: String get() = manifest.name
 
     private val lock = Mutex()
+
+    /** Only the files the manifest lists as assets: a page cannot read its bytecode or anything else through Image. */
+    private val assets = manifest.assets.toSet().let { listed -> PageAssets { path -> if (path in listed) files.read(path) else null } }
     private val maps = HashMap<String, String?>()
     private var i18n: PackageI18n? = null
 
     suspend fun page(name: String): LoadedPage {
         require(name in manifest.pages) { "page $name is not in package ${manifest.name}: ${manifest.pages}" }
         val bytecode = read(manifest.file(name) + ".jsb")
-        val module = PageModule(name, bytecode, manifest.buildId(name), i18n(), manifest.contracts[name])
+        val module = PageModule(name, bytecode, manifest.buildId(name), i18n(), manifest.contracts[name], assets)
         return LoadedPage(module, sourceMaps(name), this)
     }
 

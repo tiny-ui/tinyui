@@ -10,6 +10,7 @@ import app.tinyui.components.impl.CodeFieldComponent
 import app.tinyui.components.impl.ColumnComponent
 import app.tinyui.components.impl.DividerComponent
 import app.tinyui.components.impl.IconComponent
+import app.tinyui.components.impl.ImageComponent
 import app.tinyui.components.impl.IndexBarComponent
 import app.tinyui.components.impl.LazyColumnComponent
 import app.tinyui.components.impl.LoadingComponent
@@ -45,6 +46,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> SpacerComponent(scope) }
     register(BuiltinSchemas.Icon) { scope -> IconComponent(scope) }
+    register(BuiltinSchemas.Image) { scope -> ImageComponent(scope) }
     register(BuiltinSchemas.Loading) { scope -> LoadingComponent(scope) }
     register(BuiltinSchemas.BottomSheet) { scope -> BottomSheetComponent(scope) }
     register(BuiltinSchemas.Popover) { scope -> PopoverComponent(scope) }

@@ -424,6 +424,16 @@ export interface IndexBarProps {
     children?: Children;
 }
 
+/** A picture: an image imported from the package (`import hero from "./hero.png"`) or an https URL. Give it a width and a height: it takes that box before the picture arrives, so nothing moves when it does. */
+export interface ImageProps extends LayoutProps {
+    /** an imported image, or an https URL; anything else draws nothing and is reported */
+    src: string;
+    /** fit: whole picture inside the box; crop: fills the box, edges cut; fill: stretched to the box */
+    contentScale?: "fit" | "crop" | "fill";
+    /** what a screen reader says; leave unset for a decorative picture */
+    label?: string;
+}
+
 export interface IntrinsicElements {
     Column: ColumnProps;
     Row: RowProps;
@@ -449,6 +459,7 @@ export interface IntrinsicElements {
     Tabs: TabsProps;
     SectionHeader: SectionHeaderProps;
     IndexBar: IndexBarProps;
+    Image: ImageProps;
 }
 
 export const Column = "Column";
@@ -475,3 +486,4 @@ export const Menu = "Menu";
 export const Tabs = "Tabs";
 export const SectionHeader = "SectionHeader";
 export const IndexBar = "IndexBar";
+export const Image = "Image";

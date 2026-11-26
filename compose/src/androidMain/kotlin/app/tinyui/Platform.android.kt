@@ -37,4 +37,4 @@ internal actual fun plainTextClipEntry(text: String): ClipEntry = ClipEntry(Clip
 
 internal actual val platformFileSystem: FileSystem = FileSystem.SYSTEM
 
-internal actual fun defaultHttpClient(): HttpClient = HttpClient(OkHttp)
+internal actual val defaultHttpClient: HttpClient by lazy { HttpClient(OkHttp) }

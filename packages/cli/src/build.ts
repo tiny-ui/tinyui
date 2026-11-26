@@ -73,6 +73,8 @@ export interface Manifest {
     contracts?: Record<string, PageContract>;
     /** The package's strings: the default language and each language's file (docs/build-chain.md §8); absent without strings. */
     i18n?: { default: string; files: Record<string, string> };
+    /** The images pages import, as paths inside the package (`assets/<hash>.png`, docs/build-chain.md §12); each is a key of `hashes`. Absent without images. */
+    assets?: string[];
 }
 
 export async function build(options: BuildOptions): Promise<BuildResult> {
@@ -96,7 +98,9 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     // stale outputs would otherwise be packaged along with the current pages
     await rm(join(out, "pages"), { recursive: true, force: true });
     await rm(join(out, "i18n"), { recursive: true, force: true });
-    const pages = await bundlePages(root, out, config, pagesDir, pageNames);
+    await rm(join(out, "assets"), { recursive: true, force: true });
+    const assets = new Map<string, string>();
+    const pages = await bundlePages(root, out, config, pagesDir, pageNames, assets);
     const requires = await pageRequires(pages);
     await finish(root, pages, qjsc);
     const hashes: Record<string, string> = {};
@@ -107,6 +111,16 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
             await mkdir(dirname(target), { recursive: true });
             await copyFile(i18n.sources.get(locale)!, target);
             hashes[path] = createHash("sha256").update(await readFile(target)).digest("hex");
+        }
+    }
+    for (const [path, source] of [...assets].sort(([a], [b]) => (a < b ? -1 : 1))) {
+        const target = join(out, ...path.split("/"));
+        await mkdir(dirname(target), { recursive: true });
+        await copyFile(source, target);
+        const bytes = await readFile(target);
+        hashes[path] = createHash("sha256").update(bytes).digest("hex");
+        if (bytes.length > IMAGE_WARN_BYTES) {
+            process.stderr.write(`tinyui: warning: ${relative(root, source)} is ${Math.round(bytes.length / 1024)} KB; every image travels with each hot update, keep one under ${IMAGE_WARN_BYTES / 1024} KB\n`);
         }
     }
 
@@ -127,6 +141,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         ...(Object.keys(presentation).length > 0 && { presentation }),
         ...(contracts && { contracts }),
         ...(i18n && { i18n: { default: i18n.defaultLocale, files: Object.fromEntries(i18n.paths) } }),
+        ...(assets.size > 0 && { assets: [...assets.keys()].sort() }),
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
     return { pages, manifest };
@@ -286,7 +301,7 @@ async function bundleRuntime(root: string, out: string): Promise<BuiltModule[]> 
     return built;
 }
 
-async function bundlePages(root: string, out: string, config: TinyUIConfig, pagesDir: string, pages: Map<string, string>): Promise<BuiltModule[]> {
+async function bundlePages(root: string, out: string, config: TinyUIConfig, pagesDir: string, pages: Map<string, string>, assets: Map<string, string>): Promise<BuiltModule[]> {
     const outdir = join(out, "pages");
     const prefix = `${config.name}/`;
     await esbuild({
@@ -300,7 +315,7 @@ async function bundlePages(root: string, out: string, config: TinyUIConfig, page
         jsxFactory: "h",
         jsxFragment: "Fragment",
         inject: [JSX_SHIM],
-        plugins: [pagePlugin],
+        plugins: [pagePlugin(assets)],
     });
     return [...pages.keys()].map((name) => {
         const js = join(outdir, name.slice(prefix.length) + ".js");
@@ -359,10 +374,35 @@ async function gitShortSha(root: string): Promise<string> {
 const JSX_SHIM = "tinyui:jsx-shim";
 const TSX = /\.tsx$/;
 
-/** `inject` wants a module; this serves one in memory so pages get `h` / `Fragment` from the runtime module. */
-const pagePlugin: Plugin = {
+/** Images a page may import (docs/build-chain.md §12): the formats Image decodes on both platforms. */
+const IMAGE = /\.(png|jpe?g|webp)$/i;
+
+/** Above this an image still builds, with a warning: it is downloaded again with every hot update of the package. */
+const IMAGE_WARN_BYTES = 200 * 1024;
+
+/**
+ * Where an imported image lives inside the package: named by its content so the same file imported twice is one
+ * asset, and a changed file is a new name (no stale cache under the old one).
+ */
+async function assetPath(file: string): Promise<string> {
+    const hash = createHash("sha256").update(await readFile(file)).digest("hex").slice(0, 16);
+    const ext = file.slice(file.lastIndexOf(".") + 1).toLowerCase().replace("jpeg", "jpg");
+    return `assets/${hash}.${ext}`;
+}
+
+/**
+ * `inject` wants a module; this serves one in memory so pages get `h` / `Fragment` from the runtime module. Images the
+ * pages import are collected into [assets] (package path → source file) for the build to copy.
+ */
+const pagePlugin = (assets: Map<string, string>): Plugin => ({
     name: "tinyui-pages",
     setup(api) {
+        // docs/build-chain.md §12: an image file is the `src` Image takes, a reference into this package
+        api.onLoad({ filter: IMAGE }, async (args) => {
+            const path = await assetPath(args.path);
+            assets.set(path, args.path);
+            return { contents: `export default ${JSON.stringify(`asset:${path}`)};`, loader: "js" };
+        });
         api.onResolve({ filter: /^tinyui:jsx-shim$/ }, (args) => ({ path: args.path, namespace: "tinyui" }));
         // docs/components.md §3: an SVG file is the icon string Icon takes, checked here rather than on the device
         api.onLoad({ filter: /\.svg$/ }, async (args) => {
@@ -395,7 +435,7 @@ const pagePlugin: Plugin = {
             }
         });
     },
-};
+});
 
 function common(root: string) {
     return {

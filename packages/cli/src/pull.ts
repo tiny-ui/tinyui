@@ -40,6 +40,7 @@ interface Manifest {
     files: Record<string, string>;
     hashes: Record<string, string>;
     i18n?: { default: string; files: Record<string, string> };
+    assets?: string[];
 }
 
 /**

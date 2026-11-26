@@ -164,12 +164,17 @@ class Updates internal constructor(
                 val drop = p.installed == version
                 if (drop) p.installed = null
                 // the blacklist reaches the disk before the files go: a crash in between must not let check() install it again
-                try {
+                val saved = try {
                     p.saveState()
+                    true
                 } catch (e: IOException) {
                     onEvent(UpdateEvent.Failed(pkg, version, FailStage.STORAGE, "rollback not saved: ${e.message ?: e}"))
+                    false
                 }
-                if (drop) runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
+                // The version this process started on keeps its files for the pages still open, and the next start clears
+                // it. Not when the blacklist did not reach the disk: then the missing files are all that keeps the next
+                // start off the bad version, and that outweighs the pictures of a page that is failing anyway
+                if (drop && (version != p.startedOn || !saved)) runCatching { fs.deleteRecursively(p.root / INSTALLED / version) }
             }
             onEvent(UpdateEvent.RolledBack(pkg, version, page, failure.kind, failure.error.buildId, failure.message))
         }
@@ -204,6 +209,12 @@ class Updates internal constructor(
         var current: Bundle = embedded
         /** The manifest of what [check] installed last; written and read under [lock]. */
         var installedManifest: BuildManifest? = null
+
+        /**
+         * The installed version this process started on, if any. Its directory stays until the next start, whatever
+         * happens meanwhile (a newer install, a rollback): its pages that are still open read their images from it.
+         */
+        var startedOn: String? = null
         /** Why embedded cannot run on this host; it then stays the floor only in name: pages fail, installs do not compare against it. */
         val unusable: Set<Mismatch> = buildSet {
             if (embedded.manifest.engine != engine) add(Mismatch.ENGINE)
@@ -236,12 +247,18 @@ class Updates internal constructor(
             return manifest
         }
 
-        /** Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded. */
+        /**
+         * Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded.
+         * Bytecode and strings stay in memory (small, read once per page). Images do not: they can be hundreds of KB each
+         * and Image's cache keeps what is on screen, so they are read from disk again when asked, and checked again, since
+         * the file may have changed since startup. The directory of the version the process started on stays until the next start (see [startedOn]).
+         */
         fun verifyAtStartup(): Boolean {
             val manifest = selected ?: return true
             selected = null
             val dir = root / INSTALLED / manifest.version
             val files = HashMap<String, ByteArray>()
+            val assets = manifest.assets.toSet()
             for ((path, hashKey) in manifest.payload) {
                 val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
                 if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
@@ -250,10 +267,17 @@ class Updates internal constructor(
                     dropInstalled()
                     return false
                 }
-                files[path] = bytes
+                if (path !in assets) files[path] = bytes
             }
-            current = Bundle(manifest) { path -> files[path] }
+            current = Bundle(manifest) { path -> files[path] ?: if (path in assets) readVerified(dir / path, manifest.hashes[path]) else null }
+            startedOn = manifest.version
             return true
+        }
+
+        /** The file when it still matches [hash]; null when it is gone or changed. */
+        private fun readVerified(file: Path, hash: String?): ByteArray? {
+            val bytes = runCatching { fs.read(file) { readByteArray() } }.getOrNull() ?: return null
+            return bytes.takeIf { it.toByteString().sha256().hex() == hash }
         }
 
         private fun dropInstalled() {
@@ -328,8 +352,9 @@ class Updates internal constructor(
                 installed = version
                 saveState()
                 installedManifest = manifest
-                // the install is committed: an older directory that will not go is cleaned up at the next start, not a failed check
-                runCatching { fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) } }
+                // the install is committed: an older directory that will not go is cleaned up at the next start, not a failed check.
+                // The version this process started on stays: its pages read their images from it until the next start
+                runCatching { fs.list(root / INSTALLED).filter { it.name != version && it.name != startedOn }.forEach { fs.deleteRecursively(it) } }
             } catch (e: CancellationException) {
                 discard()
                 throw e

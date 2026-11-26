@@ -1,6 +1,6 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-11-22 `tinyui.config.json` 加 `app` / `hostVersion` / `updatesUrl`（§2.1），`routes --host` 去掉、改读 `tinyui-host/<hostVersion>.txt`（§10）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；2026-11-12 加 §10 路由类型；2026-11-26 加 §12 图片；2026-11-22 `tinyui.config.json` 加 `app` / `hostVersion` / `updatesUrl`（§2.1），`routes --host` 去掉、改读 `tinyui-host/<hostVersion>.txt`（§10）；2026-09-19 修订模块名规则——加包名前缀、去 `pages/` 段，引入 `tinyui.config.json`（[ADR-006](./adr-006-hot-updates.md) §2.10），随热下发 M1 实施，sample 与 TrendingAI 的现有模块名一并改；2026-09-24 按 ADR-006 §2.11 修订：运行时模块改由库构建、随库发布，`tinyui build` 只编页面；2026-09-25 按 [ADR-007](./adr-007-host-boundary.md) 加包内 i18n 资源（§8）、SVG 图标（§9）与网络通道名的静态识别（§5.1）
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk 已随 M1 做进 CLI（[jsx-transform.md](./jsx-transform.md)），`qjsc-kmp` 二进制分发已于 2026-09-23 随热下发 M5.2 做完（§5）；字节码行号回映射见 §7
 
@@ -189,3 +189,13 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 - 这些声明在清掉上一次的输出之前读：声明或契约文件被拒绝时，输出目录保持原样
 - 取值 `"screen"`（缺省，不用写）、`"sheet"`；其他值构建失败。manifest 只列不是 `screen` 的页面
 - 由页面自己声明而不是打开它的一方传：页面的内容是按某种呈现画的（弹层自带标题栏、高度随内容），从哪里打开都该是那个样子，原生代码打开它时也不用知道
+
+## 12. 图片
+
+定于 2026-11-26（组件契约见 [components.md](./components.md) §3 `Image`）。页面 `import hero from "./hero.png"`（`.png` / `.jpg` / `.jpeg` / `.webp`），`tinyui build` 在 esbuild 里给这几种扩展名挂加载器：
+
+- 文件按内容 sha256 的前 16 位命名，拷到输出目录的 `assets/<hash>.<扩展名>`（`.jpeg` 统一写 `.jpg`）；同一个文件被几处 import 只有一份，改了文件就是新名字，设备上不会读到旧缓存
+- import 的默认导出是字符串 `"asset:assets/<hash>.png"`，就是 `Image` 的 `src`。类型声明在 `tinyui-core/assets`
+- manifest 写 `assets`（包内路径列表，排序），每个路径进 `hashes`；`payload`（`bundle` / `publish` / `pull` / `embed` 搬运与校验的文件清单）随之包含它们，所以图片和页面字节码一样受签名保护（[updates.md](./updates.md) §1.1、§7）
+- 单张超过 200 KB 照样构建，打一条警告：图片随包，每次热下发都要重新下载
+- 构建前清掉上一次的 `assets/`，不留已经不用的图

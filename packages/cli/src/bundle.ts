@@ -137,10 +137,12 @@ async function readManifest(dist: string): Promise<Manifest> {
     const modules = names("pages");
     if (new Set(modules).size !== modules.length) throw new Error(`${file}: a module is listed twice`);
     const i18nFiles = Object.values((raw.i18n as { files?: Record<string, string> } | undefined)?.files ?? {});
+    const assets = raw.assets ?? [];
+    if (!Array.isArray(assets) || !assets.every((a) => typeof a === "string")) throw new Error(`${file}: "assets" must list paths inside the package`);
     for (const key of ["files", "hashes", "buildIds"] as const) {
         const keys = Object.keys(table(key)).sort();
-        const expected = key === "hashes" ? [...modules, ...i18nFiles] : modules;
-        if (keys.join("\n") !== [...expected].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "pages"${key === "hashes" ? " and the i18n files" : ""}`);
+        const expected = key === "hashes" ? [...modules, ...i18nFiles, ...assets] : modules;
+        if (keys.join("\n") !== [...expected].sort().join("\n")) throw new Error(`${file}: "${key}" does not cover exactly the modules in "pages"${key === "hashes" ? ", the i18n files and the assets" : ""}`);
     }
     return raw as Manifest;
 }

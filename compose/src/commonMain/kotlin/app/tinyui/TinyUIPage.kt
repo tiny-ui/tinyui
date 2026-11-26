@@ -6,6 +6,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.retain.RetainObserver
 import androidx.compose.runtime.retain.retain
 import androidx.compose.ui.Alignment
@@ -15,7 +16,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.tinyui.components.LocalPageAssetSource
 import app.tinyui.components.LocalToastLayer
+import app.tinyui.components.PageAssetSource
 
 /**
  * Renders one TinyUI page; the host owns navigation and passes the page's bytecode (docs/app-model.md).
@@ -77,12 +80,14 @@ fun TinyUIPage(
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    // one per page: a new one on every recomposition would make each Image start its request again
+    val assetSource = remember(page) { PageAssetSource(page.pkg, page.assets) }
     Box(modifier) {
         val failure = pageHost.failure
         if (failure != null) {
             error(failure)
         } else {
-            CompositionLocalProvider(LocalToastLayer provides pageHost.ui.toasts) {
+            CompositionLocalProvider(LocalToastLayer provides pageHost.ui.toasts, LocalPageAssetSource provides assetSource) {
                 for (child in pageHost.tree.root.children) key(child.id) { pageHost.Render(child) }
             }
         }

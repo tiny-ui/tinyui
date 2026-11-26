@@ -50,9 +50,20 @@ class PageModule(
     val buildId: String = "",
     val i18n: PackageI18n = PackageI18n.EMPTY,
     val contract: PageContract? = null,
+    /** The images the page's package carries (docs/build-chain.md §12); [PageAssets.NONE] for a page loaded outside a [app.tinyui.bundle.Bundle]. */
+    val assets: PageAssets = PageAssets.NONE,
 ) {
     /** The package the page belongs to: the part of [name] before the first `/`. */
     val pkg: String get() = name.substringBefore('/')
+}
+
+/** Reads a file the package carries for `Image` (`assets/<hash>.png`); null when the package has no such file. */
+fun interface PageAssets {
+    suspend fun read(path: String): ByteArray?
+
+    companion object {
+        val NONE = PageAssets { null }
+    }
 }
 
 /** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */

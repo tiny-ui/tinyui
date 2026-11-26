@@ -16,8 +16,11 @@ internal expect fun zoneOffsetMinutes(zone: String, epochMs: Long): Int?
 
 internal expect fun plainTextClipEntry(text: String): ClipEntry
 
-/** The engine each platform ships; the `default` channel adds nothing to it. */
-internal expect fun defaultHttpClient(): HttpClient
+/**
+ * The engine each platform ships, as one client for the process: every host's `default` channel and Image's https
+ * pictures share its connections. Nothing is added to it, so nothing of a host's identity rides on it.
+ */
+internal expect val defaultHttpClient: HttpClient
 
 /**
  * What `device.info().region` promises: ISO 3166-1 alpha-2, upper case, or empty. A locale's region can also be a

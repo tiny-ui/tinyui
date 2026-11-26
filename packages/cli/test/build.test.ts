@@ -71,6 +71,17 @@ describe("tinyui build", () => {
         assert.ok(home.sources.includes("src/pages/home.tsx"), `sources are root-relative: ${home.sources}`);
     });
 
+    it("copies an imported image into the package under its content hash and lists it as an asset", async () => {
+        const manifest = JSON.parse(await readFile(result.manifest, "utf8")) as { assets?: string[]; hashes: Record<string, string> };
+        assert.equal(manifest.assets?.length, 1);
+        const [path] = manifest.assets!;
+        assert.match(path!, /^assets\/[0-9a-f]{16}\.png$/);
+        await access(join(out, ...path!.split("/")));
+        assert.match(manifest.hashes[path!] ?? "", /^[0-9a-f]{64}$/, "covered by hashes, so by the signature");
+        const js = await readFile(join(out, "pages", "home.js"), "utf8");
+        assert.ok(js.includes(`"asset:${path}"`), "the import is the reference Image reads");
+    });
+
     it("rejects two sources for one page name", async () => {
         const clashRoot = await mkdtemp(join(tmpdir(), "tinyui-clash-"));
         try {
@@ -109,11 +120,11 @@ describe("tinyui build", () => {
         assert.equal(manifest.tinyui, JSON.parse(await readFile(join(import.meta.dirname, "..", "..", "core", "package.json"), "utf8")).version);
         if (qjsc) {
             assert.match(manifest.engine, /^[0-9a-f]{40}$/);
-            assert.deepEqual(Object.keys(manifest.hashes), manifest.pages);
+            assert.deepEqual(Object.keys(manifest.hashes), [...manifest.pages, ...(manifest.assets ?? [])]);
             for (const hash of Object.values(manifest.hashes)) assert.match(hash as string, /^[0-9a-f]{64}$/);
         } else {
             assert.equal(manifest.engine, "");
-            assert.deepEqual(manifest.hashes, {});
+            assert.deepEqual(Object.keys(manifest.hashes), manifest.assets ?? [], "no bytecode to hash; the images still are");
         }
     });
 

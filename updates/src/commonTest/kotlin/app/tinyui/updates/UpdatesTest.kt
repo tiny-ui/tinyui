@@ -112,6 +112,41 @@ class UpdatesTest {
         assertEquals(CheckResult.UpToDate("v1"), second.check("shop"))
     }
 
+    /** [manifest] plus one image at `assets/<version>.png` (docs/build-chain.md §12). */
+    private fun manifestWithImage(version: String, createdAt: String): Pair<String, Map<String, String>> {
+        val files = mapOf("pages/home.jsb" to "HOME-$version", "assets/$version.png" to "PNG-$version")
+        val base = manifest(version = version, createdAt = createdAt, files = files)
+        val image = "\"assets/$version.png\":\"${files.getValue("assets/$version.png").encodeUtf8().sha256().hex()}\""
+        return base.replace("\"hashes\":{", "\"assets\":[\"assets/$version.png\"],\"hashes\":{$image,") to files
+    }
+
+    @Test
+    fun anInstalledPackagesImagesAreReadFromDiskWhenAskedAndCheckedAgain() = runTest {
+        val (json, files) = manifestWithImage("v1", "2026-09-22T10:00:00Z")
+        publish(json, files = files)
+        updates(embedded()).check("shop")
+        val running = updates(embedded()).current("shop")
+        val assets = running.page("shop/home").module.assets
+        assertEquals("PNG-v1", assets.read("assets/v1.png")?.decodeToString(), "verified at startup, read when Image asks")
+        fs.write(dir / "shop/installed/v1/assets/v1.png") { writeUtf8("PNG-v1 changed") }
+        assertNull(assets.read("assets/v1.png"), "a file changed since startup is not drawn")
+    }
+
+    @Test
+    fun aNewerInstallKeepsTheRunningVersionsDirectoryUntilTheNextStart() = runTest {
+        val (v1, v1Files) = manifestWithImage("v1", "2026-09-22T10:00:00Z")
+        publish(v1, files = v1Files)
+        updates(embedded()).check("shop")
+        val running = updates(embedded())
+        val (v2, v2Files) = manifestWithImage("v2", "2026-09-22T11:00:00Z")
+        publish(v2, files = v2Files)
+        assertEquals(CheckResult.Installed("v2"), running.check("shop"))
+        assertTrue(fs.exists(dir / "shop/installed/v1/assets/v1.png"), "pages of this process still read their images from v1")
+        assertEquals("PNG-v1", running.current("shop").page("shop/home").module.assets.read("assets/v1.png")?.decodeToString())
+        updates(embedded())
+        assertFalse(fs.exists(dir / "shop/installed/v1"), "the next start runs v2 and clears v1")
+    }
+
     @Test
     fun anInstalledPackageForAnotherEngineOrTinyuiIsNotRunAfterTheHostChanges() = runTest {
         publish(manifest())
@@ -296,9 +331,10 @@ class UpdatesTest {
         u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E2", "shop/home", "cccccccc", "boom")))
         assertSame(u.embedded("shop"), u.current("shop"))
         assertEquals(UpdateEvent.RolledBack("shop", "v1", "shop/home", "E2", "cccccccc", "boom"), events.last())
-        assertFalse(fs.exists(dir / "shop/installed/v1"))
+        assertTrue(fs.exists(dir / "shop/installed/v1"), "its pages that are still open read their images from it")
         assertEquals(CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE), u.check("shop"))
         assertEquals("HOME-v0", pageBytes(updates(embedded()).current("shop")), "and stays embedded after a restart")
+        assertFalse(fs.exists(dir / "shop/installed/v1"), "the next start clears it")
     }
 
     @Test
@@ -337,7 +373,7 @@ class UpdatesTest {
         rolling.join()
         assertEquals("v1", assertIs<UpdateEvent.RolledBack>(events.last()).version)
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"failed\":[\"v1\"]")
-        assertFalse(fs.exists(dir / "shop/installed/v1"))
+        assertTrue(fs.exists(dir / "shop/installed/v1"), "blacklisted on disk; the files stay for the pages still open, until the next start")
     }
 
     @Test

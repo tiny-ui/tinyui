@@ -43,4 +43,4 @@ internal actual fun plainTextClipEntry(text: String): ClipEntry = ClipEntry.with
 
 internal actual val platformFileSystem: FileSystem = FileSystem.SYSTEM
 
-internal actual fun defaultHttpClient(): HttpClient = HttpClient(Darwin)
+internal actual val defaultHttpClient: HttpClient by lazy { HttpClient(Darwin) }
