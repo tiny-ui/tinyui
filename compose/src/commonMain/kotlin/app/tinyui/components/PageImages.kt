@@ -2,6 +2,7 @@ package app.tinyui.components
 
 import androidx.compose.runtime.compositionLocalOf
 import app.tinyui.PageAssets
+import app.tinyui.sharedHttpClient
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.decode.DataSource
@@ -80,7 +81,8 @@ internal object TinyUIImages {
 
     fun loader(context: PlatformContext): ImageLoader = loader ?: ImageLoader.Builder(context)
         .components {
-            add(KtorNetworkFetcherFactory())
+            // the client the `default` channel uses: one connection pool, nothing of the host's on the request
+            add(KtorNetworkFetcherFactory(httpClient = { sharedHttpClient }))
             add(PackagedImageFetcher.Factory())
             add(PackagedImageKeyer())
         }

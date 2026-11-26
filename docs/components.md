@@ -270,7 +270,7 @@ const [method, setMethod] = signal("phone");
 `Image` 画一张图（2026-11-26 加，第一个需要的业务页面触发：随包的多色插画、CDN 上的国旗）。`src` 有两种来源：
 
 - **随包图片**：页面 `import hero from "./hero.png"`（png / jpg / webp），`tinyui build` 把文件按内容 hash 拷进包的 `assets/`，import 拿到 `"asset:assets/<hash>.png"`（build-chain.md §12）。文件列在 manifest 的 `assets`，进 `hashes`，与页面字节码一起受签名保护、热下发时一起下载校验（updates.md §1.1）。设备上只从页面所属的包读，读不到清单以外的文件
-- **网络图片**：`https://` 地址，经 core 自带的 ktor 客户端下载，不带宿主的公共头与会话（图片不认人，也就不经页面的 `http.client` 通道）；`http://` 不加载
+- **网络图片**：`https://` 地址，经 core 自带的 ktor 客户端下载（与 `default` 通道同一个客户端、同一个连接池），不带宿主的公共头与会话（图片不认人，也就不经页面的 `http.client` 通道）；`http://` 不加载
 
 加载交给 coil3，框架内置、宿主不接线（ADR-007 的判据：能随包变的进包，通用能力框架自己做）。一个进程一个 loader：内存缓存，网络图片另有磁盘缓存（系统临时目录下 `tinyui-images`，64 MB）；随包图片按「包名 + 路径」做缓存 key，路径里有内容 hash，换图即换 key。
 

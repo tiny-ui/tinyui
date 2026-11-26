@@ -50,7 +50,7 @@ class TinyUIHost(
 
     internal val storages = Storages(dataDir, sink)
     internal val missingKeys = MissingKeys()
-    internal val defaultChannel: HttpChannel by lazy { KtorChannel(defaultHttpClient()) }
+    internal val defaultChannel: HttpChannel by lazy { KtorChannel(sharedHttpClient) }
     /** The platform's zone when [timeZone] is null; replaceable so tests can move it. */
     internal var systemZone: () -> String = ::systemTimeZone
 

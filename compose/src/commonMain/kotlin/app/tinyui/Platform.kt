@@ -19,6 +19,9 @@ internal expect fun plainTextClipEntry(text: String): ClipEntry
 /** The engine each platform ships; the `default` channel adds nothing to it. */
 internal expect fun defaultHttpClient(): HttpClient
 
+/** One client for the process: the `default` channel of every host, and Image's https pictures, share its connections. */
+internal val sharedHttpClient: HttpClient by lazy { defaultHttpClient() }
+
 /**
  * What `device.info().region` promises: ISO 3166-1 alpha-2, upper case, or empty. A locale's region can also be a
  * UN M.49 area such as `419` (Latin America); that is not a country, and a page looking it up in a country table

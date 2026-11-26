@@ -236,12 +236,18 @@ class Updates internal constructor(
             return manifest
         }
 
-        /** Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded. */
+        /**
+         * Reads every file of [selected] against its hash; false when one does not match and the package is back on embedded.
+         * Bytecode and strings stay in memory (small, read once per page). Images do not: they can be hundreds of KB each
+         * and Image's cache keeps what is on screen, so they are read from disk again when asked, and checked again, since
+         * the file may have changed since startup. The running version's directory outlives a newer install (see [check]).
+         */
         fun verifyAtStartup(): Boolean {
             val manifest = selected ?: return true
             selected = null
             val dir = root / INSTALLED / manifest.version
             val files = HashMap<String, ByteArray>()
+            val assets = manifest.assets.toSet()
             for ((path, hashKey) in manifest.payload) {
                 val bytes = runCatching { fs.read(dir / path) { readByteArray() } }.getOrNull()
                 if (bytes == null || bytes.toByteString().sha256().hex() != manifest.hashes[hashKey]) {
@@ -250,10 +256,16 @@ class Updates internal constructor(
                     dropInstalled()
                     return false
                 }
-                files[path] = bytes
+                if (path !in assets) files[path] = bytes
             }
-            current = Bundle(manifest) { path -> files[path] }
+            current = Bundle(manifest) { path -> files[path] ?: if (path in assets) readVerified(dir / path, manifest.hashes[path]) else null }
             return true
+        }
+
+        /** The file when it still matches [hash]; null when it is gone or changed. */
+        private fun readVerified(file: Path, hash: String?): ByteArray? {
+            val bytes = runCatching { fs.read(file) { readByteArray() } }.getOrNull() ?: return null
+            return bytes.takeIf { it.toByteString().sha256().hex() == hash }
         }
 
         private fun dropInstalled() {
@@ -328,8 +340,10 @@ class Updates internal constructor(
                 installed = version
                 saveState()
                 installedManifest = manifest
-                // the install is committed: an older directory that will not go is cleaned up at the next start, not a failed check
-                runCatching { fs.list(root / INSTALLED).filter { it.name != version }.forEach { fs.deleteRecursively(it) } }
+                // the install is committed: an older directory that will not go is cleaned up at the next start, not a failed check.
+                // The version this process runs stays: its pages read their images from it until the next start
+                val running = current.takeIf { it !== embedded }?.manifest?.version
+                runCatching { fs.list(root / INSTALLED).filter { it.name != version && it.name != running }.forEach { fs.deleteRecursively(it) } }
             } catch (e: CancellationException) {
                 discard()
                 throw e
