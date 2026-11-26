@@ -7,7 +7,7 @@ import kotlin.test.assertIs
 class ImageSrcTest {
     @Test
     fun anImportedImageIsReadFromThePackage() {
-        assertEquals(ImageSrc.Packaged("assets/0123456789abcdef.png"), ImageSrc.parse("asset:assets/0123456789abcdef.png"))
+        assertEquals(ImageSrc.Asset("assets/0123456789abcdef.png"), ImageSrc.parse("asset:assets/0123456789abcdef.png"))
     }
 
     @Test

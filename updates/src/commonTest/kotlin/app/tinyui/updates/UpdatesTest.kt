@@ -331,9 +331,10 @@ class UpdatesTest {
         u.rollBack("shop", u.current("shop"), "shop/home", PageFailure(PageError("E2", "shop/home", "cccccccc", "boom")))
         assertSame(u.embedded("shop"), u.current("shop"))
         assertEquals(UpdateEvent.RolledBack("shop", "v1", "shop/home", "E2", "cccccccc", "boom"), events.last())
-        assertFalse(fs.exists(dir / "shop/installed/v1"))
+        assertTrue(fs.exists(dir / "shop/installed/v1"), "its pages that are still open read their images from it")
         assertEquals(CheckResult.Skipped("v1", SkipReason.FAILED_BEFORE), u.check("shop"))
         assertEquals("HOME-v0", pageBytes(updates(embedded()).current("shop")), "and stays embedded after a restart")
+        assertFalse(fs.exists(dir / "shop/installed/v1"), "the next start clears it")
     }
 
     @Test
@@ -372,7 +373,7 @@ class UpdatesTest {
         rolling.join()
         assertEquals("v1", assertIs<UpdateEvent.RolledBack>(events.last()).version)
         assertContains(fs.read(dir / "shop/state.json") { readUtf8() }, "\"failed\":[\"v1\"]")
-        assertFalse(fs.exists(dir / "shop/installed/v1"))
+        assertTrue(fs.exists(dir / "shop/installed/v1"), "blacklisted on disk; the files stay for the pages still open, until the next start")
     }
 
     @Test

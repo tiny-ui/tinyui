@@ -32,7 +32,7 @@ class ImageTest {
             tree.apply("""[["c",1,"Box"],["p",1,"background","#FFFFFF"],["c",2,"Image"],["p",2,"src",${'"'}$src${'"'}],["p",2,"width",40],["p",2,"height",40],["p",2,"contentScale","fill"],["i",0,1,0],["i",1,2,0]]""")
             setContent {
                 MaterialTheme {
-                    CompositionLocalProvider(LocalPageImages provides PageImages("shop", PageAssets { files[it] })) {
+                    CompositionLocalProvider(LocalPageAssetSource provides PageAssetSource("shop", PageAssets { files[it] })) {
                         androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.testTag("image")) { renderer.Render(tree.node(1)!!) }
                     }
                 }

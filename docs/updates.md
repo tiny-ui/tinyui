@@ -304,7 +304,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 `state.json` 写入走临时文件加 rename，任何时刻磁盘上都是一份完整的它。
 
-构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节码与 i18n 直接作为该包 `Bundle` 的来源，进页面不再读磁盘；图片（manifest `assets`）校验后不留在内存，`Image` 要用时再从磁盘读、再核一次 sha256，对不上按读不到处理（图片单张可达上百 KB，常驻内存不划算，画出来的那份有 `Image` 自己的缓存）。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。这些清理都是尽力而为：删不掉的目录留到下次启动再试，不让构造失败，也不影响选包（留下的旧版本目录从不会被选中）；`check()` 装上新版本后清理旧目录同理，不算检查失败；本进程正在运行的已装版本不清（它的页面还要从那里读图片），留到下次启动的清理。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包几十到一两百 KB，重算一遍的开销可以忽略。
+构造时对每个包：`installed` 存在、`name` 等于包名、`hostVersion` / `engine` 等于宿主值、`tinyui` 与宿主兼容（§1.1）、不在 `failed`、`createdAt` 新于 `embedded`、**逐文件重算 sha256 与 manifest 一致** → `current(pkg) = installed`，否则 `= embedded`。sha256 不一致的（磁盘损坏、半个文件）按失败处理：`failed += version`、`installed = null`、`Failed(integrity)`；校验时读进内存的字节码与 i18n 直接作为该包 `Bundle` 的来源，进页面不再读磁盘；图片（manifest `assets`）校验后不留在内存，`Image` 要用时再从磁盘读、再核一次 sha256，对不上按读不到处理（图片单张可达上百 KB，常驻内存不划算，画出来的那份有 `Image` 自己的缓存）。`createdAt` 不新于内置、`hostVersion` / `engine` 不等于宿主值或 `tinyui` 不兼容的 installed 当场删除（App 升级带来了更新的内置包、bump 了 hostVersion 或换了引擎；同 major 内宿主升 tinyui，已装的包不因此失效）；残留的 `staging/` 删除；`<dir>` 下不属于任何内置包的子目录删除（App 升级去掉了某个包）。这些清理都是尽力而为：删不掉的目录留到下次启动再试，不让构造失败，也不影响选包（留下的旧版本目录从不会被选中）；`check()` 装上新版本后清理旧目录同理，不算检查失败；本进程启动时跑的已装版本不清（它的页面还要从那里读图片），留到下次启动的清理。不重验签：签名在落盘前验过，之后文件内容由 sha256 锁住；整包几十到一两百 KB，重算一遍的开销可以忽略。
 
 `Running` 在按 manifest 选定之后、读页面文件重算 sha256 之前发出：宿主通常拿它给遥测挂「本进程跑哪个版本」，构造又多在后台协程里，等读完整包再发会晚于宿主启动后的第一条事件（Android 的 `ProcessLifecycleOwner` 在首个 Activity 启动时就触发）。installed 损坏时依次发 `Running(installed)`、`Failed(integrity)`、`Running(embedded)`，以最后一次为准；三者都在构造返回前发出，页面拿到 `Updates` 时已经是校验过的包。
 
@@ -312,7 +312,7 @@ manifest 一到手先验签再解析：签名不对的 manifest 里任何字段�
 
 ### 4.5 失败回退
 
-`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：先用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎），此后新开的页面也立即拿到 embedded；再在包锁内 `failed += version`、`state.installed = null` 并落盘，然后删该 installed 目录，最后 `onEvent(RolledBack)`。页面不等这一步：`check()` 下载期间一直持有包锁，弱网下可能要等十几秒。这一步不随页面离开而取消；`state.json` 写不进去（如磁盘已满）时发 `Failed(storage)`、不抛出，本进程照样留在 embedded，installed 目录照删：留着它下次启动会再跑一遍坏包，删了最多在磁盘恢复后被 `check()` 再装回一次、再失败一次后拉黑。启动时的落盘同样失败不抛，`Updates` 的构造不因磁盘已满而失败。先落盘再删目录：两步之间进程被杀，下次启动按黑名单跳过，不会让 `check()` 把它再装回来。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
+`UpdatesPage` 挂的页面来自某包的 installed 且报 E2 / E6（`PageHost.failure`）时：先用该包的 `embedded.page(name)` 重挂同一页面（`TinyUIPage` 的 `remember` 键含 `page`，换 `PageModule` 即重建引擎），此后新开的页面也立即拿到 embedded；再在包锁内 `failed += version`、`state.installed = null` 并落盘，然后删该 installed 目录（本进程启动时跑的就是它、且黑名单已落盘时不删：还开着的页面要从那里读图片，下次启动的清理会删），最后 `onEvent(RolledBack)`。页面不等这一步：`check()` 下载期间一直持有包锁，弱网下可能要等十几秒。这一步不随页面离开而取消；`state.json` 写不进去（如磁盘已满）时发 `Failed(storage)`、不抛出，本进程照样留在 embedded，installed 目录照删（即使本进程启动时跑的就是它，还开着的页面会读不到图片）：留着它下次启动会再跑一遍坏包，删了最多在磁盘恢复后被 `check()` 再装回一次、再失败一次后拉黑。启动时的落盘同样失败不抛，`Updates` 的构造不因磁盘已满而失败。先落盘再删目录：两步之间进程被杀，下次启动按黑名单跳过，不会让 `check()` 把它再装回来。E2 / E6 本身照常经 `PageSink.error` 上报，带 `buildId`。其他包不受影响。
 
 页面来自 embedded 时的失败走宿主自己的 `error` 槽，与不用 `tinyui-updates` 时相同。
 
