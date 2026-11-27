@@ -174,7 +174,8 @@ class Delivery(private val fetch: Fetch) {
 
         /**
          * Makes [out] hold exactly [files]. Assembled beside it and swapped in: [out] never holds half a package, and a
-         * failure at any step leaves the previous one, which a build without network falls back on.
+         * failure at any step leaves the previous one, which a build without network keeps when it is for the same host
+         * version.
          */
         fun replaceDir(out: File, files: Map<String, ByteArray>) {
             out.parentFile.mkdirs()
