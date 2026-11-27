@@ -134,6 +134,7 @@ app.tinyui.bundle       发包（updates.md）：Bundle、BuildManifest，以及
 | [components.md](./components.md) | 内置组件：schema 真值与生成链、公共布局 prop 与 Modifier 顺序、首批八个组件、命令消费、Placeholder | 已定（2026-09-16） |
 | [native-api.md](./native-api.md) | `tinyui-native` 与 `TinyUIHost`：J2 白名单、navigation / store / events / http / storage / i18n / session / ui / linking / analytics、`host.call` 兜底、E3 错误码与阈值 | 已定（2026-09-16；2026-09-25 按 ADR-007 重写） |
 | [updates-activation.md](./updates-activation.md) | 热下发的生效时机：下次启动之外的候选（启动时等待、只对新开页面、装好即切并重挂）与代价 | 讨论中，未定（2026-11-23） |
+| [updates-compatibility.md](./updates-compatibility.md) | 宿主加版本后页面包怎么跟：精确匹配的成本与根因，多版本发布、服务端推导、客户端协商、微信小程序方向四个候选；已定测试包不再回落 | 讨论中，未定（2026-11-27） |
 
 ## 下一阶段
 
