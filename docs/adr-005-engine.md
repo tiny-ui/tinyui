@@ -67,7 +67,7 @@ Lynx、Kuikly、Weex 2 三个头部动态化框架独立选择了 QuickJS（或�
 
 | 项 | 结论 |
 |---|---|
-| 引擎 | QuickJS，bellard/quickjs main，锁 commit `04be246`（版本 2026-06-04） |
+| 引擎 | QuickJS，bellard/quickjs main，锁 commit `2519774`（2026-11-23，quickjs-kmp 0.2.0 起；此前为 `04be246`） |
 | 接入 | 新建 **quickjs-kmp**（`wang.harlon:quickjs-kmp`，包 `wang.harlon.quickjs`），复制 mquickjs-kmp 的骨架，Kotlin 公共 API 与之同形；实现思路见 quickjs-kmp 仓 `docs/` |
 | 语言目标 | **ES2025**，CLI 只做 TS 擦除与 JSX → `h()`，不降级 |
 | 模块 | **原生 ESM 必选**：运行时（`tinyui-core` / `tinyui-native`）与页面都是模块字节码；引擎侧"名字 → 预编译模块"表，CLI 保证模块图里只剩表内的裸说明符（业务内部 import 构建期合并进页面模块，运行时模块 `external`） |

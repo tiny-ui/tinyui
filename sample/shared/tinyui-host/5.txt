@@ -1,0 +1,12 @@
+hostVersion 5
+tinyui 0.14.1-alpha03
+
+components
+
+capabilities
+  session.signIn
+
+channels
+  todos
+
+routes

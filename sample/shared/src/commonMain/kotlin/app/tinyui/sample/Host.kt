@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import okio.Path
 
 /** Raise when [sampleHost] changes what pages can use; `tinyui-host/<n>.txt` records each value (docs/updates.md §4.1). */
-internal const val HOST_VERSION = "4"
+internal const val HOST_VERSION = "5"
 
 /** The App's language setting; the language button in [App] flips it. */
 internal val sampleLocale = MutableStateFlow("en")
