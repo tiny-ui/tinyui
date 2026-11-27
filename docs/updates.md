@@ -415,6 +415,8 @@ app token 与发布 token 一样可以签多个、只返回一次明文、服务
 
 `tinyui publish --channel <c> [--app <app>] [--dir dist/ota]`：读 §1.2 的目录（包名从 manifest 来），先 PUT `<version>/` 下全部文件含 `manifest.json`（服务端幂等，同字节即已存在），再 PUT `current.json`。token 只从 `$TINYUI_TOKEN` 读，管理端点从 `$TINYUI_ADMIN_TOKEN` 读，实例地址取 `--url` / `$TINYUI_UPDATES_URL` / 托管实例。
 
+**没收到回应的请求重发**（2026-11-27 加）：一次发布是几十个请求，其中一个连接断了不该让整次发布重来。CLI 对没有回应的 GET 与 PUT（连接被断、底层超时，Node 报 `fetch failed`）最多发 3 次，中间等 0.5 秒、2 秒，重发时在 stderr 写一行；这两类请求重复做结果一样——同样的字节到同样的路径、指针指向同一个版本。**收到了回应就不重发**，不论状态码：那是服务端的拒绝，再问一遍还是拒绝。POST 不重发（签发 token、创建 app，第一次可能已经到了服务端），DELETE 也不重发（第二次会得到 404）。全部失败时报出是哪个请求、试了几次。
+
 ### 6.2 管理 release
 
 | 请求 | 语义 |

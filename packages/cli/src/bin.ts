@@ -439,12 +439,16 @@ async function releases(v: Values, positionals: string[]): Promise<number> {
     return 0;
 }
 
+function onRetry(message: string): void {
+    process.stderr.write(`${message}\n`);
+}
+
 function publishClient(v: Values): UpdatesClient {
-    return new UpdatesClient({ url: urlOf(v), token: requireToken(TOKEN_ENV) });
+    return new UpdatesClient({ url: urlOf(v), token: requireToken(TOKEN_ENV), onRetry });
 }
 
 function adminClient(v: Values): UpdatesClient {
-    return new UpdatesClient({ url: urlOf(v), token: requireToken(ADMIN_TOKEN_ENV) });
+    return new UpdatesClient({ url: urlOf(v), token: requireToken(ADMIN_TOKEN_ENV), onRetry });
 }
 
 async function appId(v: Values): Promise<string> {
