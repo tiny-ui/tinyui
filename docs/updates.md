@@ -226,7 +226,7 @@ class Updates(
 
 - 当前 `hostVersion` 的快照文件不存在，或组件、能力、通道三段与 `render` 结果不同，或当前 tinyui 与快照的下限不兼容（§1.1）→ 失败，提示加 `hostVersion`。`tinyui` 行只判兼容：同 major 内单纯升 tinyui 不会让测试失败，跨 major 会
 - 加 `-Ptinyui.updateHostSnapshot` 跑同一个测试 → 写入当前结果，`tinyui` 行即当前 tinyui 版本，成为这个 `hostVersion` 的下限。这等于人声明"这个版本还没合入 main"；本地不判断，冻结由服务端兜底：`hosts upload` 同版本不同字节得 409（§6.4）
-- 宿主 main 的 CI 在每次 push 时跑这个测试并 `hosts upload`（同字节幂等），`hostVersion` 加 1 的提交一进 main 快照即上传、冻结（M6 拍板第 13 点）。上传不等到发 App：发版前要先在新版本下发布包（内置包、staging 验证都要），而发布前要读快照
+- 宿主 main 的 CI 在 `tinyui-host/` 有改动的 push 上 `hosts upload`（同字节幂等），`hostVersion` 加 1 的提交一进 main 快照即上传、冻结（M6 拍板第 13 点）。**上传不设前置测试**（2026-11-27 改；此前写的是先跑这个测试再上传）：快照只描述宿主自己，而这个测试所在的模块要先解析到内置包（§1.4），刚加 1 时新版本下还没有页面包，页面包又要等快照上传后才能发布（§1.3），让上传等测试就成了环。快照与宿主一致由加 1 的人保证：合入前在本地用页面源码构建（`tinyui.<pkg>.dir`）跑过这个测试，生成之后又改了宿主契约的要重新生成；合入后宿主每次跑测试都会再核对，冻结了对不上的快照只能再加 1。上传不等到发 App：发版前要先在新版本下发布包（内置包、staging 验证都要），而发布前要读快照
 - 快照文件在 `.gitattributes` 里固定 `eol=lf`：上传的是原始字节，CRLF 的副本会被当成另一份快照而得 409
 - `hostVersion` 在宿主里只写一处常量，`Updates(hostVersion = …)` 与这个测试都读它
 

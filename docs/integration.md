@@ -135,7 +135,7 @@ tasks.withType<Test>().configureEach {
 
 ### 2.5 CI：上传宿主快照
 
-主干上 `tinyui-host/` 有改动时，先跑快照测试，再上传。上传后这个版本的快照即冻结：
+主干上 `tinyui-host/` 有改动时上传，上传后这个版本的快照即冻结。**上传不要排在快照测试后面**：那个测试所在的模块要先取到内置包，刚加 1 时新版本下还没有页面包（内置包不回落到旧版本），页面包又要等快照上传后才能发，两边会互相等。快照对不对由加 1 的人在合入前保证（§4）：
 
 ```sh
 host=$(sed -n 's/^tinyui\.hostVersion=\([0-9]*\)$/\1/p' gradle.properties)
@@ -226,7 +226,7 @@ tinyui.login.dir=../shop-pages-login
 
 **宿主给页面加东西（或删、改）。**
 
-1. 宿主：改代码，`tinyui.hostVersion` 加 1，带 `-Ptinyui.updateHostSnapshot` 跑快照测试生成新的 `tinyui-host/<n>.txt`，合入主干，CI 上传快照
+1. 宿主：改代码，`tinyui.hostVersion` 加 1，带 `-Ptinyui.updateHostSnapshot` 跑快照测试生成新的 `tinyui-host/<n>.txt`，再不带这个参数把宿主测试跑一遍（这两步都用页面源码构建，`tinyui.<包名>.dir`：新版本下还没有页面包，从通道取不到），合入主干，CI 上传快照。CI 在这一步替不了你：上传不等测试（§2.5），合入前的本地这一遍是唯一的把关
 2. 页面包：`tinyui.config.json` 的 `hostVersion` 改成新值，取新快照（`TINYUI_TOKEN=<发布 token> tinyui hosts download`，写到 `tinyui-host/<n>.txt`；或从宿主仓拷），重新 `pnpm routes`，合入主干，CI 在新版本下发布
 
 第 1 步之后、第 2 步之前，宿主从通道取内置包的构建都会失败（测试包与正式包一样，不回落到上一个 `hostVersion`）：这段时间用页面源码构建（`tinyui.<包名>.dir`），挂在这个宿主上的每个包都要做完第 2 步才恢复。宿主的 CI 若在合并请求上跑要内置包的任务，加 1 的那次合并请求因此是红的。什么变化要加 1、什么不用，见 [updates.md](./updates.md) §4.1。
