@@ -174,19 +174,13 @@ class DeliveryTest {
     }
 
     @Test
-    fun fallsBackToAnOlderHostVersionOffProduction() {
-        publish("1", "v1")
-        val resolved = resolve(hostVersion = "3")
-        assertEquals("v1", resolved.version)
-        assertEquals("1", resolved.hostVersion)
-        assertNotNull(resolved.warning)
-    }
-
-    @Test
-    fun productionDoesNotFallBack() {
+    fun noChannelFallsBackToAnOlderHostVersion() {
         publish("2", "v1")
-        val e = assertFailsWith<ResolveException> { resolve(hostVersion = "3", strict = true) }
-        assertTrue("host version 3" in e.message!!, e.message)
+        for (strict in listOf(false, true)) {
+            val e = assertFailsWith<ResolveException> { resolve(hostVersion = "3", strict = strict) }
+            assertTrue("host version 3" in e.message!!, e.message)
+        }
+        assertFalse(out.exists())
     }
 
     @Test
@@ -204,6 +198,14 @@ class DeliveryTest {
         assertFalse(resolved.changed)
         assertNotNull(resolved.warning)
         assertFailsWith<ResolveException> { resolve(strict = true, fetch = down) }
+    }
+
+    @Test
+    fun withoutNetworkWhatAnOlderHostVersionResolvedIsNotKept() {
+        publish("2", "v1")
+        resolve(hostVersion = "2")
+        val e = assertFailsWith<ResolveException> { resolve(hostVersion = "3", fetch = Delivery { throw IOException("no route to host") }) }
+        assertTrue("host version 2" in e.message!!, e.message)
     }
 
     @Test

@@ -22,12 +22,12 @@ fun interface Fetch {
 
 data class Resolved(
     val version: String,
-    /** The host version the package was published for: lower than the host's own when it fell back. */
+    /** The host version the package was published for: the host's own. */
     val hostVersion: String,
     val createdAt: String,
     /** False when the directory already held this version. */
     val changed: Boolean,
-    /** Set when what is embedded is not simply the channel's current version for this host version. */
+    /** Set when what is embedded is the last result kept without network, not what the channel points at now. */
     val warning: String? = null,
 )
 
@@ -44,33 +44,30 @@ class Delivery(private val fetch: Fetch) {
         pkg: String,
         hostVersion: String,
         publicKey: String,
-        /** A strict channel is what release builds embed: no falling back to an older host version or to the last result. */
+        /** A strict channel is what release builds embed: without network it fails instead of keeping the last result. */
         strict: Boolean,
         out: File,
     ): Resolved {
-        val host = hostVersion.toIntOrNull()?.takeIf { it > 0 && it.toString() == hostVersion }
-            ?: throw ResolveException("hostVersion must be a positive integer, got \"$hostVersion\"")
-        val previous = published(out, pkg, publicKey)
-        var candidate = host
-        while (true) {
-            val root = "$base/$pkg/$candidate"
-            val pointerBytes = try {
-                fetch.get("$root/current.json")
-            } catch (e: IOException) {
-                // no network is not a reason to stop a debug build that already resolved this package once
-                if (strict || previous == null) throw ResolveException("$pkg: cannot reach $root/current.json (${e.message})" + if (strict) "" else ", and nothing was resolved before")
-                return previous.copy(changed = false, warning = "$pkg: cannot reach $root/current.json (${e.message}), keeping ${previous.version}")
-            }
-            if (pointerBytes == null) {
-                // the host version was just raised and the package has not been published for it yet
-                if (strict) throw ResolveException("$pkg: nothing is published at $root; publish the package for host version $candidate first")
-                if (candidate == 1) throw ResolveException("$pkg: nothing is published under $base/$pkg for host version $host or lower")
-                candidate--
-                continue
-            }
-            val resolved = download(root, pointerBytes, pkg, candidate.toString(), publicKey, out, previous)
-            return if (candidate == host) resolved else resolved.copy(warning = "$pkg: nothing is published for host version $host yet, embedding ${resolved.version} of host version $candidate")
+        if (hostVersion.toIntOrNull()?.takeIf { it > 0 && it.toString() == hostVersion } == null) {
+            throw ResolveException("hostVersion must be a positive integer, got \"$hostVersion\"")
         }
+        val previous = published(out, pkg, publicKey)
+        val root = "$base/$pkg/$hostVersion"
+        val pointerBytes = try {
+            fetch.get("$root/current.json")
+        } catch (e: IOException) {
+            val unreachable = "$pkg: cannot reach $root/current.json (${e.message})"
+            if (strict) throw ResolveException(unreachable)
+            // no network is not a reason to stop a debug build that already resolved this package once, for this host
+            // version: what an older one resolved is not what this host's Apps are served
+            if (previous == null) throw ResolveException("$unreachable, and nothing was resolved before")
+            if (previous.hostVersion != hostVersion) throw ResolveException("$unreachable, and what was resolved before is for host version ${previous.hostVersion}")
+            return previous.copy(changed = false, warning = "$unreachable, keeping ${previous.version}")
+        }
+        // the host version was just raised and the package has not been published for it yet. No channel falls back to
+        // an older host version: an App embedding that would find no updates where it looks for them
+        if (pointerBytes == null) throw ResolveException("$pkg: nothing is published at $root; publish the package for host version $hostVersion first")
+        return download(root, pointerBytes, pkg, hostVersion, publicKey, out, previous)
     }
 
     private fun download(root: String, pointerBytes: ByteArray, pkg: String, hostVersion: String, publicKey: String, out: File, previous: Resolved?): Resolved {

@@ -116,8 +116,8 @@ tinyui {
 - 每次构建都取一次指针（约 100 字节），版本没变就不再下载
 - 指针正在灰度（`rollout` < 100）→ 构建失败并报出比例：灰度中的版本不能成为每个新装用户的地板，而公开端点上拿不到上一个全量版本的签名。放量到 100 再构建
 - 下载的 manifest 的 `publicKey` 与声明的不同 → 失败。公钥轮换即改这里的声明，本来就与 `hostVersion` 加 1 同时发生（§7）
-- 当前 `hostVersion` 下该通道还没有版本（宿主刚加 1，页面还没在新版本下发布）：`production` 失败；其他通道依次回落到更小的 `hostVersion`，取到第一个为止并警告。回落来的包能不能跑仍由 `PackageCheck` 的宿主测试判定
-- 取不到指针（没有网络）：`production` 失败；其他通道沿用 build 目录里上次解析的结果并警告，没有则失败
+- 当前 `hostVersion` 下该通道还没有版本（宿主刚加 1，页面还没在新版本下发布）：失败，任何通道都一样，等这个包在新版本下发布。不回落到更小的 `hostVersion`（2026-11-27 改；此前非 `production` 通道回落并警告）：内置了旧版本目录下的包的 App，到自己的 `hostVersion` 目录下查不到更新，测试包走的就不是正式用户的路，页面包没跟上也要拖到打正式包才暴露。加 1 的提交合入、快照上传之后，到各包在新版本下发完之前，宿主只能用页面源码构建（上表第一种来源），见 [updates-compatibility.md](./updates-compatibility.md) §3
+- 取不到指针（没有网络）：`production` 失败；其他通道沿用 build 目录里上次解析的结果并警告，没有、或上次的结果属于另一个 `hostVersion`（刚加 1）则失败
 
 产物与接线：
 
@@ -232,7 +232,7 @@ class Updates(
 
 测试只构造 `TinyUIHost`、不执行任何能力与组件，所以能在 JVM 上跑；能力实现需要的仓库类对象在测试里传假的即可。
 
-内置包另有一个宿主测试（照 sample 的 `EmbeddedPackageTest`）：对这次构建解析到的每个内置包的 manifest 跑 `PackageCheck.problems(manifest, host)`，要求为空。内置包是不是给当前 `hostVersion` 发布过的，由插件在 `production` 通道下保证（§1.4），不再是测试。
+内置包另有一个宿主测试（照 sample 的 `EmbeddedPackageTest`）：对这次构建解析到的每个内置包的 manifest 跑 `PackageCheck.problems(manifest, host)`，要求为空。内置包是不是给当前 `hostVersion` 发布过的，由插件保证（§1.4），不再是测试。
 
 **接入约定：`check()` 在任何 TinyUI 页面挂载之前调用**（App 启动即调；用 §4.6 的 `UpdatesScheduler` 时即 `start()`）。回滚（一个新 version）对已装上的用户生效靠的是下一次 `check()` 装上它；页面若先于它崩溃，回滚永远送不到。进程级崩溃（native 段错误）不在 §4.5 的回退范围内，出口就是灰度 + 回滚 + 这条约定；挂载标记见 ADR-006 §4.3 推迟项。
 

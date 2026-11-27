@@ -229,7 +229,7 @@ tinyui.login.dir=../shop-pages-login
 1. 宿主：改代码，`tinyui.hostVersion` 加 1，带 `-Ptinyui.updateHostSnapshot` 跑快照测试生成新的 `tinyui-host/<n>.txt`，合入主干，CI 上传快照
 2. 页面包：`tinyui.config.json` 的 `hostVersion` 改成新值，取新快照（`TINYUI_TOKEN=<发布 token> tinyui hosts download`，写到 `tinyui-host/<n>.txt`；或从宿主仓拷），重新 `pnpm routes`，合入主干，CI 在新版本下发布
 
-第 1 步之后、第 2 步之前，宿主的测试包构建会回落到上一个 `hostVersion` 的包并打警告，不会失败。什么变化要加 1、什么不用，见 [updates.md](./updates.md) §4.1。
+第 1 步之后、第 2 步之前，宿主从通道取内置包的构建都会失败（测试包与正式包一样，不回落到上一个 `hostVersion`）：这段时间用页面源码构建（`tinyui.<包名>.dir`），挂在这个宿主上的每个包都要做完第 2 步才恢复。宿主的 CI 若在合并请求上跑要内置包的任务，加 1 的那次合并请求因此是红的。什么变化要加 1、什么不用，见 [updates.md](./updates.md) §4.1。
 
 **升级 tinyui。** 分两种：
 
@@ -246,10 +246,9 @@ tinyui.login.dir=../shop-pages-login
 
 | 看到 | 意思 | 怎么办 |
 |---|---|---|
-| 构建失败：`nothing is published at …/production/<pkg>/<n>` | 正式包要的 `hostVersion` 下，这个包还没晋级过 production | 页面包在该版本下发布并晋级 |
+| 构建失败：`nothing is published at …/<通道>/<pkg>/<n>` | 宿主的 `hostVersion` 下，这个包在该通道还没有版本：宿主刚加 1 页面包还没跟上，或正式包要的版本还没晋级过 production | 页面包在该版本下发布（正式包还要晋级），按 §4 跟进 |
 | 构建失败：`… is rolling out to 20% …` | production 正在灰度，灰度中的版本不能作地板 | 放量到 100 再构建 |
-| 构建警告：`nothing is published for host version <n> yet, embedding … of host version <m>` | 宿主刚加 1，页面包还没跟上，测试包先用旧版本 | 页面包按 §4 跟进 |
-| 构建警告：`cannot reach …, keeping …` | 连不上热下发服务，沿用上次取到的版本（只在非 production） | 检查网络；正式包这种情况会失败 |
+| 构建警告：`cannot reach …, keeping …` | 连不上热下发服务，沿用上次取到的版本（只在非 production，且上次取的就是当前 `hostVersion` 的） | 检查网络；正式包这种情况会失败 |
 | 构建失败：`local.properties has tinyui.<pkg>.dir=…, and this build embeds for production` | 联调的配置没删就打正式包 | 删掉那一行 |
 | 构建失败：`… is not signed with the declared key` | 线上的包不是 `tinyui { }` 里那把公钥签的 | 确认是否换过钥；换钥流程见 [updates.md](./updates.md) §7 |
 | 构建失败：合并资源时报重复文件 | 源码树里还留着 `composeResources/files/tinyui/<包名>/` | 删掉，内置包不入库 |
