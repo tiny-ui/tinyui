@@ -12,6 +12,10 @@ export interface ClientOptions {
     token: string;
     /** Injected by the tests; defaults to the global `fetch`. */
     fetch?: typeof globalThis.fetch;
+    /** Told each time a request that got no answer is about to be sent again. */
+    onRetry?: (message: string) => void;
+    /** How long to wait before each further attempt; its length is how many there are. Injected by the tests. */
+    retryDelaysMs?: readonly number[];
 }
 
 export interface UploadResult {
@@ -34,6 +38,16 @@ export class UpdatesError extends Error {
     }
 }
 
+/**
+ * Sent again when no answer came back (a dropped connection, a timeout below HTTP): repeating them changes nothing —
+ * the same bytes to the same path, the pointer at the same version. POST is not: it issues a token or creates an app,
+ * and the first attempt may have reached the server. Neither is DELETE, which answers 404 the second time.
+ */
+const REPEATABLE = new Set(["GET", "PUT"]);
+
+/** A publish is tens of requests in a row; one dropped connection should not cost all of them. */
+const RETRY_DELAYS_MS: readonly number[] = [500, 2000];
+
 /** Loopback is the one place a token may travel without TLS: `wrangler dev` has no certificate. */
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
@@ -41,11 +55,15 @@ export class UpdatesClient {
     readonly url: string;
     readonly #token: string;
     readonly #fetch: typeof globalThis.fetch;
+    readonly #onRetry: ((message: string) => void) | undefined;
+    readonly #retryDelaysMs: readonly number[];
 
     constructor(options: ClientOptions) {
         this.url = requireSecureUrl(options.url).replace(/\/+$/, "");
         this.#token = options.token;
         this.#fetch = options.fetch ?? globalThis.fetch;
+        this.#onRetry = options.onRetry;
+        this.#retryDelaysMs = options.retryDelaysMs ?? RETRY_DELAYS_MS;
     }
 
     async json<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -74,7 +92,7 @@ export class UpdatesClient {
     }
 
     async #send(method: string, path: string, body: string | Uint8Array | undefined, contentType: string | undefined): Promise<Response> {
-        const response = await this.#fetch(`${this.url}${path}`, {
+        const response = await this.#answered(method, path, {
             method,
             headers: {
                 authorization: `Bearer ${this.#token}`,
@@ -82,8 +100,27 @@ export class UpdatesClient {
             },
             ...(body !== undefined && { body }),
         });
+        // an answer is final, whatever its status: the server refused, and asking again would be refused again
         if (!response.ok) throw new UpdatesError(response.status, method, path, await detail(response));
         return response;
+    }
+
+    /** The response, sending a repeatable request again while none comes back. */
+    async #answered(method: string, path: string, init: RequestInit): Promise<Response> {
+        const delays = REPEATABLE.has(method) ? this.#retryDelaysMs : [];
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await this.#fetch(`${this.url}${path}`, init);
+            } catch (e) {
+                const failure = `${method} ${path}: ${unanswered(e)}`;
+                const delay = delays[attempt];
+                if (delay === undefined) {
+                    throw new Error(attempt === 0 ? failure : `${failure}, after ${attempt + 1} attempts`, { cause: e });
+                }
+                this.#onRetry?.(`${failure}; trying again (${attempt + 2} of ${delays.length + 1})`);
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
     }
 }
 
@@ -107,6 +144,14 @@ export function requireToken(variable: typeof TOKEN_ENV | typeof ADMIN_TOKEN_ENV
     const token = process.env[variable];
     if (!token) throw new Error(`${variable} is not set; this command needs it (tinyui tokens create issues publish tokens)`);
     return token;
+}
+
+/** Node's fetch says only "fetch failed"; what went wrong is on `cause` (ECONNRESET, UND_ERR_SOCKET, …). */
+function unanswered(e: unknown): string {
+    const message = e instanceof Error ? e.message : String(e);
+    const cause: unknown = e instanceof Error ? e.cause : undefined;
+    const why = typeof cause === "object" && cause !== null ? ((cause as { code?: unknown }).code ?? (cause as { message?: unknown }).message) : undefined;
+    return typeof why === "string" && why !== "" ? `${message} (${why})` : message;
 }
 
 async function detail(response: Response): Promise<string> {
